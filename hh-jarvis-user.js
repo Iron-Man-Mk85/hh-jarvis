@@ -1,6 +1,6 @@
 // ==UserScript==
 // @name           HH J.A.R.V.I.S.
-// @version        0.1.1
+// @version        0.1.2
 // @description    QoL for KK games
 // @author         Iron Man
 // @match          https://*.pornstarharem.com/*
@@ -9,12 +9,20 @@
 // @match          https://*.mangarpg.com/*
 // @match          https://*.amouragent.com/*
 // @run-at         document-idle
-// @namespace      github Iron Man
-// @updateURL      
-// @downloadURL    
+// @namespace      https://github.com/Iron-Man-Mk85/hh-jarvis
+// @downloadURL    https://raw.githubusercontent.com/Iron-Man-Mk85/hh-jarvis/main/hh-jarvis-user.js
+// @updateURL      https://raw.githubusercontent.com/Iron-Man-Mk85/hh-jarvis/main/hh-jarvis-user.js
 // @icon           https://www.google.com/s2/favicons?sz=64&domain=hentaiheroes.com
 // @grant          none
 // ==/UserScript==
+
+/* =================
+*  =   Changelog   =
+*  =================
+* 0.1.2 - Polishing and update links
+* 0.1.1 - Add FriendAndFoes module
+* 0.0.1 - Initial release
+*/
 
 (async function() {
     'use strict';
@@ -22,13 +30,12 @@
     const {$, localStorage, location} = window
     const LS_CONFIG_NAME = 'HHStark'
     const currentPage = location.pathname
+    const tab = location.search
 
     if (!$) {
         console.log('WARNING: No jQuery found. Ending script.')
         return
     }
-
-    console.log('HH J.A.R.V.I.S.*TEST loaded');
 
     // Define CSS
     const sheet = (() => {
@@ -81,10 +88,6 @@
 
         run({league, contests}) {
             if (this.hasRun || !this.shouldRun()) {return}
-
-            /*
-            * Functions
-            */
 
             function lsGet(key, ls_name=LS_CONFIG_NAME) {
                 return JSON.parse(localStorage.getItem(`${ls_name}${key}`))
@@ -237,10 +240,6 @@
                 }
             }
 
-            /*
-            * Main
-            */
-
             const friendIcon = createIcon('starkFriend')
             const foeIcon = createIcon('starkFoe')
 
@@ -379,7 +378,7 @@
                     addFoeLogos();
                 })
 
-            } else if (currentPage.includes('/activities.html') && contests) {
+            } else if (tab.includes('?tab=contests') && contests) {
                 $(document).ready(() => {
                     addFriendLogosContests();
                     addFoeLogosContests();

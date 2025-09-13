@@ -17,8 +17,8 @@ HH J.A.R.V.I.S. is a Quality of Life userscript for Kinkoid games.
 - [Stay (iOS)](https://apps.apple.com/us/app/stay-for-safari/id1591620171)
 
 2. **Install the script:**  
-- [Click here to install](https://raw.githubusercontent.com/Iron-Man-Mk85/hh-jarvis/main/hh-jarvis-user.js)
-- Or copy the contents of `hh-jarvis-user.js` and paste into your userscript manager.
+- [Download the script and add it yourself](https://raw.githubusercontent.com/Iron-Man-Mk85/hh-jarvis/main/hh-jarvis-user.js)
+- Or use this link in the 'install from URL' section: https://raw.githubusercontent.com/Iron-Man-Mk85/hh-jarvis/main/hh-jarvis-user.js
 
 3. **HH++ BDSM:**
 - Make sure you've got [HH++ BDSM](https://github.com/zoop0kemon/hh-plus-plus/) installed and active, it only works with it.

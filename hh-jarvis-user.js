@@ -1,6 +1,6 @@
 // ==UserScript==
 // @name           HH J.A.R.V.I.S.
-// @version        0.1.2
+// @version        0.1.3
 // @description    QoL for KK games
 // @author         Iron Man
 // @match          https://*.pornstarharem.com/*
@@ -19,6 +19,7 @@
 /* =================
 *  =   Changelog   =
 *  =================
+* 0.1.3 - Better code practices
 * 0.1.2 - Polishing and update links
 * 0.1.1 - Add FriendAndFoes module
 * 0.0.1 - Initial release
@@ -54,6 +55,16 @@
         return style.sheet
     })();
 
+    function lsGet(key, ls_name=LS_CONFIG_NAME) {
+        return JSON.parse(localStorage.getItem(`${ls_name}${key}`))
+    }
+    function lsSet(key, value, ls_name=LS_CONFIG_NAME) {
+        return localStorage.setItem(`${ls_name}${key}`, JSON.stringify(value))
+    }
+    function lsRm(key, ls_name=LS_CONFIG_NAME) {
+        return localStorage.removeItem(`${ls_name}${key}`)
+    }
+
     class HHModule {
         constructor ({group, configSchema}) {
             this.group = 'JARVIS'
@@ -79,169 +90,158 @@
                     default: true
                 }]
             }
-            super({name: baseKey, configSchema})
+            super({name: baseKey, configSchema});
+
+            this.friendIcon = this.createIcon('starkFriend');
+            this.foeIcon = this.createIcon('starkFoe');
         }
 
         shouldRun() {
             return currentPage.includes('/leagues.html') || currentPage.includes('/activities.html')
         }
 
+        updateList(listName, id, add) {
+            let list = lsGet(listName) || [];
+            if (add && !list.includes(id)) {
+                list.push(id);
+            } else if (!add && list.includes(id)) {
+                list = list.filter(item => item !== id);
+            }
+            if (listName === 'FriendList') this.updateFriendButtonVisibility(id, add);
+            else this.updateFoeButtonVisibility(id, add);
+            lsSet(listName, list);
+        }
+
+        createIcon(className) {
+            const div = document.createElement('div');
+            const span = document.createElement('span');
+            div.className = className;
+            span.className = className + 'Icon';
+            div.appendChild(span);
+            return div;
+        }
+
+        createButton(className, iconUrl) {
+            const btn = document.createElement('button');
+            const img = document.createElement('img');
+            btn.className = className;
+            img.className = className + 'Icon';
+            img.src = iconUrl;
+            btn.appendChild(img);
+            btn.style.display = 'none';
+            return btn;
+        }
+
+        updateFriendButtonVisibility(memberId, isPlus) {
+            const memberElement = document.querySelector(`[id-member="${memberId}"]`);
+            const addFriendButton = memberElement.previousElementSibling.querySelector('.starkAddFriendButton');
+            const removeFriendButton = memberElement.previousElementSibling.querySelector('.starkRemoveFriendButton');
+            if (isPlus) {
+                addFriendButton.style.display = 'none';
+                removeFriendButton.style.display = 'inline';
+                memberElement.appendChild(this.friendIcon.cloneNode(true));
+                memberElement.style.color = 'rgb(0, 0, 204)';
+                memberElement.style.webkitTextStroke = '0.01em #FFFFFF';
+            } else {
+                addFriendButton.style.display = 'inline';
+                removeFriendButton.style.display = 'none';
+                memberElement.removeChild(memberElement.querySelector('.starkFriend'));
+                memberElement.style.removeProperty('color');
+                memberElement.style.removeProperty('-webkit-text-stroke');
+            }
+        }
+
+        updateFoeButtonVisibility(memberId, isPlus) {
+            const memberElement = document.querySelector(`[id-member="${memberId}"]`);
+            const AddFoeButton = memberElement.previousElementSibling.querySelector('.starkAddFoeButton');
+            const RemoveFoeButton = memberElement.previousElementSibling.querySelector('.starkRemoveFoeButton');
+            if (isPlus) {
+                AddFoeButton.style.display = 'none';
+                RemoveFoeButton.style.display = 'inline';
+                memberElement.appendChild(this.foeIcon.cloneNode(true));
+                memberElement.style.color = 'rgb(204, 0, 0)';
+                memberElement.style.webkitTextStroke = '0.01em #FFFFFF';
+            } else {
+                AddFoeButton.style.display = 'inline';
+                RemoveFoeButton.style.display = 'none';
+                memberElement.removeChild(memberElement.querySelector('.starkFoe'));
+                memberElement.style.removeProperty('color');
+                memberElement.style.removeProperty('-webkit-text-stroke');
+            }
+        }
+
+        addFriendLogos() {
+            let friendList = lsGet('FriendList');
+            if (friendList !== null) {
+                const nicknameElements = document.querySelectorAll('.nickname');
+                nicknameElements.forEach((nicknameElement) => {
+                    const memberId = nicknameElement.getAttribute('id-member');
+                    if (friendList.includes(memberId)) {
+                        nicknameElement.appendChild(this.friendIcon.cloneNode(true));
+                        nicknameElement.style.color = 'rgb(0, 0, 204)';
+                        nicknameElement.style.webkitTextStroke = '0.01em #FFFFFF';
+                    }
+                });
+            }
+        }
+
+        addFoeLogos() {
+            let foeList = lsGet('FoeList');
+            if (foeList !== null) {
+                const nicknameElements = document.querySelectorAll('.nickname');
+                nicknameElements.forEach((nicknameElement) => {
+                    const memberId = nicknameElement.getAttribute('id-member');
+                    if (foeList.includes(memberId)) {
+                        nicknameElement.appendChild(this.foeIcon.cloneNode(true));
+                        nicknameElement.style.color = 'rgb(204, 0, 0)';
+                        nicknameElement.style.webkitTextStroke = '0.01em #FFFFFF';
+                    }
+                });
+            }
+        }
+
+        addFriendLogosContests() {
+            let friendList = lsGet('FriendList');
+            if (friendList !== null) {
+                const panels = document.querySelectorAll('.ranking');
+                panels.forEach((panel) => {
+                    const table = panel.querySelector('.leadTable');
+                    const tableRows = table.querySelectorAll('tr[sorting_id]');
+                    tableRows.forEach((contestant) => {
+                        const memberId = contestant.getAttribute('sorting_id');
+                        if (friendList.includes(memberId)) {
+                            const row = contestant.querySelector('td:nth-child(2)');
+                            row.appendChild(this.friendIcon.cloneNode(true));
+                            row.style.color = 'rgb(0, 0, 204)';
+                            row.style.webkitTextStroke = '0.01em #FFFFFF';
+                        }
+                    })
+                });
+            }
+        }
+
+        addFoeLogosContests() {
+            let foeList = lsGet('FoeList');
+            if (foeList !== null) {
+                const panels = document.querySelectorAll('.ranking');
+                panels.forEach((panel) => {
+                    const table = panel.querySelector('.leadTable');
+                    const tableRows = table.querySelectorAll('tr[sorting_id]');
+                    tableRows.forEach((contestant) => {
+                        const memberId = contestant.getAttribute('sorting_id');
+                        if (foeList.includes(memberId)) {
+                            const row = contestant.querySelector('td:nth-child(2)');
+                            row.appendChild(this.foeIcon.cloneNode(true));
+                            row.style.color = 'rgb(204, 0, 0)';
+                            row.style.webkitTextStroke = '0.01em #FFFFFF';
+                        }
+                    })
+                });
+            }
+        }
+
         run({league, contests}) {
             if (this.hasRun || !this.shouldRun()) {return}
-
-            function lsGet(key, ls_name=LS_CONFIG_NAME) {
-                return JSON.parse(localStorage.getItem(`${ls_name}${key}`))
-            }
-            function lsSet(key, value, ls_name=LS_CONFIG_NAME) {
-                return localStorage.setItem(`${ls_name}${key}`, JSON.stringify(value))
-            }
-            // TODO
-            // function lsRm(key, ls_name=LS_CONFIG_NAME) {
-            //     return localStorage.removeItem(`${ls_name}${key}`)
-            // }
-
-            function updateList(listName, id, add) {
-                let list = lsGet(listName) || [];
-                if (add && !list.includes(id)) {
-                    list.push(id);
-                } else if (!add && list.includes(id)) {
-                    list = list.filter(item => item !== id);
-                }
-                if (listName === 'FriendList') updateFriendButtonVisibility(id, add);
-                else updateFoeButtonVisibility(id, add);
-                lsSet(listName, list);
-            }
-
-            function createIcon(className) {
-                const div = document.createElement('div');
-                const span = document.createElement('span');
-                div.className = className;
-                span.className = className + 'Icon';
-                div.appendChild(span);
-                return div;
-            }
-
-            function createButton(className, iconUrl) {
-                const btn = document.createElement('button');
-                const img = document.createElement('img');
-                btn.className = className;
-                img.className = className + 'Icon';
-                img.src = iconUrl;
-                btn.appendChild(img);
-                btn.style.display = 'none';
-                return btn;
-            }
-
-            function updateFriendButtonVisibility(memberId, isPlus) {
-                const memberElement = document.querySelector(`[id-member="${memberId}"]`);
-                const addFriendButton = memberElement.previousElementSibling.querySelector('.starkAddFriendButton');
-                const removeFriendButton = memberElement.previousElementSibling.querySelector('.starkRemoveFriendButton');
-                if (isPlus) {
-                    addFriendButton.style.display = 'none';
-                    removeFriendButton.style.display = 'inline';
-                    memberElement.appendChild(friendIcon.cloneNode(true));
-                    memberElement.style.color = 'rgb(0, 0, 204)';
-                    memberElement.style.webkitTextStroke = '0.01em #FFFFFF';
-                } else {
-                    addFriendButton.style.display = 'inline';
-                    removeFriendButton.style.display = 'none';
-                    memberElement.removeChild(memberElement.querySelector('.starkFriend'));
-                    memberElement.style.removeProperty('color');
-                    memberElement.style.removeProperty('-webkit-text-stroke');
-                }
-            }
-
-            function updateFoeButtonVisibility(memberId, isPlus) {
-                const memberElement = document.querySelector(`[id-member="${memberId}"]`);
-                const AddFoeButton = memberElement.previousElementSibling.querySelector('.starkAddFoeButton');
-                const RemoveFoeButton = memberElement.previousElementSibling.querySelector('.starkRemoveFoeButton');
-                if (isPlus) {
-                    AddFoeButton.style.display = 'none';
-                    RemoveFoeButton.style.display = 'inline';
-                    memberElement.appendChild(foeIcon.cloneNode(true));
-                    memberElement.style.color = 'rgb(204, 0, 0)';
-                    memberElement.style.webkitTextStroke = '0.01em #FFFFFF';
-                } else {
-                    AddFoeButton.style.display = 'inline';
-                    RemoveFoeButton.style.display = 'none';
-                    memberElement.removeChild(memberElement.querySelector('.starkFoe'));
-                    memberElement.style.removeProperty('color');
-                    memberElement.style.removeProperty('-webkit-text-stroke');
-                }
-            }
-
-            function addFriendLogos() {
-                let friendList = lsGet('FriendList');
-                if (friendList !== null) {
-                    const nicknameElements = document.querySelectorAll('.nickname');
-                    nicknameElements.forEach((nicknameElement) => {
-                        const memberId = nicknameElement.getAttribute('id-member');
-                        if (friendList.includes(memberId)) {
-                            nicknameElement.appendChild(friendIcon.cloneNode(true));
-                            nicknameElement.style.color = 'rgb(0, 0, 204)';
-                            nicknameElement.style.webkitTextStroke = '0.01em #FFFFFF';
-                        }
-                    });
-                }
-            }
-
-            function addFoeLogos() {
-                let foeList = lsGet('FoeList');
-                if (foeList !== null) {
-                    const nicknameElements = document.querySelectorAll('.nickname');
-                    nicknameElements.forEach((nicknameElement) => {
-                        const memberId = nicknameElement.getAttribute('id-member');
-                        if (foeList.includes(memberId)) {
-                            nicknameElement.appendChild(foeIcon.cloneNode(true));
-                            nicknameElement.style.color = 'rgb(204, 0, 0)';
-                            nicknameElement.style.webkitTextStroke = '0.01em #FFFFFF';
-                        }
-                    });
-                }
-            }
-
-            function addFriendLogosContests() {
-                let friendList = lsGet('FriendList');
-                if (friendList !== null) {
-                    const panels = document.querySelectorAll('.ranking');
-                    panels.forEach((panel) => {
-                        const table = panel.querySelector('.leadTable');
-                        const tableRows = table.querySelectorAll('tr[sorting_id]');
-                        tableRows.forEach((contestant) => {
-                            const memberId = contestant.getAttribute('sorting_id');
-                            if (friendList.includes(memberId)) {
-                                const row = contestant.querySelector('td:nth-child(2)');
-                                row.appendChild(friendIcon.cloneNode(true));
-                                row.style.color = 'rgb(0, 0, 204)';
-                                row.style.webkitTextStroke = '0.01em #FFFFFF';
-                            }
-                        })
-                    });
-                }
-            }
-
-            function addFoeLogosContests() {
-                let foeList = lsGet('FoeList');
-                if (foeList !== null) {
-                    const panels = document.querySelectorAll('.ranking');
-                    panels.forEach((panel) => {
-                        const table = panel.querySelector('.leadTable');
-                        const tableRows = table.querySelectorAll('tr[sorting_id]');
-                        tableRows.forEach((contestant) => {
-                            const memberId = contestant.getAttribute('sorting_id');
-                            if (foeList.includes(memberId)) {
-                                const row = contestant.querySelector('td:nth-child(2)');
-                                row.appendChild(foeIcon.cloneNode(true));
-                                row.style.color = 'rgb(204, 0, 0)';
-                                row.style.webkitTextStroke = '0.01em #FFFFFF';
-                            }
-                        })
-                    });
-                }
-            }
-
-            const friendIcon = createIcon('starkFriend')
-            const foeIcon = createIcon('starkFoe')
 
             const starkFriendsIcon = 'https://i.imgur.com/vjzKcJg.png';
             const starkFriendsStrokeIcon = 'https://i.imgur.com/DJ5pJHC.png';
@@ -261,10 +261,10 @@
                 tabsContainer.appendChild(foesButton);
 
                 // +/- buttons++
-                const addFriendElement = createButton('starkAddFriendButton', starkFriendsStrokeIcon);
-                const removeFriendElement = createButton('starkRemoveFriendButton', starkFriendsStrokeIcon);
-                const addFoeElement = createButton('starkAddFoeButton', starkFoesStrokeIcon);
-                const removeFoeElement = createButton('starkRemoveFoeButton', starkFoesStrokeIcon);
+                const addFriendElement = this.createButton('starkAddFriendButton', starkFriendsStrokeIcon);
+                const removeFriendElement = this.createButton('starkRemoveFriendButton', starkFriendsStrokeIcon);
+                const addFoeElement = this.createButton('starkAddFoeButton', starkFoesStrokeIcon);
+                const removeFoeElement = this.createButton('starkRemoveFoeButton', starkFoesStrokeIcon);
 
                 // friend/foes variables
                 let friendList = lsGet('FriendList');
@@ -351,37 +351,37 @@
                 document.querySelectorAll('.starkAddFriendButton').forEach(button => {
                     button.addEventListener('click', event => {
                         const id = event.target.parentNode.parentNode.querySelector('[id-member]').getAttribute('id-member');
-                        updateList('FriendList', id, true);
+                        this.updateList('FriendList', id, true);
                     });
                 });
                 document.querySelectorAll('.starkRemoveFriendButton').forEach(button => {
                     button.addEventListener('click', event => {
                         const id = event.target.parentNode.parentNode.querySelector('[id-member]').getAttribute('id-member');
-                        updateList('FriendList', id, false);
+                        this.updateList('FriendList', id, false);
                     });
                 });
                 document.querySelectorAll('.starkAddFoeButton').forEach(button => {
                     button.addEventListener('click', event => {
                         const id = event.target.parentNode.parentNode.querySelector('[id-member]').getAttribute('id-member');
-                        updateList('FoeList', id, true);
+                        this.updateList('FoeList', id, true);
                     });
                 });
                 document.querySelectorAll('.starkRemoveFoeButton').forEach(button => {
                     button.addEventListener('click', event => {
                         const id = event.target.parentNode.parentNode.querySelector('[id-member]').getAttribute('id-member');
-                        updateList('FoeList', id, false);
+                        this.updateList('FoeList', id, false);
                     });
                 });
 
                 $(document).ready(() => {
-                    addFriendLogos();
-                    addFoeLogos();
+                    this.addFriendLogos();
+                    this.addFoeLogos();
                 })
 
             } else if (tab.includes('?tab=contests') && contests) {
                 $(document).ready(() => {
-                    addFriendLogosContests();
-                    addFoeLogosContests();
+                    this.addFriendLogosContests();
+                    this.addFoeLogosContests();
                 })
             }
 
@@ -591,7 +591,7 @@
 
                 hhPlusPlusConfig.registerGroup({
                     key: 'JARVIS',
-                    name: 'HH JARVIS'
+                    name: 'HH Jarvis'
                 })
                 allModules.forEach(module => {
                     hhPlusPlusConfig.registerModule(module)

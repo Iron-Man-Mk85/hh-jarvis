@@ -1,6 +1,6 @@
 // ==UserScript==
 // @name           HH J.A.R.V.I.S.
-// @version        0.1.3
+// @version        0.2.0
 // @description    QoL for KK games
 // @author         Iron Man
 // @match          https://*.pornstarharem.com/*
@@ -19,22 +19,23 @@
 /* =================
 *  =   Changelog   =
 *  =================
+* 0.2.0 - Add RemovePassLock module
 * 0.1.3 - Better code practices
 * 0.1.2 - Polishing and update links
 * 0.1.1 - Add FriendAndFoes module
 * 0.0.1 - Initial release
 */
 
-(async function() {
+(async function () {
     'use strict';
 
-    const {$, localStorage, location} = window
+    const { $, localStorage, location } = window
     const LS_CONFIG_NAME = 'HHStark'
     const currentPage = location.pathname
     const tab = location.search
 
     if (!$) {
-        console.log('WARNING: No jQuery found. Ending script.')
+        console.log('WARNING: No jQuery found. Ending script.');
         return
     }
 
@@ -55,18 +56,18 @@
         return style.sheet
     })();
 
-    function lsGet(key, ls_name=LS_CONFIG_NAME) {
+    function lsGet(key, ls_name = LS_CONFIG_NAME) {
         return JSON.parse(localStorage.getItem(`${ls_name}${key}`))
     }
-    function lsSet(key, value, ls_name=LS_CONFIG_NAME) {
+    function lsSet(key, value, ls_name = LS_CONFIG_NAME) {
         return localStorage.setItem(`${ls_name}${key}`, JSON.stringify(value))
     }
-    function lsRm(key, ls_name=LS_CONFIG_NAME) {
+    function lsRm(key, ls_name = LS_CONFIG_NAME) {
         return localStorage.removeItem(`${ls_name}${key}`)
     }
 
     class HHModule {
-        constructor ({group, configSchema}) {
+        constructor({ group, configSchema }) {
             this.group = 'JARVIS'
             this.configSchema = configSchema
             this.hasRun = false
@@ -90,7 +91,7 @@
                     default: true
                 }]
             }
-            super({name: baseKey, configSchema});
+            super({ name: baseKey, configSchema });
 
             this.friendIcon = this.createIcon('starkFriend');
             this.foeIcon = this.createIcon('starkFoe');
@@ -240,8 +241,8 @@
             }
         }
 
-        run({league, contests}) {
-            if (this.hasRun || !this.shouldRun()) {return}
+        run({ league, contests }) {
+            if (this.hasRun || !this.shouldRun()) { return }
 
             const starkFriendsIcon = 'https://i.imgur.com/vjzKcJg.png';
             const starkFriendsStrokeIcon = 'https://i.imgur.com/DJ5pJHC.png';
@@ -580,14 +581,88 @@
         }
     }
 
+    class RemovePassLock extends HHModule {
+        constructor() {
+            const baseKey = 'removePassLock'
+            const configSchema = {
+                baseKey,
+                default: false,
+                label: `Remove the lock icon in PoV/PoG Pass/Pass+ for easier reading`,
+                subSettings: [{
+                    key: 'pov',
+                    label: `Remove in PoV`,
+                    default: true
+                }, {
+                    key: 'pog',
+                    label: `Remove in PoG`,
+                    default: true
+                }]
+            }
+            super({name: baseKey, configSchema});
+
+            this.selectorToFind = '.lock_yellow_icn';
+            this.classToRemove = 'lock_yellow_icn';
+        }
+
+        shouldRun() {
+            return currentPage.includes('/path-of-valor.html') || currentPage.includes('/path-of-glory.html')
+        }
+
+        observeUntil(selector, callback, { once = true, timeout = 5000 } = {}) {
+            let timer = null;
+            let elements = document.querySelectorAll(selector);
+            if (elements.length) {
+                callback(elements);
+                if (once) return;
+            }
+
+            const observer = new MutationObserver(() => {
+                elements = document.querySelectorAll(selector);
+                if (elements.length) {
+                    if (once) {
+                        observer.disconnect();
+                        if (timer) clearTimeout(timer);
+                    }
+                    callback(elements);
+                }
+            });
+            observer.observe(document.documentElement, { childList: true, subtree: true });
+
+            if (Number.isFinite(timeout) && timeout > 0) {
+                timer = setTimeout(() => {
+                    observer.disconnect();
+                }, timeout);
+            }
+        }
+
+        removeClassWhenSelectorAvailable(selector, classToRemove, { once = true, timeout = 5000 } = {}) {
+            this.observeUntil(selector, (elements) => {
+                elements.forEach(el => el.classList.remove(classToRemove));
+            }, { timeout, once });
+        }
+
+        run({pov, pog}) {
+            if (this.hasRun || !this.shouldRun()) {return}
+
+            if (currentPage.includes('/path-of-valor.html') && pov) {
+                this.removeClassWhenSelectorAvailable(this.selectorToFind, this.classToRemove);
+            } else if (currentPage.includes('/path-of-glory.html') && pog) {
+                this.removeClassWhenSelectorAvailable(this.selectorToFind, this.classToRemove);
+            }
+
+            this.hasRun = true
+        }
+    }
+
     const allModules = [
-        new FriendAndFoes()
+        new FriendAndFoes(),
+        new RemovePassLock()
     ]
 
     setTimeout(() => {
         if (window.HHPlusPlus) {
             const runScript = () => {
-                const {hhPlusPlusConfig} = window
+                const { hhPlusPlusConfig } = window
 
                 hhPlusPlusConfig.registerGroup({
                     key: 'JARVIS',

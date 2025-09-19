@@ -1,6 +1,6 @@
 // ==UserScript==
 // @name           HH J.A.R.V.I.S.
-// @version        0.3.0
+// @version        0.3.1
 // @description    QoL for KK games
 // @author         Iron Man
 // @match          https://*.pornstarharem.com/*
@@ -19,6 +19,7 @@
 /* =================
 *  =   Changelog   =
 *  =================
+* 0.3.1 - Add harem link inside love raid cards
 * 0.3.0 - Add LoveRaidsAddon and LoveRaidsParser modules
 * 0.2.0 - Add RemovePassLock module
 * 0.1.3 - Better code practices
@@ -716,7 +717,8 @@
             document.querySelectorAll('.raid-card').forEach((raidCard, i) => {
                 const raid = love_raids[i];
                 const { name = 'Unknown', rarity = 'N/A', shards = 0 } = girls[i];
-                const name_label = names ? `${name}` : raidCard.querySelector('.raid-name > span')?.innerHTML || `Mysterious Girl ${GT.design.love_raid}`;
+                const haremLink = HHPlusPlus.Helpers.getHref(`/characters/${love_raids[i].id_girl}`);
+                const name_label = names ? String(name) : raidCard.querySelector('.raid-name > span > span')?.textContent?.trim() || 'ERROR, ask for help.';
                 const raid_id_label = raid_id ? `(${raid.id_raid})` : '';
                 const skin_label = (skin && Array.isArray(raid?.girl_data?.grade_skins) && raid.girl_data.grade_skins.length > 0) ? '👙' : '';
 
@@ -726,9 +728,9 @@
                 if (skin) displayParts.push(skin_label);
                 const displayLabel = displayParts.join(' ').trim();
 
-                const raidNameElem = raidCard.querySelector('.raid-name > span');
+                const raidNameElem = raidCard.querySelector('.raid-name > span > span');
                 if (raidNameElem) {
-                    raidNameElem.innerHTML = displayLabel;
+                    raidNameElem.textContent = displayLabel;
                 }
 
                 const objectives = raidCard.querySelectorAll('.classic-girl');
@@ -736,8 +738,17 @@
                 if (girl) {
                     const girlNameElem = girl.querySelector('.girl-name');
                     if (girlNameElem) {
-                        girlNameElem.innerHTML = displayLabel;
+                        let link = girlNameElem.querySelector('a');
+                        if (!link) {
+                            link = document.createElement('a');
+                            link.className = 'hh-girl-link';
+                            while (girlNameElem.firstChild) link.appendChild(girlNameElem.firstChild);
+                            girlNameElem.appendChild(link);
+                        }
+                        link.textContent = displayLabel;
+                        link.href = haremLink;
                     }
+
                     if (shards === 100) {
                         const objElem = girl.querySelector('.objective');
                         if (objElem) {

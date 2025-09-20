@@ -7,6 +7,9 @@ HH J.A.R.V.I.S. is a Quality of Life userscript for Kinkoid games.
 ## Features
 
 - **Friends & Foes Management:** Easily mark players as friends or foes in leagues and contests.
+- **Better PoV/PoG** Remove the lock icon in PoV/PoG Pass/Pass+ for easier reading
+- **Love Raids Addon:** Adds useful infos to the Love Raids page.
+- **Love Raids Parser:** If you manage a Sheet to track Love Raids girls, you can easily get all the info in a click!
 
 ## Installation
 

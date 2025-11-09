@@ -1,6 +1,6 @@
 // ==UserScript==
 // @name           HH J.A.R.V.I.S.
-// @version        0.3.1
+// @version        0.4.0
 // @description    QoL for KK games
 // @author         Iron Man
 // @match          https://*.pornstarharem.com/*
@@ -19,6 +19,7 @@
 /* =================
 *  =   Changelog   =
 *  =================
+* 0.4.0 - Add ActivityParser module
 * 0.3.1 - Add harem link inside love raid cards
 * 0.3.0 - Add LoveRaidsAddon and LoveRaidsParser modules
 * 0.2.0 - Add RemovePassLock module
@@ -646,7 +647,7 @@
             }, { timeout, once });
         }
 
-        run({pov, pog}) {
+        run({ pov, pog }) {
             if (this.hasRun || !this.shouldRun()) {return}
 
             if (currentPage.includes('/path-of-valor.html') && pov) {
@@ -709,7 +710,7 @@
             return ids.map(id => girlDict.get(id.toString()) || {});
         }
 
-        run({raid_id, skin, names, color, fight_icon, shadows}) {
+        run({ raid_id, skin, names, color, fight_icon, shadows }) {
             if (this.hasRun || !this.shouldRun()) {return}
 
             const girls = this.getGirls(love_raids.map(raid => raid.id_girl));
@@ -1012,11 +1013,97 @@
         }
     }
 
+    class ActivityParser extends HHModule {
+        constructor() {
+            const baseKey = 'activityParser'
+            const configSchema = {
+                baseKey,
+                default: false,
+                label: `Helper for GSheet management`,
+                subSettings: [{
+                    key: 'missionCopier',
+                    label: `Legendary missions info copier`,
+                    default: false
+                }]
+            }
+            super({name: baseKey, configSchema});
+        }
+
+        shouldRun() {
+            return currentPage.includes('/activities.html')
+        }
+
+        async copyToClipboard(text) {
+            await navigator.clipboard.writeText(text);
+            const toast = document.createElement('div');
+            toast.textContent = 'Copied!';
+            toast.style.position = 'fixed';
+            toast.style.bottom = '10px';
+            toast.style.right = '10px';
+            toast.style.background = 'rgba(0,0,0,0.7)';
+            toast.style.color = 'white';
+            toast.style.padding = '5px 10px';
+            toast.style.borderRadius = '5px';
+            toast.style.zIndex = '9999';
+            document.body.appendChild(toast);
+            setTimeout(() => toast.remove(), 1000);
+        }
+
+        run({ missionCopier }) {
+            if (this.hasRun || !this.shouldRun()) {return}
+
+            if (missionCopier) {
+                document.querySelectorAll('.mission_entry.legendary').forEach(entry => {
+                    const imgDiv = entry.querySelector('.mission_image img');
+                    const titleAll = entry.querySelector('.mission_details h1');
+                    const desc = entry.querySelector('.mission_details p');
+
+                    if (imgDiv) {
+                        imgDiv.style.cursor = 'pointer';
+                        imgDiv.addEventListener('click', e => {
+                            e.stopPropagation();
+                            this.copyToClipboard(imgDiv.src);
+                        });
+                    }
+
+                    if (titleAll) {
+                        titleAll.style.cursor = 'pointer';
+                        const outerTitle = titleAll.querySelector('.event-mission-content-text');
+                        if (outerTitle) {
+                            outerTitle.style.cursor = 'pointer';
+                            outerTitle.addEventListener('click', e => {
+                                e.stopPropagation();
+                                this.copyToClipboard(outerTitle.textContent.trim());
+                            });
+                        }
+
+                        titleAll.addEventListener('click', e => {
+                            if (e.target && e.target.closest && e.target.closest('.event-mission-content-text')) return;
+                            const titleClone = titleAll.cloneNode(true);
+                            titleClone.querySelector('.event-mission-content-text')?.remove();
+                            const title = titleClone.textContent.trim();
+                            this.copyToClipboard(title);
+                        });
+                    }
+
+                    if (desc) {
+                        desc.style.cursor = 'pointer';
+                        desc.addEventListener('click', e => {
+                            e.stopPropagation();
+                            this.copyToClipboard(desc.innerText.trim());
+                        });
+                    }
+                });
+            }
+        }
+    }
+
     const allModules = [
         new FriendAndFoes(),
         new RemovePassLock(),
         new LoveRaidsAddon(),
-        new LoveRaidsParser()
+        new LoveRaidsParser(),
+        new ActivityParser()
     ]
 
     setTimeout(() => {

@@ -19,6 +19,7 @@
 /* =================
 *  =   Changelog   =
 *  =================
+* 0.4.1 - Fix Love Raids shadows replacement
 * 0.4.0 - Add ActivityParser module
 * 0.3.1 - Add harem link inside love raid cards
 * 0.3.0 - Add LoveRaidsAddon and LoveRaidsParser modules
@@ -776,12 +777,13 @@
                 if (shadows) {
                     const leftImage = raidCard.querySelector('.girl-img.left');
                     if (leftImage) {
-                        leftImage.src = leftImage.src.replace('avb0', 'ava0');
+                        leftImage.src = leftImage.src.replace('-black', '');
                     }
                     if (raidCard.classList.contains('multiple-girl')) {
                         const rightImage = raidCard.querySelector('.girl-img.right');
                         if (rightImage) {
-                            rightImage.src = rightImage.src.replace('avb0.png', 'grade_skins/grade_skin1.png');
+                            // rightImage.src = rightImage.src.replace('avb0.png', 'grade_skins/grade_skin1.png');
+                            rightImage.src = rightImage.src.replace('-black', '');
                         }
                     }
                 }

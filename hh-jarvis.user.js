@@ -1,6 +1,6 @@
 // ==UserScript==
 // @name           HH J.A.R.V.I.S.
-// @version        0.6.0
+// @version        0.6.1
 // @description    QoL for KK games
 // @author         Iron Man
 // @match          https://*.pornstarharem.com/*
@@ -19,6 +19,7 @@
 /* =================
 *  =   Changelog   =
 *  =================
+* 0.6.1 - Read native Manga RPG contest titles and recognize active cards when contest data is unavailable
 * 0.6.0 - Add a contest start preference, continuous marking, and compact settings with a version label
 * 0.5.0 - Add league and contest player marking with custom colors, compact settings, and limit Top 20 to promotable leagues
 * 0.4.2 - Fix module startup, league controls, and raid exports; add the Top 20 league target
@@ -531,13 +532,15 @@
                 const id = card.getAttribute('id_contest');
                 const contest = active.get(id);
                 const header = card.querySelector('.contest_header');
-                if (!contest || !header || card.matches('.ended') || header.matches('.ended')) return [];
+                if (!header || card.matches('.ended') || header.matches('.ended')) return [];
+                if (!contest && !header.matches('.in_progress')) return [];
 
-                const name = header.querySelector('.contest_name, h3, h4, h5')?.textContent || contest.name || contest.title;
+                const name = header.querySelector('.contest_title, .contest_name, h3, h4, h5')?.textContent?.trim() ||
+                    contest?.name || contest?.title;
                 return [{
                     id, card, header,
-                    daily: contest.category_type === 'daily',
-                    label: String(name || (contest.category_type === 'daily' ? 'Daily contest' : 'Contest')).trim()
+                    daily: contest?.category_type === 'daily',
+                    label: String(name || (contest?.category_type === 'daily' ? 'Daily contest' : 'Contest')).trim()
                 }];
             });
         }
@@ -1278,7 +1281,7 @@
 
             hhPlusPlusConfig.registerGroup({
                 key: 'JARVIS',
-                name: 'HH Jarvis <small class="jarvis-version">v0.6.0</small>'
+                name: 'HH Jarvis <small class="jarvis-version">v0.6.1</small>'
             })
             allModules.forEach(module => {
                 hhPlusPlusConfig.registerModule(module)

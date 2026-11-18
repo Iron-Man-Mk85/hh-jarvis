@@ -1,6 +1,6 @@
 // ==UserScript==
 // @name           HH J.A.R.V.I.S.
-// @version        0.4.2
+// @version        0.5.0
 // @description    QoL for KK games
 // @author         Iron Man
 // @match          https://*.pornstarharem.com/*
@@ -19,6 +19,7 @@
 /* =================
 *  =   Changelog   =
 *  =================
+* 0.5.0 - Add league and contest player marking with custom colors, compact settings, and limit Top 20 to promotable leagues
 * 0.4.2 - Fix module startup, league controls, and raid exports; add the Top 20 league target
 * 0.4.1 - Fix Love Raids shadows replacement
 * 0.4.0 - Add ActivityParser module
@@ -37,7 +38,6 @@
     const { $, localStorage, location } = window
     const LS_CONFIG_NAME = 'HHStark'
     const currentPage = location.pathname
-    const tab = location.search
 
     if (!$) {
         console.log('WARNING: No jQuery found. Ending script.');
@@ -47,21 +47,58 @@
     console.log('Hello, Sir, J.A.R.V.I.S. is ready to help you.');
 
     // Define CSS
-    const sheet = (() => {
-        const style = document.createElement('style')
-        style.setAttribute('class', 'hh-jarvis-style')
-        document.head.appendChild(style)
-        style.sheet.insertRules = (rules) => {
-            rules.replace(/ {4}/g, '').split(/(?<=})\n/g).map(rule => rule.replace(/\n/g, '')).forEach(rule => {
-                try {
-                    style.sheet.insertRule(rule)
-                } catch {
-                    console.log(`Error adding style rules:\n${rule}`)
-                }
-            })
+    const style = document.createElement('style');
+    style.className = 'hh-jarvis-style';
+    style.textContent = `
+        .hh-plus-plus-config-panel .group-panel[rel="JARVIS"] .panel-contents {
+            align-content: start;
+            align-items: start;
+            grid-auto-rows: max-content;
+            overflow-y: auto;
         }
-        return style.sheet
-    })();
+        .hh-plus-plus-config-panel .group-panel[rel="JARVIS"] .config-setting.has-subsettings {
+            grid-row-end: auto;
+        }
+        .hh-plus-plus-config-panel .group-panel[rel="JARVIS"] .jarvis-mark-color input {
+            width: 30px;
+            height: 20px;
+            flex: none;
+            padding: 0;
+        }
+        .jarvis-mark-toolbar {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            margin: 2px 6px;
+            font-size: 12px;
+        }
+        .jarvis-mark-toolbar select {
+            appearance: auto;
+            font: inherit;
+            color: #fff;
+            background: #282b32;
+            border: 1px solid #777;
+            border-radius: 4px;
+            padding: 1px 4px;
+        }
+        [data-jarvis-mark="friend"] {
+            color: var(--jarvis-friend-color) !important;
+        }
+        [data-jarvis-mark="foe"] {
+            color: var(--jarvis-foe-color) !important;
+        }
+        td[data-jarvis-mark] > a {
+            color: inherit !important;
+        }
+        .jarvis-mark-mode [data-jarvis-player] {
+            cursor: crosshair;
+        }
+        .jarvis-mark-mode [data-jarvis-player]:hover,
+        .jarvis-mark-mode [data-jarvis-player]:focus-visible {
+            outline: 1px solid currentColor;
+        }
+    `;
+    document.head.appendChild(style);
 
     function lsGet(key, ls_name = LS_CONFIG_NAME) {
         return JSON.parse(localStorage.getItem(`${ls_name}${key}`))
@@ -96,507 +133,285 @@
             const configSchema = {
                 baseKey,
                 default: true,
-                label: `Show Friends and Foes`,
+                label: 'Show Friends and Foes',
                 subSettings: [{
                     key: 'league',
-                    label: `Show in League`,
+                    label: 'Show in League',
                     default: true
                 }, {
                     key: 'contests',
-                    label: `Show in Contests`,
+                    label: 'Show in Contests',
                     default: true
                 }]
             }
             super({ name: baseKey, configSchema });
 
-            this.friendIcon = this.createIcon('starkFriend');
-            this.foeIcon = this.createIcon('starkFoe');
+            this.names = new Map();
+            this.focusableNames = new Map();
+            this.mode = '';
         }
 
         shouldRun() {
-            return currentPage.includes('/leagues.html') || currentPage.includes('/activities.html')
+            return ['/home.html', '/leagues.html', '/activities.html'].includes(currentPage);
         }
 
-        updateList(listName, id, add) {
-            let list = lsGet(listName) || [];
-            if (add && !list.includes(id)) {
-                list.push(id);
-            } else if (!add && list.includes(id)) {
-                list = list.filter(item => item !== id);
-            }
-            if (listName === 'FriendList') this.updateFriendButtonVisibility(id, add);
-            else this.updateFoeButtonVisibility(id, add);
-            lsSet(listName, list);
-        }
-
-        createIcon(className) {
-            const div = document.createElement('div');
-            const span = document.createElement('span');
-            div.className = className;
-            span.className = className + 'Icon';
-            div.appendChild(span);
-            return div;
-        }
-
-        createButton(className, iconUrl) {
-            const btn = document.createElement('button');
-            const img = document.createElement('img');
-            btn.className = className;
-            img.className = className + 'Icon';
-            img.src = iconUrl;
-            btn.appendChild(img);
-            btn.style.display = 'none';
-            return btn;
-        }
-
-        updateFriendButtonVisibility(memberId, isPlus) {
-            const memberElement = document.querySelector(`[id-member="${memberId}"]`);
-            const addFriendButton = memberElement.previousElementSibling.querySelector('.starkAddFriendButton');
-            const removeFriendButton = memberElement.previousElementSibling.querySelector('.starkRemoveFriendButton');
-            if (isPlus) {
-                addFriendButton.style.display = 'none';
-                removeFriendButton.style.display = 'inline';
-                memberElement.appendChild(this.friendIcon.cloneNode(true));
-                memberElement.style.color = 'rgb(0, 0, 204)';
-                memberElement.style.webkitTextStroke = '0.01em #FFFFFF';
-            } else {
-                addFriendButton.style.display = 'inline';
-                removeFriendButton.style.display = 'none';
-                memberElement.removeChild(memberElement.querySelector('.starkFriend'));
-                memberElement.style.removeProperty('color');
-                memberElement.style.removeProperty('-webkit-text-stroke');
+        readSetting(key) {
+            try {
+                return lsGet(key);
+            } catch {
+                return null;
             }
         }
 
-        updateFoeButtonVisibility(memberId, isPlus) {
-            const memberElement = document.querySelector(`[id-member="${memberId}"]`);
-            const AddFoeButton = memberElement.previousElementSibling.querySelector('.starkAddFoeButton');
-            const RemoveFoeButton = memberElement.previousElementSibling.querySelector('.starkRemoveFoeButton');
-            if (isPlus) {
-                AddFoeButton.style.display = 'none';
-                RemoveFoeButton.style.display = 'inline';
-                memberElement.appendChild(this.foeIcon.cloneNode(true));
-                memberElement.style.color = 'rgb(204, 0, 0)';
-                memberElement.style.webkitTextStroke = '0.01em #FFFFFF';
-            } else {
-                AddFoeButton.style.display = 'inline';
-                RemoveFoeButton.style.display = 'none';
-                memberElement.removeChild(memberElement.querySelector('.starkFoe'));
-                memberElement.style.removeProperty('color');
-                memberElement.style.removeProperty('-webkit-text-stroke');
+        readMarks() {
+            const stored = this.readSetting('PlayerMarks');
+            if (stored && typeof stored === 'object' && !Array.isArray(stored)) return stored;
+
+            const marks = {};
+            for (const [key, mark] of [['FriendList', 'friend'], ['FoeList', 'foe']]) {
+                const list = this.readSetting(key);
+                if (!Array.isArray(list)) continue;
+
+                for (const id of list) {
+                    if (/^[1-9]\d*$/.test(String(id))) marks[id] = mark;
+                }
+            }
+            return marks;
+        }
+
+        readColors() {
+            const saved = this.readSetting('PlayerMarkColors');
+            return {
+                friend: /^#[\da-f]{6}$/i.test(saved?.friend) ? saved.friend : '#72caff',
+                foe: /^#[\da-f]{6}$/i.test(saved?.foe) ? saved.foe : '#ff8383'
+            };
+        }
+
+        saveSetting(key, value) {
+            try {
+                lsSet(key, value);
+                return true;
+            } catch {
+                alert('Jarvis could not save your Friends and Foes settings.');
+                return false;
             }
         }
 
-        addFriendLogos() {
-            let friendList = lsGet('FriendList');
-            if (friendList !== null) {
-                const nicknameElements = document.querySelectorAll('.nickname');
-                nicknameElements.forEach((nicknameElement) => {
-                    const memberId = nicknameElement.getAttribute('id-member');
-                    if (friendList.includes(memberId)) {
-                        nicknameElement.appendChild(this.friendIcon.cloneNode(true));
-                        nicknameElement.style.color = 'rgb(0, 0, 204)';
-                        nicknameElement.style.webkitTextStroke = '0.01em #FFFFFF';
-                    }
-                });
+        addColorSettings() {
+            const selector = '.group-panel[rel="JARVIS"] .config-setting[rel="JARVIS_friendAndFoes"] .sub-settings';
+            window.HHPlusPlus.Helpers.doWhenSelectorAvailable(selector, () => {
+                const settings = document.querySelector(selector);
+                if (!settings || settings.querySelector('.jarvis-mark-color')) return;
+
+                for (const [mark, text] of [['friend', 'Friend name color'], ['foe', 'Foe name color']]) {
+                    const label = document.createElement('label');
+                    label.className = 'jarvis-mark-color';
+                    const title = document.createElement('span');
+                    title.textContent = text;
+                    const input = document.createElement('input');
+                    input.type = 'color';
+                    input.value = this.readColors()[mark];
+                    input.disabled = !settings.closest('.config-setting').classList.contains('enabled');
+                    input.addEventListener('change', () => {
+                        const colors = this.readColors();
+                        if (!this.saveSetting('PlayerMarkColors', { ...colors, [mark]: input.value })) input.value = colors[mark];
+                    });
+                    label.append(title, input);
+                    settings.appendChild(label);
+                }
+            });
+        }
+
+        createToolbar() {
+            const toolbar = document.createElement('div');
+            toolbar.className = 'jarvis-mark-toolbar';
+
+            const select = document.createElement('select');
+            select.setAttribute('aria-label', 'Mark players');
+            for (const [value, text] of [['', 'Mark players'], ['friend', 'Mark as friend'], ['foe', 'Mark as foe'], ['clear', 'Clear a mark']]) {
+                const option = document.createElement('option');
+                option.value = value;
+                option.textContent = text;
+                select.appendChild(option);
+            }
+            const hint = document.createElement('span');
+            hint.textContent = 'Select a name';
+            hint.setAttribute('aria-live', 'polite');
+            hint.hidden = true;
+            select.addEventListener('change', () => this.setMode(select.value));
+            toolbar.addEventListener('click', event => event.stopPropagation());
+            toolbar.append(select, hint);
+
+            this.select = select;
+            this.hint = hint;
+            return toolbar;
+        }
+
+        setMode(mode) {
+            this.mode = mode;
+            this.select.value = mode;
+            this.hint.hidden = !mode;
+            this.root?.classList.toggle('jarvis-mark-mode', !!mode);
+
+            for (const name of this.names.keys()) {
+                if (mode && name.tabIndex < 0) {
+                    this.focusableNames.set(name, name.getAttribute('tabindex'));
+                    name.tabIndex = 0;
+                } else if (!mode) {
+                    this.restoreFocus(name);
+                }
             }
         }
 
-        addFoeLogos() {
-            let foeList = lsGet('FoeList');
-            if (foeList !== null) {
-                const nicknameElements = document.querySelectorAll('.nickname');
-                nicknameElements.forEach((nicknameElement) => {
-                    const memberId = nicknameElement.getAttribute('id-member');
-                    if (foeList.includes(memberId)) {
-                        nicknameElement.appendChild(this.foeIcon.cloneNode(true));
-                        nicknameElement.style.color = 'rgb(204, 0, 0)';
-                        nicknameElement.style.webkitTextStroke = '0.01em #FFFFFF';
-                    }
-                });
-            }
+        restoreFocus(name) {
+            if (!this.focusableNames.has(name)) return;
+
+            const tabindex = this.focusableNames.get(name);
+            if (tabindex === null) name.removeAttribute('tabindex');
+            else name.setAttribute('tabindex', tabindex);
+            this.focusableNames.delete(name);
         }
 
-        addFriendLogosContests() {
-            let friendList = lsGet('FriendList');
-            if (friendList !== null) {
-                const panels = document.querySelectorAll('.ranking');
-                panels.forEach((panel) => {
-                    const table = panel.querySelector('.leadTable');
-                    if (!table) return;
-                    const tableRows = table.querySelectorAll('tr[sorting_id]');
-                    tableRows.forEach((contestant) => {
-                        const memberId = contestant.getAttribute('sorting_id');
-                        const row = contestant.querySelector('td:nth-child(2)');
-                        if (row && friendList.includes(memberId)) {
-                            row.appendChild(this.friendIcon.cloneNode(true));
-                            row.style.color = 'rgb(0, 0, 204)';
-                            row.style.webkitTextStroke = '0.01em #FFFFFF';
+        getContestNames(root) {
+            const names = new Map();
+            const byContest = new Map();
+            const contests = Object.values(window.contests || {}).filter(Array.isArray).flat();
+
+            for (const row of root.querySelectorAll('.leadTable tr')) {
+                const cell = row.cells?.[1];
+                if (!cell || cell.localName !== 'td') continue;
+                const name = cell.querySelector('.nickname') || cell;
+                let id = row.getAttribute('sorting_id') || name.getAttribute('id-member') ||
+                    name.querySelector('[id-member]')?.getAttribute('id-member');
+                const contestId = row.closest('[id_contest]')?.getAttribute('id_contest');
+                if (contestId) {
+                    if (!byContest.has(contestId)) {
+                        const participants = contests.find(contest => String(contest.id_contest) === contestId)?.participants;
+                        const byName = new Map();
+                        for (const { nickname, id_member } of Object.values(participants || {})) {
+                            const nicknameKey = String(nickname ?? '').trim();
+                            if (!nicknameKey || !/^[1-9]\d*$/.test(String(id_member))) continue;
+                            if (!byName.has(nicknameKey)) byName.set(nicknameKey, new Set());
+                            byName.get(nicknameKey).add(String(id_member));
                         }
-                    })
-                });
+                        byContest.set(contestId, byName);
+                    }
+                    const matches = byContest.get(contestId).get(name.textContent.trim());
+                    if (matches && !matches.has(id)) id = matches.size === 1 ? matches.values().next().value : null;
+                }
+                if (/^[1-9]\d*$/.test(id)) names.set(name, id);
             }
+            return names;
         }
 
-        addFoeLogosContests() {
-            let foeList = lsGet('FoeList');
-            if (foeList !== null) {
-                const panels = document.querySelectorAll('.ranking');
-                panels.forEach((panel) => {
-                    const table = panel.querySelector('.leadTable');
-                    if (!table) return;
-                    const tableRows = table.querySelectorAll('tr[sorting_id]');
-                    tableRows.forEach((contestant) => {
-                        const memberId = contestant.getAttribute('sorting_id');
-                        const row = contestant.querySelector('td:nth-child(2)');
-                        if (row && foeList.includes(memberId)) {
-                            row.appendChild(this.foeIcon.cloneNode(true));
-                            row.style.color = 'rgb(204, 0, 0)';
-                            row.style.webkitTextStroke = '0.01em #FFFFFF';
-                        }
-                    })
-                });
+        refresh() {
+            const root = document.querySelector(this.rootSelector);
+            if (this.root && this.root !== root) this.root.classList.remove('jarvis-mark-mode');
+            this.root = root;
+            const names = !root ? new Map() : this.inLeague
+                ? new Map(Array.from(root.querySelectorAll('.nickname[id-member]'), name => [name, name.getAttribute('id-member')])
+                    .filter(([, id]) => /^[1-9]\d*$/.test(id)))
+                : this.getContestNames(root);
+
+            for (const name of this.names.keys()) {
+                if (names.has(name)) continue;
+                delete name.dataset.jarvisPlayer;
+                delete name.dataset.jarvisMark;
+                this.restoreFocus(name);
             }
+
+            this.names = names;
+            if (!root) return;
+            const leagueHeader = this.inLeague && document.querySelector('.league_tiers');
+            if (leagueHeader) {
+                if (this.toolbar.parentElement !== leagueHeader) leagueHeader.appendChild(this.toolbar);
+            } else if (this.inLeague) {
+                if (this.toolbar.nextElementSibling !== root) root.before(this.toolbar);
+            } else if (this.toolbar.parentElement !== root) {
+                root.prepend(this.toolbar);
+            }
+
+            const marks = this.readMarks();
+            const colors = this.readColors();
+            for (const [mark, color] of Object.entries(colors)) {
+                const property = '--jarvis-' + mark + '-color';
+                if (root.style.getPropertyValue(property) !== color) root.style.setProperty(property, color);
+            }
+            for (const [name, id] of names) {
+                if (name.dataset.jarvisPlayer !== id) name.dataset.jarvisPlayer = id;
+                const mark = marks[id];
+                if (mark === 'friend' || mark === 'foe') {
+                    if (name.dataset.jarvisMark !== mark) name.dataset.jarvisMark = mark;
+                } else if (name.dataset.jarvisMark) {
+                    delete name.dataset.jarvisMark;
+                }
+            }
+            this.setMode(this.mode);
+        }
+
+        markPlayer(event) {
+            if (!this.mode) return;
+
+            const keyboard = event.type === 'keydown';
+            if (keyboard && event.key === 'Escape') {
+                this.setMode('');
+                this.select.focus();
+                return;
+            }
+            if (keyboard && event.key !== 'Enter' && event.key !== ' ') return;
+
+            const name = event.target.closest?.('[data-jarvis-player]');
+            const id = this.names.get(name);
+            if (!id) return;
+
+            event.preventDefault();
+            event.stopPropagation();
+            const marks = this.readMarks();
+            if (this.mode === 'clear') delete marks[id];
+            else marks[id] = this.mode;
+
+            this.saveSetting('PlayerMarks', marks);
+            this.setMode('');
+            this.refresh();
+            if (keyboard) this.select.focus();
         }
 
         run({ league, contests }) {
-            if (this.hasRun || !this.shouldRun()) { return }
+            if (this.hasRun || !this.shouldRun()) {return}
 
-            const starkFriendsIcon = 'https://i.imgur.com/vjzKcJg.png';
-            const starkFriendsStrokeIcon = 'https://i.imgur.com/DJ5pJHC.png';
-            const starkFoesIcon = 'https://i.imgur.com/QdVFN7l.png';
-            const starkFoesStrokeIcon = 'https://i.imgur.com/WYxso6g.png';
-
-            if (currentPage.includes('/leagues.html') && league) {
-                const tabsContainer = document.querySelector('.tabs');
-                if (!tabsContainer) return;
-
-                // friends/foes button
-                const friendsButton = document.createElement('div');
-                friendsButton.textContent = 'Friends';
-                friendsButton.className = 'switch-tab tab-switcher-fade-out friends-button';
-                const foesButton = document.createElement('div');
-                foesButton.textContent = 'Foes';
-                foesButton.className = 'switch-tab tab-switcher-fade-out foes-button';
-                tabsContainer.appendChild(friendsButton);
-                tabsContainer.appendChild(foesButton);
-
-                // +/- buttons++
-                const addFriendElement = this.createButton('starkAddFriendButton', starkFriendsStrokeIcon);
-                const removeFriendElement = this.createButton('starkRemoveFriendButton', starkFriendsStrokeIcon);
-                const addFoeElement = this.createButton('starkAddFoeButton', starkFoesStrokeIcon);
-                const removeFoeElement = this.createButton('starkRemoveFoeButton', starkFoesStrokeIcon);
-
-                // friend/foes variables
-                let friendList = lsGet('FriendList');
-                let foeList = lsGet('FoeList');
-                let friendsShown = 0;
-                let foesShown = 0;
-
-                // append +/- buttons to their container
-                const nicknameElements = document.querySelectorAll('.nickname');
-                nicknameElements.forEach((nicknameElement) => {
-                    const buttonContainer = document.createElement('span');
-                    buttonContainer.classList.add('starkButtons');
-                    buttonContainer.style.marginRight = '5px';
-                    buttonContainer.appendChild(addFriendElement.cloneNode(true));
-                    buttonContainer.appendChild(removeFriendElement.cloneNode(true));
-                    buttonContainer.appendChild(addFoeElement.cloneNode(true));
-                    buttonContainer.appendChild(removeFoeElement.cloneNode(true));
-                    nicknameElement.parentNode.insertBefore(buttonContainer, nicknameElement);
-                });
-
-                // friends button listener
-                friendsButton.addEventListener('click', () => {
-                    if (!friendsShown) {
-                        friendList = lsGet('FriendList');
-                        nicknameElements.forEach((nicknameElement) => {
-                            const memberId = nicknameElement.getAttribute('id-member');
-                            const plusButton = nicknameElement.parentNode.querySelector('.starkAddFriendButton');
-                            const minusButton = nicknameElement.parentNode.querySelector('.starkRemoveFriendButton');
-                            if (friendList !== null && friendList.includes(memberId)) {
-                                minusButton.style.display = 'inline';
-                            } else {
-                                plusButton.style.display = 'inline';
-                            }
-                        });
-                        friendsShown = 1;
-                    } else {
-                        friendList = lsGet('FriendList');
-                        nicknameElements.forEach((nicknameElement) => {
-                            const memberId = nicknameElement.getAttribute('id-member');
-                            const plusButton = nicknameElement.parentNode.querySelector('.starkAddFriendButton');
-                            const minusButton = nicknameElement.parentNode.querySelector('.starkRemoveFriendButton');
-                            if (friendList !== null && friendList.includes(memberId)) {
-                                minusButton.style.display = 'none';
-                            } else {
-                                plusButton.style.display = 'none';
-                            }
-                        });
-                        friendsShown = 0;
-                    }
-                });
-
-                // foes button listener
-                foesButton.addEventListener('click', () => {
-                    if (!foesShown) {
-                        foeList = lsGet('FoeList');
-                        nicknameElements.forEach((nicknameElement) => {
-                            const memberId = nicknameElement.getAttribute('id-member');
-                            const plusButton = nicknameElement.parentNode.querySelector('.starkAddFoeButton');
-                            const minusButton = nicknameElement.parentNode.querySelector('.starkRemoveFoeButton');
-                            if (foeList !== null && foeList.includes(memberId)) {
-                                minusButton.style.display = 'inline';
-                            } else {
-                                plusButton.style.display = 'inline';
-                            }
-                        });
-                        foesShown = 1;
-                    } else {
-                        foeList = lsGet('FoeList');
-                        nicknameElements.forEach((nicknameElement) => {
-                            const memberId = nicknameElement.getAttribute('id-member');
-                            const plusButton = nicknameElement.parentNode.querySelector('.starkAddFoeButton');
-                            const minusButton = nicknameElement.parentNode.querySelector('.starkRemoveFoeButton');
-                            if (foeList !== null && foeList.includes(memberId)) {
-                                minusButton.style.display = 'none';
-                            } else {
-                                plusButton.style.display = 'none';
-                            }
-                        });
-                        foesShown = 0;
-                    }
-                });
-
-                // +/- buttons listeners
-                document.querySelectorAll('.starkAddFriendButton').forEach(button => {
-                    button.addEventListener('click', event => {
-                        const id = event.target.parentNode.parentNode.querySelector('[id-member]').getAttribute('id-member');
-                        this.updateList('FriendList', id, true);
-                    });
-                });
-                document.querySelectorAll('.starkRemoveFriendButton').forEach(button => {
-                    button.addEventListener('click', event => {
-                        const id = event.target.parentNode.parentNode.querySelector('[id-member]').getAttribute('id-member');
-                        this.updateList('FriendList', id, false);
-                    });
-                });
-                document.querySelectorAll('.starkAddFoeButton').forEach(button => {
-                    button.addEventListener('click', event => {
-                        const id = event.target.parentNode.parentNode.querySelector('[id-member]').getAttribute('id-member');
-                        this.updateList('FoeList', id, true);
-                    });
-                });
-                document.querySelectorAll('.starkRemoveFoeButton').forEach(button => {
-                    button.addEventListener('click', event => {
-                        const id = event.target.parentNode.parentNode.querySelector('[id-member]').getAttribute('id-member');
-                        this.updateList('FoeList', id, false);
-                    });
-                });
-
-                $(document).ready(() => {
-                    this.addFriendLogos();
-                    this.addFoeLogos();
-                })
-
-            } else if (tab.includes('?tab=contests') && contests) {
-                $(document).ready(() => {
-                    this.addFriendLogosContests();
-                    this.addFoeLogosContests();
-                })
+            this.inLeague = currentPage === '/leagues.html';
+            if (currentPage === '/home.html') {
+                this.addColorSettings();
+                this.hasRun = true;
+                return;
             }
+            if (this.inLeague ? !league : !contests) return;
 
-            sheet.insertRules(`
-            .friends-button {
-                color: #A1624A;
-                border: none;
-                padding: 8px;
-                font-size: 16px;
-                cursor: pointer;
-            }
+            this.rootSelector = this.inLeague ? '.league_table' : '#contests .right_part';
+            this.toolbar = this.createToolbar();
+            const markPlayer = event => this.markPlayer(event);
+            document.addEventListener('click', markPlayer, true);
+            document.addEventListener('keydown', markPlayer, true);
+            window.addEventListener('storage', event => {
+                if (!event.key || ['PlayerMarks', 'PlayerMarkColors', 'FriendList', 'FoeList']
+                    .some(key => event.key === LS_CONFIG_NAME + key)) this.refresh();
+            });
 
-            .foes-button {
-                color: #A1624A;
-                border: none;
-                padding: 8px;
-                font-size: 16px;
-                cursor: pointer;
-            }
+            const observer = new MutationObserver(mutations => {
+                const root = document.querySelector(this.rootSelector);
+                if (root !== this.root || (root && (!this.toolbar.isConnected || mutations.some(({ target }) => root.contains(target))))) {
+                    this.refresh();
+                }
+            });
+            observer.observe(document.body, {
+                childList: true,
+                characterData: true,
+                subtree: true,
+                attributes: true,
+                attributeFilter: ['sorting_id', 'id-member', 'id_contest']
+            });
 
-            .starkFriendColor {
-                color = 'rgb(0, 0, 204)';
-                text-shadow: 0 0 0 1px #FFFFFF;
-            }
-
-            .starkFoeColor {
-                color = 'rgb(204, 0, 0)';
-                text-shadow: 0 0 0 1px #FFFFFF;
-            }
-
-            .addFriend {
-                background-color: #51CB20;
-                border: none;
-                border-radius: 50%;
-                color: #FFFFFF;
-                cursor: pointer;
-                font-size: 11px;
-                height: 20px;
-                width: 20px;
-                display: flex;
-                justify-content: center;
-                align-items: center;
-            }
-
-            .removeFriend {
-                background-color: #F71735;
-                border: none;
-                border-radius: 50%;
-                color: #FFFFFF;
-                cursor: pointer;
-                font-size: 11px;
-                height: 20px;
-                width: 20px;
-                display: flex;
-                justify-content: center;
-                align-items: center;
-            }
-
-            .starkAddFriendButton {
-                background-color: #51CB20;
-                border: none;
-                border-radius: 50%;
-                color: #FFFFFF;
-                cursor: pointer;
-                font-size: 11px;
-                height: 20px;
-                width: 20px;
-                display: flex;
-                justify-content: center;
-                align-items: center;
-                margin: 2px;
-                padding: 0;
-            }
-
-            .starkRemoveFriendButton {
-                background-color: #F71735;
-                border: none;
-                border-radius: 50%;
-                color: #FFFFFF;
-                cursor: pointer;
-                font-size: 11px;
-                height: 20px;
-                width: 20px;
-                display: flex;
-                justify-content: center;
-                align-items: center;
-                margin: 2px;
-                padding: 0;
-            }
-
-            .starkAddFoeButton {
-                background-color: #51CB20;
-                border: none;
-                border-radius: 50%;
-                color: #FFFFFF;
-                cursor: pointer;
-                font-size: 11px;
-                height: 20px;
-                width: 20px;
-                display: flex;
-                justify-content: center;
-                align-items: center;
-                margin: 2px;
-                padding: 0;
-            }
-
-            .starkRemoveFoeButton {
-                background-color: #F71735;
-                border: none;
-                border-radius: 50%;
-                color: #FFFFFF;
-                cursor: pointer;
-                font-size: 11px;
-                height: 20px;
-                width: 20px;
-                display: flex;
-                justify-content: center;
-                align-items: center;
-                margin: 2px;
-                padding: 0;
-            }
-
-            .starkFriend {
-                display: inline-flex;
-                height: 100%;
-                flex-direction: column;
-                justify-content: center;
-            }
-
-            .starkFoe {
-                display: inline-flex;
-                height: 100%;
-                flex-direction: column;
-                justify-content: center;
-            }
-
-            .starkFriendIcon {
-                text-rendering: optimizeLegibility;
-                border-spacing: 0;
-                border-collapse: separate;
-                color: #ffffff;
-                cursor: pointer;
-                box-sizing: inherit;
-                vertical-align: bottom;
-                font: inherit;
-                display: block;
-                background-image: url(${starkFriendsIcon});
-                background-position: center center;
-                background-repeat: no-repeat;
-                padding: 0;
-                margin: 0;
-                margin-left: 5px;
-                height: 21px;
-                width: 21px;
-                background-size: contain;
-            }
-
-            .starkFoeIcon {
-                text-rendering: optimizeLegibility;
-                border-spacing: 0;
-                border-collapse: separate;
-                color: #ffffff;
-                cursor: pointer;
-                box-sizing: inherit;
-                vertical-align: bottom;
-                font: inherit;
-                display: block;
-                background-image: url(${starkFoesIcon});
-                background-position: center center;
-                background-repeat: no-repeat;
-                padding: 0;
-                margin: 0;
-                margin-left: 5px;
-                height: 21px;
-                width: 21px;
-                background-size: contain;
-            }
-
-            .starkAddFriendButtonIcon,
-            .starkRemoveFriendButtonIcon {
-                border: none;
-                height: 15px;
-                width: 15px;
-                pointer-events: none;
-            }
-
-            .starkAddFoeButtonIcon,
-            .starkRemoveFoeButtonIcon {
-                border: none;
-                height: 15px;
-                width: 15px;
-                pointer-events: none;
-            }`)
-
+            this.refresh();
             this.hasRun = true
         }
     }
@@ -607,7 +422,7 @@
             const configSchema = {
                 baseKey,
                 default: true,
-                label: `Show the Top 20 score target in the league summary`
+                label: `Show the Top 20 promotion target in lower leagues`
             }
             super({name: baseKey, configSchema});
         }
@@ -624,6 +439,8 @@
                 if (!summary || summary.querySelector('.jarvisTop20')) return;
 
                 const { opponents_list, current_tier_number, max_league } = window;
+                const tier = Number(current_tier_number);
+                if (!(tier > 0 && tier < Number(max_league))) return;
                 const heroId = (window.shared?.Hero || window.Hero)?.infos?.id;
                 if (!Array.isArray(opponents_list) || heroId == null) return;
 
@@ -642,10 +459,9 @@
                 const format = new Intl.NumberFormat();
                 const target = inTop20 ? cutoffScore : cutoffScore + 1;
                 const difference = inTop20 ? score - target : target - score;
-                const label = Number(current_tier_number) < Number(max_league) ? 'Top 20 promotion target' : 'Top 20 score target';
                 const tooltip = inTop20
-                    ? `${label}: ${format.format(target)} points at rank 21. Your lead: ${format.format(difference)} points.`
-                    : `${label}: ${format.format(target)} points to pass rank 20.`;
+                    ? `Top 20 promotion target: ${format.format(target)} points at rank 21. Your lead: ${format.format(difference)} points.`
+                    : `Top 20 promotion target: ${format.format(target)} points to pass rank 20.`;
 
                 const entry = document.createElement('span');
                 entry.className = 'minTop20 jarvisTop20';

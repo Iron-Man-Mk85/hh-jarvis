@@ -1,6 +1,6 @@
 // ==UserScript==
 // @name           HH J.A.R.V.I.S. (Testing)
-// @version        0.6.2
+// @version        0.6.3
 // @description    QoL for KK games
 // @author         Iron Man
 // @match          https://*.pornstarharem.com/*
@@ -19,6 +19,7 @@
 /* =================
 *  =   Changelog   =
 *  =================
+* 0.6.3 - Stop both contest startup scrolls, isolate the selected leaderboard, and restore pinned contests at Top or My rank
 * 0.6.2 - Pin contests on their cards, hide the startup scroll, and use right-click marking with isolated settings scrolling
 * 0.6.1 - Read native Manga RPG contest titles and recognize active cards when contest data is unavailable
 * 0.6.0 - Add a contest start preference, continuous marking, and compact settings with a version label
@@ -46,10 +47,17 @@
         return;
     }
 
-    // Keep the game's initial scroll out of view until Jarvis restores the pinned card.
+    // Keep both panes out of view until the pinned contest and its leaderboard are positioned.
     const guard = document.createElement('style');
     guard.id = 'jarvis-contest-startup';
-    guard.textContent = '#contests .left_part .scroll_area { opacity: 0 !important; pointer-events: none; scroll-behavior: auto !important; }';
+    guard.textContent = `
+        #contests .left_part .scroll_area,
+        #contests .right_part {
+            opacity: 0 !important;
+            pointer-events: none;
+            scroll-behavior: auto !important;
+        }
+    `;
     const observer = new MutationObserver(() => {
         if (!document.documentElement) return;
         document.documentElement.appendChild(guard);
@@ -61,7 +69,7 @@
     setTimeout(() => {
         observer.disconnect();
         guard.remove();
-    }, 2000);
+    }, 4000);
 })();
 
 (function runJarvis() {
@@ -144,6 +152,25 @@
         .jarvis-contest-pin:focus-visible {
             outline: 1px solid currentColor;
         }
+        select.jarvis-contest-rank-start {
+            all: unset;
+            display: inline-block;
+            margin-inline-start: .25em;
+            padding-inline: .15em;
+            color: inherit;
+            font: inherit;
+            font-size: .72em;
+            text-decoration: underline dotted;
+            text-underline-offset: 2px;
+            cursor: pointer;
+        }
+        .jarvis-contest-rank-start option {
+            background: #232936;
+            color: #fff;
+        }
+        .jarvis-contest-rank-start:focus-visible {
+            outline: 1px solid currentColor;
+        }
         .jarvis-mark-menu {
             position: fixed;
             z-index: 10000;
@@ -167,8 +194,12 @@
         .jarvis-mark-menu button:focus-visible {
             background: #414d64;
         }
-        #contests .left_part .scroll_area.jarvis-contest-instant {
+        #contests .left_part .scroll_area.jarvis-contest-instant,
+        #contests .right_part.jarvis-contest-instant .lead_table_view {
             scroll-behavior: auto !important;
+        }
+        #contests .right_part .ranking[id_contest].jarvis-contest-other {
+            display: none !important;
         }
         [data-jarvis-mark="friend"] {
             color: var(--jarvis-friend-color) !important;
@@ -581,11 +612,14 @@
                 if (!contest && !header.matches('.in_progress')) return [];
 
                 const title = header.querySelector('.contest_title, .contest_name, h3, h4, h5');
-                const name = title?.textContent?.trim() || contest?.name || contest?.title;
+                const name = title && Array.from(title.childNodes)
+                    .filter(node => !node.matches?.('.jarvis-contest-pin, .jarvis-contest-rank-start'))
+                    .map(node => node.textContent).join('').trim();
                 return [{
                     id, card, header, title,
                     daily: contest?.category_type === 'daily',
-                    label: String(name || (contest?.category_type === 'daily' ? 'Daily contest' : 'Contest')).trim()
+                    label: String(name || contest?.name || contest?.title ||
+                        (contest?.category_type === 'daily' ? 'Daily contest' : 'Contest')).trim()
                 }];
             });
         }
@@ -604,8 +638,8 @@
 
         updatePins(list, contests) {
             const hosts = new Set(contests.map(({ title, header }) => title || header));
-            for (const pin of list.querySelectorAll('.jarvis-contest-pin')) {
-                if (!hosts.has(pin.parentElement)) pin.remove();
+            for (const control of list.querySelectorAll('.jarvis-contest-pin, .jarvis-contest-rank-start')) {
+                if (!hosts.has(control.parentElement)) control.remove();
             }
 
             for (const { id, title, header, label } of contests) {
@@ -637,65 +671,185 @@
                 pin.setAttribute('aria-pressed', String(pinned));
                 pin.setAttribute('aria-label', pinned ? `Unpin ${label}` : `Pin ${label} to open on reload`);
                 pin.title = pinned ? 'Pinned. Click to return to the Daily default.' : 'Open this contest when the page reloads';
+
+                let position = host.querySelector(':scope > .jarvis-contest-rank-start');
+                if (!pinned) {
+                    position?.remove();
+                    continue;
+                }
+                if (!position) {
+                    position = document.createElement('select');
+                    position.className = 'jarvis-contest-rank-start';
+                    position.setAttribute('aria-label', 'Leaderboard position on reload');
+                    position.title = 'Where to open the pinned contest leaderboard';
+                    position.add(new Option('Top', 'top'));
+                    position.add(new Option('My rank', 'mine'));
+                    position.addEventListener('click', event => event.stopPropagation());
+                    position.addEventListener('keydown', event => event.stopPropagation());
+                    position.addEventListener('change', event => {
+                        event.stopPropagation();
+                        const next = position.value;
+                        try {
+                            lsSet('ContestRankStart', next);
+                            this.rankStart = next;
+                        } catch (err) {
+                            position.value = this.rankStart;
+                            console.warn('Jarvis could not save the leaderboard position:', err);
+                        }
+                    });
+                    pin.after(position);
+                }
+                position.value = this.rankStart;
             }
         }
 
-        openContest(list, { id, card, header, title }) {
-            this.stopJump?.();
-            list.classList.add('jarvis-contest-instant');
+        getSelectedContestId(list, right) {
+            const selected = list.querySelector('.contest_header_active')?.closest('.contest[id_contest]');
+            if (selected) return selected.getAttribute('id_contest');
 
-            const jump = () => {
-                if (!list.isConnected || !list.contains(card)) return;
+            const panels = Array.from(right.querySelectorAll('.ranking[id_contest]'))
+                .filter(panel => panel.getClientRects().length && getComputedStyle(panel).visibility === 'visible');
+            return panels.length === 1 ? panels[0].getAttribute('id_contest') : null;
+        }
 
-                // The game may already have queued a scroll on the left-hand list.
-                $(list).stop(true, false);
-                const bounds = list.getBoundingClientRect();
-                const scale = bounds.height / list.offsetHeight;
+        showLeaderboard(right, contestId) {
+            for (const panel of right.querySelectorAll('.ranking[id_contest]')) {
+                panel.classList.toggle('jarvis-contest-other', !!contestId && panel.getAttribute('id_contest') !== contestId);
+            }
+        }
+
+        getOwnRow(board) {
+            const own = board.querySelector('.leadTable tr.lead_table_default');
+            if (own) return own;
+
+            const heroId = (window.shared?.Hero || window.Hero)?.infos?.id;
+            if (heroId == null) return null;
+
+            return Array.from(board.querySelectorAll('.leadTable tr[sorting_id]'))
+                .find(row => row.getAttribute('sorting_id') === String(heroId));
+        }
+
+        jumpTo(scroller, target, center = false) {
+            $(scroller).stop(true, false);
+            let top = 0;
+            if (target) {
+                const bounds = scroller.getBoundingClientRect();
+                const scale = bounds.height / scroller.offsetHeight;
                 if (!scale) return;
 
-                const offset = (card.getBoundingClientRect().top - bounds.top) / scale - list.clientTop;
-                const top = Math.max(0, Math.min(list.scrollHeight - list.clientHeight, list.scrollTop + offset));
-                if (Math.abs(top - list.scrollTop) >= 1) list.scrollTop = top;
+                const item = target.getBoundingClientRect();
+                top = scroller.scrollTop + (item.top - bounds.top) / scale - scroller.clientTop;
+                if (center) top -= (scroller.clientHeight - item.height / scale) / 2;
+            }
+            top = Math.max(0, Math.min(scroller.scrollHeight - scroller.clientHeight, top));
+            if (Math.abs(top - scroller.scrollTop) >= 1) scroller.scrollTop = top;
+        }
+
+        openContest(list, right, { id, card, header, title }) {
+            this.stopJump?.(false);
+            list.classList.add('jarvis-contest-instant');
+            right.classList.add('jarvis-contest-instant');
+            const placeAtOwnRank = this.preference === id && this.rankStart === 'mine';
+            let lastAttempt;
+            let attempts = 0;
+
+            const jump = () => {
+                if (!list.isConnected || !right.isConnected || !list.contains(card)) return;
+
+                const selected = this.getSelectedContestId(list, right);
+                if (selected !== id && selected !== lastAttempt && attempts < 3) {
+                    lastAttempt = selected;
+                    attempts++;
+                    this.showLeaderboard(right, null);
+                    (title || header).click();
+                } else if (selected === id) {
+                    lastAttempt = undefined;
+                }
+
+                this.jumpTo(list, card);
+                this.showLeaderboard(right, id);
+                const panel = Array.from(right.querySelectorAll('.ranking[id_contest]'))
+                    .find(panel => panel.getAttribute('id_contest') === id);
+                const board = panel?.querySelector('.lead_table_view');
+                if (!board?.clientHeight || this.getSelectedContestId(list, right) !== id) return;
+
+                this.jumpTo(board, placeAtOwnRank ? this.getOwnRow(board) : null, placeAtOwnRank);
+                document.getElementById('jarvis-contest-startup')?.remove();
             };
 
-            const stop = () => {
-                list.removeEventListener('scroll', jump);
-                list.removeEventListener('pointerdown', stop, true);
-                list.removeEventListener('wheel', stop, true);
-                list.removeEventListener('keydown', stop, true);
-                list.classList.remove('jarvis-contest-instant');
+            const onScroll = event => {
+                if (event.target === list || event.target.matches?.('.lead_table_view')) jump();
+            };
+            const stopOnClick = event => {
+                if (event.isTrusted) stop();
+            };
+            const stopOnKey = event => {
+                if (['ArrowUp', 'ArrowDown', 'PageUp', 'PageDown', 'Home', 'End', ' '].includes(event.key)) stop();
+            };
+            const afterLoad = () => {
+                clearTimeout(timer);
+                timer = setTimeout(stop, 3000);
+                lastAttempt = undefined;
+                jump();
+            };
+            const stop = (reveal = true) => {
+                for (const pane of [list, right]) {
+                    pane.removeEventListener('scroll', onScroll, true);
+                    pane.removeEventListener('pointerdown', stop, true);
+                    pane.removeEventListener('wheel', stop, true);
+                    pane.removeEventListener('click', stopOnClick, true);
+                    pane.classList.remove('jarvis-contest-instant');
+                }
+                document.removeEventListener('keydown', stopOnKey, true);
+                window.removeEventListener('load', afterLoad);
                 clearTimeout(timer);
                 this.stopJump = null;
+                this.reposition = null;
+                this.restoringCard = null;
+                this.showLeaderboard(right, this.getSelectedContestId(list, right));
+                if (reveal !== false) document.getElementById('jarvis-contest-startup')?.remove();
             };
-            const timer = setTimeout(stop, 1500);
+            let timer = setTimeout(stop, document.readyState === 'complete' ? 3000 : 6000);
             this.stopJump = stop;
-            list.addEventListener('scroll', jump, { passive: true });
-            list.addEventListener('pointerdown', stop, true);
-            list.addEventListener('wheel', stop, { passive: true, capture: true });
-            list.addEventListener('keydown', stop, true);
-
+            this.reposition = jump;
+            this.restoringCard = card;
+            for (const pane of [list, right]) {
+                pane.addEventListener('scroll', onScroll, { passive: true, capture: true });
+                pane.addEventListener('pointerdown', stop, true);
+                pane.addEventListener('wheel', stop, { passive: true, capture: true });
+                pane.addEventListener('click', stopOnClick, true);
+            }
+            document.addEventListener('keydown', stopOnKey, true);
+            if (document.readyState !== 'complete') window.addEventListener('load', afterLoad, { once: true });
             jump();
-            const alreadyOpen = Array.from(document.querySelectorAll('#contests .right_part .ranking[id_contest]'))
-                .some(panel => panel.getAttribute('id_contest') === id && panel.getClientRects().length &&
-                    getComputedStyle(panel).visibility === 'visible');
-            if (!alreadyOpen && !header.matches('.contest_header_active')) (title || header).click();
-            jump();
-            document.getElementById('jarvis-contest-startup')?.remove();
         }
 
         refresh() {
             const list = document.querySelector('#contests .left_part .scroll_area');
+            const right = document.querySelector('#contests .right_part');
+            if (this.stopJump && (this.list !== list || this.right !== right || !list?.contains(this.restoringCard))) {
+                this.stopJump(false);
+                this.restoredList = null;
+            }
             this.list = list;
-            if (!list || !list.getClientRects().length || getComputedStyle(list).visibility !== 'visible') return;
+            this.right = right;
+            if (!list || !right || !list.getClientRects().length || getComputedStyle(list).visibility !== 'visible') return;
 
             const contests = this.getContests(list);
             this.updatePins(list, contests);
 
-            if (this.restoredList === list) return;
+            if (this.reposition) {
+                this.reposition();
+                return;
+            }
+            if (this.restoredList === list) {
+                this.showLeaderboard(right, this.getSelectedContestId(list, right));
+                return;
+            }
             const target = this.getTarget(contests);
             if (!target) return;
             this.restoredList = list;
-            this.openContest(list, target);
+            this.openContest(list, right, target);
         }
 
         run() {
@@ -706,9 +860,17 @@
             } catch {
                 this.preference = '';
             }
+            try {
+                this.rankStart = lsGet('ContestRankStart') === 'mine' ? 'mine' : 'top';
+            } catch {
+                this.rankStart = 'top';
+            }
             const observer = new MutationObserver(mutations => {
                 const list = document.querySelector('#contests .left_part .scroll_area');
-                if (list !== this.list || (list && mutations.some(({ target }) => list.contains(target) || target.contains(list)))) {
+                const right = document.querySelector('#contests .right_part');
+                if (list !== this.list || right !== this.right || mutations.some(({ target }) =>
+                    (list && (list.contains(target) || target.contains(list))) ||
+                    (right && (right.contains(target) || target.contains(right))))) {
                     this.refresh();
                 }
             });
@@ -1329,7 +1491,7 @@
 
             hhPlusPlusConfig.registerGroup({
                 key: 'JARVIS',
-                name: 'HH Jarvis <small class="jarvis-version">v0.6.2 testing</small>'
+                name: 'HH Jarvis <small class="jarvis-version">v0.6.3 testing</small>'
             })
             allModules.forEach(module => {
                 hhPlusPlusConfig.registerModule(module)

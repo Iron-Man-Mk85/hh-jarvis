@@ -1,5 +1,5 @@
 // ==UserScript==
-// @name           HH J.A.R.V.I.S. (Testing)
+// @name           HH J.A.R.V.I.S.
 // @version        0.6.3
 // @description    QoL for KK games
 // @author         Iron Man
@@ -9,9 +9,9 @@
 // @match          https://*.mangarpg.com/*
 // @match          https://*.amouragent.com/*
 // @run-at         document-start
-// @namespace      https://github.com/Iron-Man-Mk85/hh-jarvis/testing
-// @downloadURL    https://raw.githubusercontent.com/Iron-Man-Mk85/hh-jarvis/testing/hh-jarvis.user.js
-// @updateURL      https://raw.githubusercontent.com/Iron-Man-Mk85/hh-jarvis/testing/hh-jarvis.user.js
+// @namespace      https://github.com/Iron-Man-Mk85/hh-jarvis
+// @downloadURL    https://raw.githubusercontent.com/Iron-Man-Mk85/hh-jarvis/main/hh-jarvis.user.js
+// @updateURL      https://raw.githubusercontent.com/Iron-Man-Mk85/hh-jarvis/main/hh-jarvis.user.js
 // @icon           https://www.google.com/s2/favicons?sz=64&domain=hentaiheroes.com
 // @grant          none
 // ==/UserScript==
@@ -1491,7 +1491,7 @@
 
             hhPlusPlusConfig.registerGroup({
                 key: 'JARVIS',
-                name: 'HH Jarvis <small class="jarvis-version">v0.6.3 testing</small>'
+                name: 'HH Jarvis <small class="jarvis-version">v0.6.3</small>'
             })
             allModules.forEach(module => {
                 hhPlusPlusConfig.registerModule(module)

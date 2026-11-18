@@ -1,6 +1,6 @@
 // ==UserScript==
 // @name           HH J.A.R.V.I.S.
-// @version        0.4.1
+// @version        0.4.2
 // @description    QoL for KK games
 // @author         Iron Man
 // @match          https://*.pornstarharem.com/*
@@ -19,6 +19,7 @@
 /* =================
 *  =   Changelog   =
 *  =================
+* 0.4.2 - Fix module startup, league controls, and raid exports; add the Top 20 league target
 * 0.4.1 - Fix Love Raids shadows replacement
 * 0.4.0 - Add ActivityParser module
 * 0.3.1 - Add harem link inside love raid cards
@@ -30,14 +31,13 @@
 * 0.0.1 - Initial release
 */
 
-(async function () {
+(function () {
     'use strict';
 
     const { $, localStorage, location } = window
     const LS_CONFIG_NAME = 'HHStark'
     const currentPage = location.pathname
     const tab = location.search
-    const girlDict = await HHPlusPlus.Helpers.getGirlDictionary();
 
     if (!$) {
         console.log('WARNING: No jQuery found. Ending script.');
@@ -71,6 +71,15 @@
     }
     function lsRm(key, ls_name = LS_CONFIG_NAME) {
         return localStorage.removeItem(`${ls_name}${key}`)
+    }
+
+    async function getGirlDictionary() {
+        try {
+            return await window.HHPlusPlus.Helpers.getGirlDictionary();
+        } catch (err) {
+            console.warn('Jarvis could not load the HH++ girl dictionary:', err);
+            return null;
+        }
     }
 
     class HHModule {
@@ -214,11 +223,12 @@
                 const panels = document.querySelectorAll('.ranking');
                 panels.forEach((panel) => {
                     const table = panel.querySelector('.leadTable');
+                    if (!table) return;
                     const tableRows = table.querySelectorAll('tr[sorting_id]');
                     tableRows.forEach((contestant) => {
                         const memberId = contestant.getAttribute('sorting_id');
-                        if (friendList.includes(memberId)) {
-                            const row = contestant.querySelector('td:nth-child(2)');
+                        const row = contestant.querySelector('td:nth-child(2)');
+                        if (row && friendList.includes(memberId)) {
                             row.appendChild(this.friendIcon.cloneNode(true));
                             row.style.color = 'rgb(0, 0, 204)';
                             row.style.webkitTextStroke = '0.01em #FFFFFF';
@@ -234,11 +244,12 @@
                 const panels = document.querySelectorAll('.ranking');
                 panels.forEach((panel) => {
                     const table = panel.querySelector('.leadTable');
+                    if (!table) return;
                     const tableRows = table.querySelectorAll('tr[sorting_id]');
                     tableRows.forEach((contestant) => {
                         const memberId = contestant.getAttribute('sorting_id');
-                        if (foeList.includes(memberId)) {
-                            const row = contestant.querySelector('td:nth-child(2)');
+                        const row = contestant.querySelector('td:nth-child(2)');
+                        if (row && foeList.includes(memberId)) {
                             row.appendChild(this.foeIcon.cloneNode(true));
                             row.style.color = 'rgb(204, 0, 0)';
                             row.style.webkitTextStroke = '0.01em #FFFFFF';
@@ -257,6 +268,9 @@
             const starkFoesStrokeIcon = 'https://i.imgur.com/WYxso6g.png';
 
             if (currentPage.includes('/leagues.html') && league) {
+                const tabsContainer = document.querySelector('.tabs');
+                if (!tabsContainer) return;
+
                 // friends/foes button
                 const friendsButton = document.createElement('div');
                 friendsButton.textContent = 'Friends';
@@ -264,7 +278,6 @@
                 const foesButton = document.createElement('div');
                 foesButton.textContent = 'Foes';
                 foesButton.className = 'switch-tab tab-switcher-fade-out foes-button';
-                const tabsContainer = document.querySelector('.tabs');
                 tabsContainer.appendChild(friendsButton);
                 tabsContainer.appendChild(foesButton);
 
@@ -588,6 +601,71 @@
         }
     }
 
+    class LeagueTop20 extends HHModule {
+        constructor() {
+            const baseKey = 'leagueTop20'
+            const configSchema = {
+                baseKey,
+                default: true,
+                label: `Show the Top 20 score target in the league summary`
+            }
+            super({name: baseKey, configSchema});
+        }
+
+        shouldRun() {
+            return currentPage.includes('/leagues.html');
+        }
+
+        run() {
+            if (this.hasRun || !this.shouldRun()) {return}
+
+            window.HHPlusPlus.Helpers.doWhenSelectorAvailable('.scriptLeagueInfo', () => {
+                const summary = document.querySelector('.scriptLeagueInfo');
+                if (!summary || summary.querySelector('.jarvisTop20')) return;
+
+                const { opponents_list, current_tier_number, max_league } = window;
+                const heroId = (window.shared?.Hero || window.Hero)?.infos?.id;
+                if (!Array.isArray(opponents_list) || heroId == null) return;
+
+                const player = opponents_list.find(({ player }) => String(player?.id_fighter) === String(heroId));
+                const rank = Number(player?.place);
+                if (!Number.isInteger(rank) || rank < 1) return;
+
+                const inTop20 = rank <= 20;
+                const cutoff = opponents_list.find(({ place }) => Number(place) === (inTop20 ? 21 : 20));
+                if (player.player_league_points == null || cutoff?.player_league_points == null) return;
+
+                const score = Number(player.player_league_points);
+                const cutoffScore = Number(cutoff.player_league_points);
+                if (!Number.isFinite(score) || !Number.isFinite(cutoffScore)) return;
+
+                const format = new Intl.NumberFormat();
+                const target = inTop20 ? cutoffScore : cutoffScore + 1;
+                const difference = inTop20 ? score - target : target - score;
+                const label = Number(current_tier_number) < Number(max_league) ? 'Top 20 promotion target' : 'Top 20 score target';
+                const tooltip = inTop20
+                    ? `${label}: ${format.format(target)} points at rank 21. Your lead: ${format.format(difference)} points.`
+                    : `${label}: ${format.format(target)} points to pass rank 20.`;
+
+                const entry = document.createElement('span');
+                entry.className = 'minTop20 jarvisTop20';
+                entry.setAttribute('hh_title', tooltip);
+                entry.setAttribute('tooltip', '');
+                entry.setAttribute('aria-label', tooltip);
+
+                const badge = document.createElement('span');
+                badge.className = 'scriptLeagueInfoIcon';
+                badge.style.backgroundColor = '#3769ba';
+                badge.style.textAlign = 'center';
+                badge.textContent = '20';
+                entry.append(badge, `${difference === 0 ? '' : inTop20 ? '-' : '+'}${format.format(Math.abs(difference))}`);
+                summary.insertBefore(entry, summary.querySelector('.minTop30, .promotionInfo'));
+            });
+
+            this.hasRun = true
+        }
+    }
+
     class RemovePassLock extends HHModule {
         constructor() {
             const baseKey = 'removePassLock'
@@ -707,20 +785,24 @@
             return currentPage.includes('/love-raids.html')
         }
 
-        getGirls(ids) {
-            return ids.map(id => girlDict.get(id.toString()) || {});
-        }
-
-        run({ raid_id, skin, names, color, fight_icon, shadows }) {
+        async run({ raid_id, skin, names, color, fight_icon, shadows }) {
             if (this.hasRun || !this.shouldRun()) {return}
 
-            const girls = this.getGirls(love_raids.map(raid => raid.id_girl));
+            const raids = (typeof love_raids !== 'undefined' && Array.isArray(love_raids)) ? love_raids : [];
+            if (!raids.length) return;
+            this.hasRun = true
 
-            document.querySelectorAll('.raid-card').forEach((raidCard, i) => {
-                const raid = love_raids[i];
-                const { name = 'Unknown', rarity = 'N/A', shards = 0 } = girls[i];
-                const haremLink = HHPlusPlus.Helpers.getHref(`/characters/${love_raids[i].id_girl}`);
-                const name_label = names ? String(name) : raidCard.querySelector('.raid-name > span > span')?.textContent?.trim() || 'ERROR, ask for help.';
+            const girlDict = await getGirlDictionary();
+            const raidsById = new Map(raids.map(raid => [String(raid.id_raid), raid]));
+
+            document.querySelectorAll('.raid-card[id_raid]').forEach(raidCard => {
+                const raid = raidsById.get(raidCard.getAttribute('id_raid'));
+                if (!raid || raid.id_girl == null) return;
+
+                const { name, rarity, shards = 0 } = girlDict?.get(String(raid.id_girl)) || {};
+                const haremLink = window.HHPlusPlus.Helpers.getHref(`/characters/${raid.id_girl}`);
+                const raidNameElem = raidCard.querySelector('.raid-name > span > span');
+                const name_label = (names && name) || raidNameElem?.textContent?.trim() || raid.event_name || raid.girl_data?.name || '';
                 const raid_id_label = raid_id ? `(${raid.id_raid})` : '';
                 const skin_label = (skin && Array.isArray(raid?.girl_data?.grade_skins) && raid.girl_data.grade_skins.length > 0) ? '👙' : '';
 
@@ -730,8 +812,7 @@
                 if (skin) displayParts.push(skin_label);
                 const displayLabel = displayParts.join(' ').trim();
 
-                const raidNameElem = raidCard.querySelector('.raid-name > span > span');
-                if (raidNameElem) {
+                if (raidNameElem && displayLabel) {
                     raidNameElem.textContent = displayLabel;
                 }
 
@@ -747,7 +828,7 @@
                             while (girlNameElem.firstChild) link.appendChild(girlNameElem.firstChild);
                             girlNameElem.appendChild(link);
                         }
-                        link.textContent = displayLabel;
+                        if (displayLabel) link.textContent = displayLabel;
                         link.href = haremLink;
                     }
 
@@ -759,9 +840,9 @@
                     }
                 }
 
-                if (color) {
+                if (color && rarity) {
                     const raidNameContainer = raidCard.querySelector('.raid-name');
-                    if (raidNameContainer && color) {
+                    if (raidNameContainer) {
                         raidNameContainer.style.color = this.rarityColors[rarity] || '';
                     }
                 }
@@ -786,12 +867,9 @@
                             rightImage.src = rightImage.src.replace('-black', '');
                         }
                     }
+                    raidCard.querySelectorAll('.eye').forEach(e => e.remove());
                 }
             });
-
-            if (shadows) document.querySelectorAll('.raid-card .eye').forEach(e => e.remove());
-
-            this.hasRun = true
         }
     }
 
@@ -850,7 +928,7 @@
             const durationHours = Math.floor(event.event_duration_seconds / 3600);
             const duration = `${durationHours} hours`;
 
-            const girl = girlDict.get(String(event.id_girl)) || {};
+            const girl = this.girlDict.get(String(event.id_girl)) || {};
             const { name = 'Unknown', rarity = 'N/A', grade = 0 } = girl;
 
             return [
@@ -883,9 +961,13 @@
                 textarea.value = text;
                 document.body.appendChild(textarea);
                 textarea.select();
-                document.execCommand('copy');
-                document.body.removeChild(textarea);
-                return false;
+                try {
+                    return document.execCommand('copy');
+                } catch (err) {
+                    return false;
+                } finally {
+                    textarea.remove();
+                }
             }
         }
 
@@ -909,6 +991,11 @@
                 return;
             }
 
+            if (!this.girlDict) {
+                alert('⚠️ The HH++ girl dictionary could not be loaded. Reload the page and try again.');
+                return;
+            }
+
             let lastSavedIdNumber = parseInt(lsGet(storageKey), 10);
 
             // If Shift is held OR no saved ID exists → ask again
@@ -920,8 +1007,6 @@
                     alert('❌ Invalid ID entered. Please enter a valid number.');
                     return;
                 }
-
-                lsSet(storageKey, lastSavedIdNumber);
             }
 
             // Filter new events
@@ -933,7 +1018,10 @@
 
             const formattedData = filteredData.map(this.formatEventRow.bind(this)).join("\n");
 
-            await this.copyToClipboard(formattedData);
+            if (!await this.copyToClipboard(formattedData)) {
+                alert('❌ Could not copy the raids. The last saved ID was kept.');
+                return;
+            }
 
             // Save highest ID
             const maxId = Math.max(...filteredData.map(e => e.id_raid));
@@ -1004,14 +1092,15 @@
             }
         }
 
-        run() {
+        async run() {
             if (this.hasRun || !this.shouldRun()) {return}
 
-            this._boundInsertButton = this.insertButton.bind(this);
-            window.addEventListener('load', this._boundInsertButton);
-            if (document.readyState === 'complete') this.insertButton();
-
             this.hasRun = true
+            this.girlDict = await getGirlDictionary();
+
+            this._boundInsertButton = this.insertButton.bind(this);
+            if (document.readyState === 'complete') this.insertButton();
+            else window.addEventListener('load', this._boundInsertButton, { once: true });
         }
     }
 
@@ -1055,7 +1144,10 @@
             if (this.hasRun || !this.shouldRun()) {return}
 
             if (missionCopier) {
-                document.querySelectorAll('.mission_entry.legendary').forEach(entry => {
+                const entries = document.querySelectorAll('.mission_entry.legendary');
+                if (!entries.length) return;
+
+                entries.forEach(entry => {
                     const imgDiv = entry.querySelector('.mission_image img');
                     const titleAll = entry.querySelector('.mission_details h1');
                     const desc = entry.querySelector('.mission_details p');
@@ -1096,12 +1188,15 @@
                         });
                     }
                 });
+
+                this.hasRun = true
             }
         }
     }
 
     const allModules = [
         new FriendAndFoes(),
+        new LeagueTop20(),
         new RemovePassLock(),
         new LoveRaidsAddon(),
         new LoveRaidsParser(),
@@ -1109,28 +1204,24 @@
     ]
 
     setTimeout(() => {
-        if (window.HHPlusPlus) {
-            const runScript = () => {
-                const { hhPlusPlusConfig } = window
+        const runScript = () => {
+            const { hhPlusPlusConfig } = window
 
-                hhPlusPlusConfig.registerGroup({
-                    key: 'JARVIS',
-                    name: 'HH Jarvis'
-                })
-                allModules.forEach(module => {
-                    hhPlusPlusConfig.registerModule(module)
-                })
-                hhPlusPlusConfig.loadConfig()
-                hhPlusPlusConfig.runModules()
-            }
+            hhPlusPlusConfig.registerGroup({
+                key: 'JARVIS',
+                name: 'HH Jarvis'
+            })
+            allModules.forEach(module => {
+                hhPlusPlusConfig.registerModule(module)
+            })
+            hhPlusPlusConfig.loadConfig()
+            hhPlusPlusConfig.runModules()
+        }
 
-            if (window.hhPlusPlusConfig) {
-                runScript()
-            } else {
-                $(document).on('hh++-bdsm:loaded', runScript)
-            }
-        } else if (!(['/integrations/', '/index.php'].some(path => path === location.pathname) && location.hostname.includes('nutaku'))) {
-            console.log('WARNING: HH++ BDSM not found. Ending the script here')
+        if (window.hhPlusPlusConfig) {
+            runScript()
+        } else {
+            $(document).one('hh++-bdsm:loaded', runScript)
         }
     }, 1)
 })();

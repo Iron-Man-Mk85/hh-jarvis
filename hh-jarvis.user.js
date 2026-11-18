@@ -1,6 +1,6 @@
 // ==UserScript==
 // @name           HH J.A.R.V.I.S.
-// @version        0.5.0
+// @version        0.6.0
 // @description    QoL for KK games
 // @author         Iron Man
 // @match          https://*.pornstarharem.com/*
@@ -19,6 +19,7 @@
 /* =================
 *  =   Changelog   =
 *  =================
+* 0.6.0 - Add a contest start preference, continuous marking, and compact settings with a version label
 * 0.5.0 - Add league and contest player marking with custom colors, compact settings, and limit Top 20 to promotable leagues
 * 0.4.2 - Fix module startup, league controls, and raid exports; add the Top 20 league target
 * 0.4.1 - Fix Love Raids shadows replacement
@@ -53,11 +54,24 @@
         .hh-plus-plus-config-panel .group-panel[rel="JARVIS"] .panel-contents {
             align-content: start;
             align-items: start;
-            grid-auto-rows: max-content;
             overflow-y: auto;
+            overscroll-behavior: contain;
         }
         .hh-plus-plus-config-panel .group-panel[rel="JARVIS"] .config-setting.has-subsettings {
             grid-row-end: auto;
+        }
+        .hh-plus-plus-config-panel .group-panel[rel="JARVIS"] .jarvis-packed-settings {
+            grid-auto-flow: row dense;
+            grid-auto-rows: 1px;
+            row-gap: 0;
+        }
+        .hh-plus-plus-config-panel .group-panel[rel="JARVIS"] .jarvis-packed-settings .config-setting {
+            grid-row-end: span var(--jarvis-setting-rows, 1);
+        }
+        .hh-plus-plus-config-panel .jarvis-version {
+            font-size: .66em;
+            font-weight: normal;
+            opacity: .8;
         }
         .hh-plus-plus-config-panel .group-panel[rel="JARVIS"] .jarvis-mark-color input {
             width: 30px;
@@ -65,21 +79,60 @@
             flex: none;
             padding: 0;
         }
-        .jarvis-mark-toolbar {
+        .jarvis-mark-toolbar,
+        .jarvis-contest-tools {
             display: inline-flex;
             align-items: center;
             gap: 6px;
-            margin: 2px 6px;
-            font-size: 12px;
         }
-        .jarvis-mark-toolbar select {
-            appearance: auto;
-            font: inherit;
-            color: #fff;
+        .jarvis-mark-toolbar {
+            margin-inline-start: .3rem;
+        }
+        .jarvis-contest-tools {
+            position: absolute;
+            inset-block-start: 0;
+            inset-inline-end: .4rem;
+            transform: translateY(-100%);
+            z-index: 2;
+        }
+        .jarvis-tool-anchor {
+            position: relative;
+        }
+        .jarvis-mark-overlay {
+            position: absolute;
+            inset-block-start: 0;
+            inset-inline-end: .4rem;
+            z-index: 2;
+        }
+        .jarvis-quiet-select {
+            appearance: none;
+            font-family: inherit;
+            font-size: 12px;
+            line-height: 1.25;
+            color: inherit;
+            background: transparent;
+            border: 0;
+            box-shadow: none;
+            padding: 2px 3px;
+            cursor: pointer;
+            text-decoration: underline dotted;
+            text-underline-offset: .18em;
+            opacity: .75;
+        }
+        .jarvis-quiet-select:hover,
+        .jarvis-quiet-select:focus-visible,
+        .jarvis-mark-toolbar[data-mode] select {
+            opacity: 1;
+        }
+        .jarvis-quiet-select option {
             background: #282b32;
-            border: 1px solid #777;
-            border-radius: 4px;
-            padding: 1px 4px;
+            color: #fff;
+        }
+        .jarvis-contest-start {
+            max-inline-size: 9rem;
+        }
+        #contests .left_part .scroll_area.jarvis-contest-instant {
+            scroll-behavior: auto !important;
         }
         [data-jarvis-mark="friend"] {
             color: var(--jarvis-friend-color) !important;
@@ -108,6 +161,48 @@
     }
     function lsRm(key, ls_name = LS_CONFIG_NAME) {
         return localStorage.removeItem(`${ls_name}${key}`)
+    }
+
+    function packSettings() {
+        if (currentPage !== '/home.html') return;
+
+        const selector = '.hh-plus-plus-config-panel .group-panel[rel="JARVIS"] .panel-contents';
+        window.HHPlusPlus.Helpers.doWhenSelectorAvailable(selector, () => {
+            const panel = document.querySelector(selector);
+            panel.addEventListener('wheel', event => event.stopPropagation(), { passive: true });
+
+            const cards = panel.querySelectorAll('.config-setting');
+            const pack = () => {
+                if (!panel.offsetWidth) return;
+
+                for (const card of cards) {
+                    card.style.setProperty('--jarvis-setting-rows', card.offsetHeight + 10);
+                }
+                panel.classList.add('jarvis-packed-settings');
+            };
+            const groupObserver = new MutationObserver(pack);
+            groupObserver.observe(panel.parentElement, { attributeFilter: ['class'] });
+            if (typeof ResizeObserver !== 'undefined') {
+                const sizeObserver = new ResizeObserver(pack);
+                cards.forEach(card => sizeObserver.observe(card));
+            }
+            pack();
+        });
+    }
+
+    function getContestTools() {
+        const host = document.querySelector('#contests .left_part');
+        if (!host) return null;
+
+        let tools = host.querySelector(':scope > .jarvis-contest-tools');
+        if (!tools) {
+            if (getComputedStyle(host).position === 'static') host.classList.add('jarvis-tool-anchor');
+            tools = document.createElement('div');
+            tools.className = 'jarvis-contest-tools';
+            tools.addEventListener('click', event => event.stopPropagation());
+            host.appendChild(tools);
+        }
+        return tools;
     }
 
     async function getGirlDictionary() {
@@ -227,30 +322,28 @@
             toolbar.className = 'jarvis-mark-toolbar';
 
             const select = document.createElement('select');
+            select.className = 'jarvis-quiet-select';
             select.setAttribute('aria-label', 'Mark players');
-            for (const [value, text] of [['', 'Mark players'], ['friend', 'Mark as friend'], ['foe', 'Mark as foe'], ['clear', 'Clear a mark']]) {
+            select.title = 'Choose Friend, Foe, or Clear, then select player names. Choose Mark or press Esc to stop.';
+            for (const [value, text] of [['', 'Mark'], ['friend', 'Friend'], ['foe', 'Foe'], ['clear', 'Clear']]) {
                 const option = document.createElement('option');
                 option.value = value;
                 option.textContent = text;
                 select.appendChild(option);
             }
-            const hint = document.createElement('span');
-            hint.textContent = 'Select a name';
-            hint.setAttribute('aria-live', 'polite');
-            hint.hidden = true;
             select.addEventListener('change', () => this.setMode(select.value));
             toolbar.addEventListener('click', event => event.stopPropagation());
-            toolbar.append(select, hint);
+            toolbar.appendChild(select);
 
             this.select = select;
-            this.hint = hint;
             return toolbar;
         }
 
         setMode(mode) {
             this.mode = mode;
             this.select.value = mode;
-            this.hint.hidden = !mode;
+            if (mode) this.toolbar.dataset.mode = mode;
+            else delete this.toolbar.dataset.mode;
             this.root?.classList.toggle('jarvis-mark-mode', !!mode);
 
             for (const name of this.names.keys()) {
@@ -322,13 +415,13 @@
 
             this.names = names;
             if (!root) return;
-            const leagueHeader = this.inLeague && document.querySelector('.league_tiers');
-            if (leagueHeader) {
-                if (this.toolbar.parentElement !== leagueHeader) leagueHeader.appendChild(this.toolbar);
-            } else if (this.inLeague) {
-                if (this.toolbar.nextElementSibling !== root) root.before(this.toolbar);
-            } else if (this.toolbar.parentElement !== root) {
-                root.prepend(this.toolbar);
+            const host = this.inLeague
+                ? root.querySelector('.head-row [column="nickname"]') || document.querySelector('.league_tiers') || root
+                : getContestTools();
+            if (host && this.toolbar.parentElement !== host) {
+                if (host === root && getComputedStyle(root).position === 'static') root.classList.add('jarvis-tool-anchor');
+                this.toolbar.classList.toggle('jarvis-mark-overlay', host === root);
+                host.appendChild(this.toolbar);
             }
 
             const marks = this.readMarks();
@@ -371,9 +464,7 @@
             else marks[id] = this.mode;
 
             this.saveSetting('PlayerMarks', marks);
-            this.setMode('');
             this.refresh();
-            if (keyboard) this.select.focus();
         }
 
         run({ league, contests }) {
@@ -411,6 +502,167 @@
                 attributeFilter: ['sorting_id', 'id-member', 'id_contest']
             });
 
+            this.refresh();
+            this.hasRun = true
+        }
+    }
+
+    class ContestStart extends HHModule {
+        constructor() {
+            const baseKey = 'contestStart'
+            const configSchema = {
+                baseKey,
+                default: true,
+                label: 'Open a preferred contest without the scroll animation'
+            }
+            super({ name: baseKey, configSchema });
+        }
+
+        shouldRun() {
+            return currentPage === '/activities.html';
+        }
+
+        getContests(list) {
+            const active = new Map(Object.values(window.contests?.active || {})
+                .filter(contest => contest?.id_contest != null)
+                .map(contest => [String(contest.id_contest), contest]));
+
+            return Array.from(list.querySelectorAll('.contest[id_contest]')).flatMap(card => {
+                const id = card.getAttribute('id_contest');
+                const contest = active.get(id);
+                const header = card.querySelector('.contest_header');
+                if (!contest || !header || card.matches('.ended') || header.matches('.ended')) return [];
+
+                const name = header.querySelector('.contest_name, h3, h4, h5')?.textContent || contest.name || contest.title;
+                return [{
+                    id, card, header,
+                    daily: contest.category_type === 'daily',
+                    label: String(name || (contest.category_type === 'daily' ? 'Daily contest' : 'Contest')).trim()
+                }];
+            });
+        }
+
+        getTarget(contests) {
+            const preferred = contests.find(contest => contest.id === this.preference);
+            if (preferred) return preferred;
+
+            const active = Object.values(window.contests?.active || {});
+            if (this.preference && active.some(contest => String(contest?.id_contest) === this.preference)) return;
+
+            const daily = contests.filter(contest => contest.daily).sort((a, b) => Number(b.id) - Number(a.id))[0];
+            if (daily) return daily;
+            if (!active.some(contest => contest?.category_type === 'daily')) return contests[0];
+        }
+
+        updateOptions(contests) {
+            const signature = JSON.stringify(contests.map(({ id, label }) => [id, label]));
+            if (signature === this.optionSignature) return;
+
+            this.optionSignature = signature;
+            this.select.replaceChildren(new Option('Open Daily', ''));
+            for (const { id, label } of contests) {
+                const duplicate = contests.some(other => other.id !== id && other.label === label);
+                this.select.add(new Option(duplicate ? `${label} #${id}` : label, id));
+            }
+            if (contests.some(contest => contest.id === this.preference)) this.select.value = this.preference;
+        }
+
+        openContest(list, { id, card, header }) {
+            this.stopJump?.();
+            list.classList.add('jarvis-contest-instant');
+
+            const jump = () => {
+                if (!list.isConnected || !list.contains(card)) return;
+
+                // The game may already have queued a scroll on the left-hand list.
+                $(list).stop(true, false);
+                const bounds = list.getBoundingClientRect();
+                const scale = bounds.height / list.offsetHeight;
+                if (!scale) return;
+
+                const offset = (card.getBoundingClientRect().top - bounds.top) / scale - list.clientTop;
+                const top = Math.max(0, Math.min(list.scrollHeight - list.clientHeight, list.scrollTop + offset));
+                if (Math.abs(top - list.scrollTop) >= 1) list.scrollTop = top;
+            };
+
+            const stop = () => {
+                list.removeEventListener('scroll', jump);
+                list.removeEventListener('pointerdown', stop, true);
+                list.removeEventListener('wheel', stop, true);
+                list.removeEventListener('keydown', stop, true);
+                list.classList.remove('jarvis-contest-instant');
+                clearTimeout(timer);
+                this.stopJump = null;
+            };
+            const timer = setTimeout(stop, 1500);
+            this.stopJump = stop;
+            list.addEventListener('scroll', jump, { passive: true });
+            list.addEventListener('pointerdown', stop, true);
+            list.addEventListener('wheel', stop, { passive: true, capture: true });
+            list.addEventListener('keydown', stop, true);
+
+            jump();
+            const alreadyOpen = Array.from(document.querySelectorAll('#contests .right_part .ranking[id_contest]'))
+                .some(panel => panel.getAttribute('id_contest') === id && panel.getClientRects().length &&
+                    getComputedStyle(panel).visibility === 'visible');
+            if (!alreadyOpen) header.click();
+            jump();
+        }
+
+        refresh() {
+            const list = document.querySelector('#contests .left_part .scroll_area');
+            this.list = list;
+            if (!list || !list.getClientRects().length || getComputedStyle(list).visibility !== 'visible') return;
+
+            const contests = this.getContests(list);
+            if (!contests.length) {
+                this.select.remove();
+                return;
+            }
+            const tools = getContestTools();
+            if (tools && this.select.parentElement !== tools) tools.prepend(this.select);
+            this.updateOptions(contests);
+
+            if (this.restoredList === list) return;
+            const target = this.getTarget(contests);
+            if (!target) return;
+            this.restoredList = list;
+            this.openContest(list, target);
+        }
+
+        run() {
+            if (this.hasRun || !this.shouldRun()) {return}
+
+            try {
+                this.preference = lsGet('ContestStartId') || '';
+            } catch {
+                this.preference = '';
+            }
+            this.select = document.createElement('select');
+            this.select.className = 'jarvis-quiet-select jarvis-contest-start';
+            this.select.setAttribute('aria-label', 'Contest to open');
+            this.select.title = 'Choose which active contest opens when you return. Open Daily resets the preference.';
+            this.select.addEventListener('change', () => {
+                this.preference = this.select.value;
+                try {
+                    if (this.preference) lsSet('ContestStartId', this.preference);
+                    else lsRm('ContestStartId');
+                } catch (err) {
+                    console.warn('Jarvis could not save the contest preference:', err);
+                }
+                if (!this.list) return;
+                const target = this.getTarget(this.getContests(this.list));
+                if (target) this.openContest(this.list, target);
+            });
+
+            const observer = new MutationObserver(mutations => {
+                const list = document.querySelector('#contests .left_part .scroll_area');
+                if (list !== this.list || (list && mutations.some(({ target }) => list.contains(target) || target.contains(list)))) {
+                    this.refresh();
+                }
+            });
+            observer.observe(document.body, { childList: true, subtree: true, attributes: true,
+                attributeFilter: ['class', 'style', 'hidden', 'id_contest'] });
             this.refresh();
             this.hasRun = true
         }
@@ -1012,6 +1264,7 @@
 
     const allModules = [
         new FriendAndFoes(),
+        new ContestStart(),
         new LeagueTop20(),
         new RemovePassLock(),
         new LoveRaidsAddon(),
@@ -1025,13 +1278,14 @@
 
             hhPlusPlusConfig.registerGroup({
                 key: 'JARVIS',
-                name: 'HH Jarvis'
+                name: 'HH Jarvis <small class="jarvis-version">v0.6.0</small>'
             })
             allModules.forEach(module => {
                 hhPlusPlusConfig.registerModule(module)
             })
             hhPlusPlusConfig.loadConfig()
             hhPlusPlusConfig.runModules()
+            packSettings();
         }
 
         if (window.hhPlusPlusConfig) {

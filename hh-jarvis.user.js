@@ -1,6 +1,6 @@
 // ==UserScript==
 // @name           HH J.A.R.V.I.S. (Testing)
-// @version        0.6.3
+// @version        0.6.4
 // @description    QoL for KK games
 // @author         Iron Man
 // @match          https://*.pornstarharem.com/*
@@ -19,6 +19,7 @@
 /* =================
 *  =   Changelog   =
 *  =================
+* 0.6.4 - Prevent pinned contest startup scrolling, keep native startup without a pin, and clear finished pins
 * 0.6.3 - Stop both contest startup scrolls, isolate the selected leaderboard, and restore pinned contests at Top or My rank
 * 0.6.2 - Pin contests on their cards, hide the startup scroll, and use right-click marking with isolated settings scrolling
 * 0.6.1 - Read native Manga RPG contest titles and recognize active cards when contest data is unavailable
@@ -42,7 +43,9 @@
     if (location.pathname !== '/activities.html' || new URLSearchParams(location.search).get('tab') !== 'contests') return;
 
     try {
-        if (JSON.parse(localStorage.getItem('HHPlusPlusConfig'))?.JARVIS_contestStart === false) return;
+        const pin = JSON.parse(localStorage.getItem('HHStarkContestStartId'));
+        if ((typeof pin !== 'string' && typeof pin !== 'number') || !pin ||
+            JSON.parse(localStorage.getItem('HHPlusPlusConfig'))?.JARVIS_contestStart === false) return;
     } catch {
         return;
     }
@@ -54,8 +57,8 @@
         #contests .left_part .scroll_area,
         #contests .right_part {
             opacity: 0 !important;
+            transition: none !important;
             pointer-events: none;
-            scroll-behavior: auto !important;
         }
     `;
     const observer = new MutationObserver(() => {
@@ -197,6 +200,12 @@
         #contests .left_part .scroll_area.jarvis-contest-instant,
         #contests .right_part.jarvis-contest-instant .lead_table_view {
             scroll-behavior: auto !important;
+            overflow-anchor: none !important;
+        }
+        #contests .jarvis-contest-loading {
+            opacity: 0 !important;
+            transition: none !important;
+            pointer-events: none;
         }
         #contests .right_part .ranking[id_contest].jarvis-contest-other {
             display: none !important;
@@ -599,7 +608,7 @@
             return currentPage === '/activities.html';
         }
 
-        getContests(list) {
+        getContests(list, finished) {
             const active = new Map(Object.values(window.contests?.active || {})
                 .filter(contest => contest?.id_contest != null)
                 .map(contest => [String(contest.id_contest), contest]));
@@ -608,7 +617,7 @@
                 const id = card.getAttribute('id_contest');
                 const contest = active.get(id);
                 const header = card.querySelector('.contest_header');
-                if (!header || card.matches('.ended') || header.matches('.ended')) return [];
+                if (!header || finished.has(id)) return [];
                 if (!contest && !header.matches('.in_progress')) return [];
 
                 const title = header.querySelector('.contest_title, .contest_name, h3, h4, h5');
@@ -617,23 +626,29 @@
                     .map(node => node.textContent).join('').trim();
                 return [{
                     id, card, header, title,
-                    daily: contest?.category_type === 'daily',
                     label: String(name || contest?.name || contest?.title ||
                         (contest?.category_type === 'daily' ? 'Daily contest' : 'Contest')).trim()
                 }];
             });
         }
 
-        getTarget(contests) {
-            const preferred = contests.find(contest => contest.id === this.preference);
-            if (preferred) return preferred;
+        clearExpiredPin(list, contests, finished) {
+            if (!this.preference || contests.some(({ id }) => id === this.preference)) return;
 
-            const active = Object.values(window.contests?.active || {});
-            if (this.preference && active.some(contest => String(contest?.id_contest) === this.preference)) return;
+            const active = window.contests?.active;
+            const missing = document.readyState === 'complete' && list.querySelector('.contest_header') &&
+                active && !Object.values(active).some(contest => String(contest?.id_contest) === this.preference);
+            if (!finished.has(this.preference) && !missing) return;
 
-            const daily = contests.filter(contest => contest.daily).sort((a, b) => Number(b.id) - Number(a.id))[0];
-            if (daily) return daily;
-            if (!active.some(contest => contest?.category_type === 'daily')) return contests[0];
+            const expiredId = this.preference;
+            this.preference = '';
+            this.startId = '';
+            this.stopJump?.();
+            try {
+                if (String(lsGet('ContestStartId')) === expiredId) lsRm('ContestStartId');
+            } catch (err) {
+                console.warn('Jarvis could not clear the expired contest preference:', err);
+            }
         }
 
         updatePins(list, contests) {
@@ -660,6 +675,8 @@
                             if (next) lsSet('ContestStartId', next);
                             else lsRm('ContestStartId');
                             this.preference = next;
+                            this.startId = '';
+                            this.stopJump?.();
                         } catch (err) {
                             console.warn('Jarvis could not save the contest preference:', err);
                         }
@@ -670,7 +687,7 @@
                 const pinned = this.preference === id;
                 pin.setAttribute('aria-pressed', String(pinned));
                 pin.setAttribute('aria-label', pinned ? `Unpin ${label}` : `Pin ${label} to open on reload`);
-                pin.title = pinned ? 'Pinned. Click to return to the Daily default.' : 'Open this contest when the page reloads';
+                pin.title = pinned ? 'Pinned. Click to restore the game default.' : 'Open this contest when the page reloads';
 
                 let position = host.querySelector(':scope > .jarvis-contest-rank-start');
                 if (!pinned) {
@@ -713,8 +730,12 @@
         }
 
         showLeaderboard(right, contestId) {
+            if (!contestId) {
+                right.querySelectorAll('.jarvis-contest-other').forEach(panel => panel.classList.remove('jarvis-contest-other'));
+                return;
+            }
             for (const panel of right.querySelectorAll('.ranking[id_contest]')) {
-                panel.classList.toggle('jarvis-contest-other', !!contestId && panel.getAttribute('id_contest') !== contestId);
+                panel.classList.toggle('jarvis-contest-other', panel.getAttribute('id_contest') !== contestId);
             }
         }
 
@@ -729,8 +750,31 @@
                 .find(row => row.getAttribute('sorting_id') === String(heroId));
         }
 
-        jumpTo(scroller, target, center = false) {
+        lockScroll(scroller) {
             $(scroller).stop(true, false);
+            // The game can start another jQuery tween after load. Block its writes on this pane only.
+            const ignoreScroll = () => {};
+            const { get } = Object.getOwnPropertyDescriptor(Element.prototype, 'scrollTop');
+            const descriptors = Object.entries({
+                scrollTop: { get, set: ignoreScroll },
+                scroll: { value: ignoreScroll, writable: true },
+                scrollTo: { value: ignoreScroll, writable: true },
+                scrollBy: { value: ignoreScroll, writable: true }
+            }).filter(([key]) => !Object.hasOwn(scroller, key));
+            for (const [key, descriptor] of descriptors) {
+                Object.defineProperty(scroller, key, { ...descriptor, configurable: true });
+            }
+
+            return () => {
+                $(scroller).stop(true, false);
+                for (const [key, descriptor] of descriptors) {
+                    const current = Object.getOwnPropertyDescriptor(scroller, key);
+                    if (current && current.value === descriptor.value && current.set === descriptor.set) delete scroller[key];
+                }
+            };
+        }
+
+        jumpTo(scroller, target, center = false) {
             let top = 0;
             if (target) {
                 const bounds = scroller.getBoundingClientRect();
@@ -742,86 +786,102 @@
                 if (center) top -= (scroller.clientHeight - item.height / scale) / 2;
             }
             top = Math.max(0, Math.min(scroller.scrollHeight - scroller.clientHeight, top));
-            if (Math.abs(top - scroller.scrollTop) >= 1) scroller.scrollTop = top;
+            if (Math.abs(top - scroller.scrollTop) >= 1) {
+                Element.prototype.scrollTo.call(scroller, { top, behavior: 'instant' });
+            }
         }
 
         openContest(list, right, { id, card, header, title }) {
-            this.stopJump?.(false);
-            list.classList.add('jarvis-contest-instant');
-            right.classList.add('jarvis-contest-instant');
-            const placeAtOwnRank = this.preference === id && this.rankStart === 'mine';
+            for (const pane of [list, right]) pane.classList.add('jarvis-contest-instant', 'jarvis-contest-loading');
+            const placeAtOwnRank = this.rankStart === 'mine';
+            const releaseList = this.lockScroll(list);
+            let board;
+            let releaseBoard;
+            let positioned = false;
             let lastAttempt;
-            let attempts = 0;
 
-            const jump = () => {
-                if (!list.isConnected || !right.isConnected || !list.contains(card)) return;
-
-                const selected = this.getSelectedContestId(list, right);
-                if (selected !== id && selected !== lastAttempt && attempts < 3) {
-                    lastAttempt = selected;
-                    attempts++;
-                    this.showLeaderboard(right, null);
-                    (title || header).click();
-                } else if (selected === id) {
-                    lastAttempt = undefined;
-                }
-
-                this.jumpTo(list, card);
-                this.showLeaderboard(right, id);
-                const panel = Array.from(right.querySelectorAll('.ranking[id_contest]'))
-                    .find(panel => panel.getAttribute('id_contest') === id);
-                const board = panel?.querySelector('.lead_table_view');
-                if (!board?.clientHeight || this.getSelectedContestId(list, right) !== id) return;
-
-                this.jumpTo(board, placeAtOwnRank ? this.getOwnRow(board) : null, placeAtOwnRank);
+            const getBoard = () => Array.from(right.querySelectorAll('.ranking[id_contest]'))
+                .find(panel => panel.getAttribute('id_contest') === id)?.querySelector('.lead_table_view');
+            const updateBoard = () => {
+                const next = getBoard();
+                if (board === next) return;
+                releaseBoard?.();
+                board = next;
+                releaseBoard = board && this.lockScroll(board);
+            };
+            const reveal = () => {
+                for (const pane of [list, right]) pane.classList.remove('jarvis-contest-loading');
                 document.getElementById('jarvis-contest-startup')?.remove();
             };
+            const restore = () => {
+                if (!list.isConnected || !right.isConnected || !list.contains(card)) return;
 
-            const onScroll = event => {
-                if (event.target === list || event.target.matches?.('.lead_table_view')) jump();
+                updateBoard();
+                const selected = this.getSelectedContestId(list, right);
+                if (selected !== id && selected !== lastAttempt) {
+                    lastAttempt = selected;
+                    this.showLeaderboard(right, null);
+                    (title || header).click();
+                    updateBoard();
+                }
+                if (!board?.clientHeight || this.getSelectedContestId(list, right) !== id ||
+                    (placeAtOwnRank && !board.querySelector('.leadTable'))) return;
+                lastAttempt = undefined;
+                this.showLeaderboard(right, id);
+                this.jumpTo(list, card);
+                this.jumpTo(board, placeAtOwnRank ? this.getOwnRow(board) : null, placeAtOwnRank);
+                if (!positioned) {
+                    positioned = true;
+                    clearTimeout(timer);
+                    reveal();
+                }
             };
-            const stopOnClick = event => {
+
+            // Correct browser-driven moves, such as scrollIntoView on a leaderboard row, before paint.
+            const onScroll = event => {
+                if (event.target === list || event.target === board) restore();
+            };
+            const inputEvents = ['pointerdown', 'touchstart', 'wheel', 'click'];
+            const onInput = event => {
                 if (event.isTrusted) stop();
             };
             const stopOnKey = event => {
-                if (['ArrowUp', 'ArrowDown', 'PageUp', 'PageDown', 'Home', 'End', ' '].includes(event.key)) stop();
+                if (event.isTrusted && ['Tab', 'ArrowUp', 'ArrowDown', 'PageUp', 'PageDown', 'Home', 'End', 'Enter', ' '].includes(event.key)) stop();
             };
             const afterLoad = () => {
-                clearTimeout(timer);
-                timer = setTimeout(stop, 3000);
                 lastAttempt = undefined;
-                jump();
+                restore();
             };
-            const stop = (reveal = true) => {
+            const stop = (finish = true) => {
+                releaseList();
+                releaseBoard?.();
                 for (const pane of [list, right]) {
                     pane.removeEventListener('scroll', onScroll, true);
-                    pane.removeEventListener('pointerdown', stop, true);
-                    pane.removeEventListener('wheel', stop, true);
-                    pane.removeEventListener('click', stopOnClick, true);
-                    pane.classList.remove('jarvis-contest-instant');
+                    pane.classList.remove('jarvis-contest-instant', 'jarvis-contest-loading');
                 }
+                for (const event of inputEvents) document.removeEventListener(event, onInput, true);
                 document.removeEventListener('keydown', stopOnKey, true);
                 window.removeEventListener('load', afterLoad);
                 clearTimeout(timer);
                 this.stopJump = null;
                 this.reposition = null;
                 this.restoringCard = null;
-                this.showLeaderboard(right, this.getSelectedContestId(list, right));
-                if (reveal !== false) document.getElementById('jarvis-contest-startup')?.remove();
+                if (finish) {
+                    this.startId = '';
+                    reveal();
+                }
             };
-            let timer = setTimeout(stop, document.readyState === 'complete' ? 3000 : 6000);
+            const timer = setTimeout(stop, 4000);
             this.stopJump = stop;
-            this.reposition = jump;
+            this.reposition = restore;
             this.restoringCard = card;
             for (const pane of [list, right]) {
                 pane.addEventListener('scroll', onScroll, { passive: true, capture: true });
-                pane.addEventListener('pointerdown', stop, true);
-                pane.addEventListener('wheel', stop, { passive: true, capture: true });
-                pane.addEventListener('click', stopOnClick, true);
             }
+            for (const event of inputEvents) document.addEventListener(event, onInput, { passive: true, capture: true });
             document.addEventListener('keydown', stopOnKey, true);
             if (document.readyState !== 'complete') window.addEventListener('load', afterLoad, { once: true });
-            jump();
+            restore();
         }
 
         refresh() {
@@ -829,37 +889,46 @@
             const right = document.querySelector('#contests .right_part');
             if (this.stopJump && (this.list !== list || this.right !== right || !list?.contains(this.restoringCard))) {
                 this.stopJump(false);
-                this.restoredList = null;
+                if (this.right) this.showLeaderboard(this.right, null);
             }
             this.list = list;
             this.right = right;
             if (!list || !right || !list.getClientRects().length || getComputedStyle(list).visibility !== 'visible') return;
 
-            const contests = this.getContests(list);
+            const finished = new Set(Object.values(window.contests?.finished || {})
+                .filter(contest => contest?.id_contest != null).map(contest => String(contest.id_contest)));
+            for (const ended of list.querySelectorAll('.contest.ended, .contest_header.ended')) {
+                const id = ended.closest('.contest[id_contest]')?.getAttribute('id_contest');
+                if (id) finished.add(id);
+            }
+            const contests = this.getContests(list, finished);
+            this.clearExpiredPin(list, contests, finished);
             this.updatePins(list, contests);
 
+            if (!this.preference) {
+                this.showLeaderboard(right, null);
+                document.getElementById('jarvis-contest-startup')?.remove();
+                return;
+            }
             if (this.reposition) {
                 this.reposition();
                 return;
             }
-            if (this.restoredList === list) {
-                this.showLeaderboard(right, this.getSelectedContestId(list, right));
-                return;
-            }
-            const target = this.getTarget(contests);
-            if (!target) return;
-            this.restoredList = list;
-            this.openContest(list, right, target);
+            const target = contests.find(contest => contest.id === this.startId);
+            if (target) this.openContest(list, right, target);
+            else if (!this.startId) this.showLeaderboard(right, this.getSelectedContestId(list, right));
         }
 
         run() {
             if (this.hasRun || !this.shouldRun()) {return}
 
             try {
-                this.preference = lsGet('ContestStartId') || '';
+                const pin = lsGet('ContestStartId');
+                this.preference = ((typeof pin === 'string' || typeof pin === 'number') && pin) ? String(pin) : '';
             } catch {
                 this.preference = '';
             }
+            this.startId = this.preference;
             try {
                 this.rankStart = lsGet('ContestRankStart') === 'mine' ? 'mine' : 'top';
             } catch {
@@ -876,6 +945,11 @@
             });
             observer.observe(document.body, { childList: true, subtree: true, attributes: true,
                 attributeFilter: ['class', 'style', 'hidden', 'id_contest'] });
+            if (document.readyState !== 'complete') window.addEventListener('load', () => this.refresh(), { once: true });
+            document.body.addEventListener('click', event => {
+                if (event.isTrusted && this.preference && this.right && this.list?.contains(event.target) &&
+                    event.target.closest('.contest_header')) this.showLeaderboard(this.right, null);
+            }, true);
             this.refresh();
             this.hasRun = true
         }
@@ -1491,7 +1565,7 @@
 
             hhPlusPlusConfig.registerGroup({
                 key: 'JARVIS',
-                name: 'HH Jarvis <small class="jarvis-version">v0.6.3 testing</small>'
+                name: 'HH Jarvis <small class="jarvis-version">v0.6.4 testing</small>'
             })
             allModules.forEach(module => {
                 hhPlusPlusConfig.registerModule(module)

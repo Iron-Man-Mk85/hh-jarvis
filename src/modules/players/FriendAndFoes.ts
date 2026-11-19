@@ -7,6 +7,7 @@ import { LS_CONFIG_NAME, lsGet, lsSet } from '../../storage';
 
 type Mark = 'friend' | 'foe';
 type MarkMode = Mark | 'clear' | '';
+const DEFAULT_COLORS: Record<Mark, string> = { friend: '#48a9ff', foe: '#ff6173' };
 
 export class FriendAndFoes extends HHModule {
     private names = new Map<HTMLElement, string>();
@@ -67,8 +68,8 @@ export class FriendAndFoes extends HHModule {
     readColors(): Record<Mark, string> {
         const saved = this.readSetting('PlayerMarkColors') as Partial<Record<Mark, unknown>> | null;
         return {
-            friend: typeof saved?.friend === 'string' && /^#[\da-f]{6}$/i.test(saved.friend) ? saved.friend : '#72caff',
-            foe: typeof saved?.foe === 'string' && /^#[\da-f]{6}$/i.test(saved.foe) ? saved.foe : '#ff8383'
+            friend: typeof saved?.friend === 'string' && /^#[\da-f]{6}$/i.test(saved.friend) ? saved.friend : DEFAULT_COLORS.friend,
+            foe: typeof saved?.foe === 'string' && /^#[\da-f]{6}$/i.test(saved.foe) ? saved.foe : DEFAULT_COLORS.foe
         };
     }
 
@@ -88,6 +89,7 @@ export class FriendAndFoes extends HHModule {
             const settings = document.querySelector(selector);
             if (!settings || settings.querySelector('.jarvis-mark-color')) return;
 
+            const inputs = new Map<Mark, HTMLInputElement>();
             for (const [mark, text] of [['friend', 'Friend name color'], ['foe', 'Foe name color']] as const) {
                 const label = document.createElement('label');
                 label.className = 'jarvis-mark-color';
@@ -96,6 +98,7 @@ export class FriendAndFoes extends HHModule {
                 const input = document.createElement('input');
                 input.type = 'color';
                 input.value = this.readColors()[mark];
+                inputs.set(mark, input);
                 input.disabled = !settings.closest('.config-setting')?.classList.contains('enabled');
                 input.addEventListener('change', () => {
                     const colors = this.readColors();
@@ -104,6 +107,15 @@ export class FriendAndFoes extends HHModule {
                 label.append(title, input);
                 settings.appendChild(label);
             }
+            const reset = document.createElement('button');
+            reset.type = 'button';
+            reset.className = 'jarvis-setting-action';
+            reset.textContent = 'Reset colors';
+            reset.addEventListener('click', () => {
+                if (!this.saveSetting('PlayerMarkColors', {})) return;
+                for (const [mark, input] of inputs) input.value = DEFAULT_COLORS[mark];
+            });
+            settings.appendChild(reset);
         });
     }
 

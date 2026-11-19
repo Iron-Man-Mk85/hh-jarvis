@@ -139,8 +139,26 @@ select.jarvis-contest-rank-start {
 [data-jarvis-mark="foe"] {
     color: var(--jarvis-foe-color) !important;
 }
+[data-jarvis-mark],
+td[data-jarvis-mark] > a {
+    text-shadow: 1px 0 #111827, -1px 0 #111827, 0 1px #111827, 0 -1px #111827 !important;
+}
 td[data-jarvis-mark] > a {
     color: inherit !important;
+}
+.jarvis-setting-action {
+    appearance: none;
+    padding: .2em .5em;
+    border: 1px solid currentColor;
+    border-radius: .35em;
+    background: transparent;
+    color: inherit;
+    font: inherit;
+    cursor: pointer;
+}
+.jarvis-setting-action:hover,
+.jarvis-setting-action:focus-visible {
+    background: color-mix(in srgb, currentColor 16%, transparent);
 }
 .jarvis-mark-mode [data-jarvis-player] {
     cursor: crosshair;

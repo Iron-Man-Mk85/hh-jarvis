@@ -1,5 +1,6 @@
 # Changelog
 
+- **0.7.4** See your rank in each active contest beside the close button and switch leaderboards without moving the contest list.
 - **0.7.3**
   - See automatic changelogs only when loading the homepage after an update.
   - Enable Silent changelog to get a New button beside HH++ and open the notes when you’re ready.

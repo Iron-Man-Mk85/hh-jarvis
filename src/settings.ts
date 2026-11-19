@@ -5,8 +5,9 @@ import css from './settings.css';
 export function injectStyles() {
     const style = document.createElement('style');
     style.className = 'hh-jarvis-style';
+    const version = `v${USERSCRIPT_VERSION}${USERSCRIPT_CHANNEL === 'Dev' ? ' Dev' : ''}`;
     style.textContent = `${css}
-        .hh-plus-plus-config-panel { --jarvis-version: "v${USERSCRIPT_VERSION}"; }
+        .hh-plus-plus-config-panel { --jarvis-version: "${version}"; }
     `;
     document.head.appendChild(style);
 }

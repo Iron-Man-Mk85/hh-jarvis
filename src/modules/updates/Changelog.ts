@@ -1,6 +1,6 @@
 import releaseNotes from '../../../CHANGELOG.md';
 import { currentPage } from '../../game';
-import { HHModule } from '../../HHModule';
+import { HHModule, type ModuleSettings } from '../../HHModule';
 import { settingHelp } from '../../settingsHelp';
 import { lsGet, lsSet } from '../../storage';
 import { showChangelogPopup } from './changelogPopup';
@@ -50,13 +50,21 @@ export class Changelog extends HHModule {
     private viewedThisPage = false;
     private loadListener: AbortController | null = null;
     private settingsInstalled = false;
+    private silent = false;
+    private notice: HTMLButtonElement | null = null;
+    private waitingForNoticeAnchor = false;
 
     constructor() {
         const baseKey = 'changelog';
         super({ name: baseKey, configSchema: {
             baseKey,
             label: settingHelp('Update notices', 'Show the changelog the first time you load the homepage after an update. Use View changelog to open it whenever you like.'),
-            default: true
+            default: true,
+            subSettings: [{
+                key: 'silent',
+                label: settingHelp('Silent changelog', 'Put a New button beside HH++ on the homepage when an update is available. Click it to read the changelog.'),
+                default: false
+            }]
         } });
     }
 
@@ -81,14 +89,17 @@ export class Changelog extends HHModule {
         });
     }
 
-    run() {
+    run({ silent = false }: ModuleSettings) {
         if (this.hasRun || !this.shouldRun()) return;
         this.hasRun = true;
+        this.silent = silent;
         // HH++ can run the module again when the user turns notices on in the settings pane.
-        if (this.settingsInstalled) return;
+        const allowAutomatic = !this.settingsInstalled;
 
         const check = () => {
-            if (this.hasRun && !this.viewedThisPage && isNewer(latestVersion, readSeenVersion())) this.open('automatic');
+            if (!this.hasUnreadUpdate()) return;
+            if (this.silent) this.showNotice();
+            else if (allowAutomatic) this.open('automatic');
         };
         if (document.readyState === 'complete') check();
         else {
@@ -100,6 +111,47 @@ export class Changelog extends HHModule {
     tearDown() {
         this.loadListener?.abort();
         this.hasRun = false;
+        this.removeNotice();
+    }
+
+    updateSubSetting(key: string, value: boolean) {
+        if (key !== 'silent') return;
+        this.silent = value;
+        if (value) this.showNotice();
+        else this.removeNotice();
+    }
+
+    private hasUnreadUpdate() {
+        return this.hasRun && !this.viewedThisPage && isNewer(latestVersion, readSeenVersion());
+    }
+
+    private showNotice() {
+        if (!this.silent || !this.hasUnreadUpdate() || this.notice || this.waitingForNoticeAnchor) return;
+
+        const selector = '.hh-plus-plus-config-button';
+        this.waitingForNoticeAnchor = true;
+        window.HHPlusPlus.Helpers.doWhenSelectorAvailable(selector, () => {
+            this.waitingForNoticeAnchor = false;
+            const anchor = document.querySelector(selector);
+            if (!anchor || !this.silent || !this.hasUnreadUpdate()) return;
+
+            const button = document.createElement('button');
+            button.type = 'button';
+            button.className = 'jarvis-changelog-notice';
+            button.textContent = 'New';
+            button.title = 'Read the Jarvis changelog';
+            button.setAttribute('aria-label', 'New Jarvis update. Read the changelog.');
+            button.addEventListener('click', event => {
+                event.stopPropagation();
+                this.open('manual', button);
+            });
+            this.notice = anchor.appendChild(button);
+        });
+    }
+
+    private removeNotice() {
+        this.notice?.remove();
+        this.notice = null;
     }
 
     private disableNotices() {
@@ -121,6 +173,8 @@ export class Changelog extends HHModule {
         const checkbox = card?.querySelector<HTMLInputElement>(`input[name="${configKey}"]`);
         if (checkbox) checkbox.checked = false;
         card?.classList.remove('enabled');
+        const silent = card?.querySelector<HTMLInputElement>(`input[name="${configKey}_silent"]`);
+        if (silent) silent.disabled = true;
         this.tearDown();
     }
 
@@ -170,10 +224,10 @@ export class Changelog extends HHModule {
         showChangelogPopup({
             content,
             closeButton,
-            shouldOpen: () => this.pending === 'manual' ||
-                (this.hasRun && !this.viewedThisPage && isNewer(latestVersion, readSeenVersion())),
+            shouldOpen: () => this.pending === 'manual' || (!this.silent && this.hasUnreadUpdate()),
             onOpen: () => {
                 this.viewedThisPage = true;
+                this.removeNotice();
                 if (this.hasRun) footer.prepend(optOut);
                 try {
                     if (isNewer(latestVersion, readSeenVersion())) lsSet(seenKey, latestVersion);

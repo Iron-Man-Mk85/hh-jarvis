@@ -1,3 +1,4 @@
+import { settingHelp } from '../../settingsHelp';
 import { HHModule } from '../../HHModule';
 import { $, currentPage } from '../../game';
 import { lsGet, lsSet, lsRm } from '../../storage';
@@ -63,7 +64,7 @@ export class ContestStart extends HHModule {
         const configSchema = {
             baseKey,
             default: true,
-            label: 'Open a preferred contest without the scroll animation'
+            label: settingHelp("Contest startup", "Open the preferred contest and leaderboard position on load. A starred contest takes priority.")
         }
         super({ name: baseKey, configSchema });
     }

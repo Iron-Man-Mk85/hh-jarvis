@@ -1,3 +1,4 @@
+import { settingHelp } from '../../settingsHelp';
 import { HHModule } from '../../HHModule';
 import type { ModuleSettings } from '../../HHModule';
 import { currentPage } from '../../game';
@@ -11,14 +12,14 @@ export class RemovePassLock extends HHModule {
         const configSchema = {
             baseKey,
             default: false,
-            label: `Remove the lock icon in PoV/PoG Pass/Pass+ for easier reading`,
+            label: settingHelp("Pass lock icons", "Hide lock icons on reward passes so the rewards are easier to read."),
             subSettings: [{
                 key: 'pov',
-                label: `Remove in PoV`,
+                label: settingHelp("Path of Valor", "Hide lock icons on the Path of Valor passes."),
                 default: true
             }, {
                 key: 'pog',
-                label: `Remove in PoG`,
+                label: settingHelp("Path of Glory", "Hide lock icons on the Path of Glory passes."),
                 default: true
             }]
         }

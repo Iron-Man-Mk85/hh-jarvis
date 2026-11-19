@@ -1,3 +1,4 @@
+import { settingHelp } from '../../settingsHelp';
 import { HHModule } from '../../HHModule';
 import type { ModuleSettings } from '../../HHModule';
 import { currentPage } from '../../game';
@@ -21,14 +22,14 @@ export class FriendAndFoes extends HHModule {
         const configSchema = {
             baseKey,
             default: true,
-            label: '<span tooltip="Right-click a player name to mark it. Press Esc to stop marking.">Show Friends and Foes</span>',
+            label: settingHelp("Friends and foes", "Right-click a player name to mark a friend or foe. Click more names to keep marking and press Esc to exit."),
             subSettings: [{
                 key: 'league',
-                label: 'Show in League',
+                label: settingHelp("In leagues", "Show marks and allow marking in league tables."),
                 default: true
             }, {
                 key: 'contests',
-                label: 'Show in Contests',
+                label: settingHelp("In contests", "Show marks and allow marking on contest leaderboards."),
                 default: true
             }]
         }

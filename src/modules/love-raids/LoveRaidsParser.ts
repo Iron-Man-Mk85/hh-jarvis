@@ -1,3 +1,4 @@
+import { settingHelp } from '../../settingsHelp';
 import { HHModule } from '../../HHModule';
 import { currentPage } from '../../game';
 import type { GirlData, LoveRaid } from '../../game-types';
@@ -21,7 +22,7 @@ export class LoveRaidsParser extends HHModule {
         const configSchema = {
             baseKey,
             default: false,
-            label: `Add a parser in Love Raids page for GSheet management`
+            label: settingHelp("Love Raids export", "Add a button to copy new raids in a spreadsheet-ready format.")
         }
         super({name: baseKey, configSchema});
     }

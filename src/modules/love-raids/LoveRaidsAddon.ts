@@ -1,3 +1,4 @@
+import { settingHelp } from '../../settingsHelp';
 import { HHModule } from '../../HHModule';
 import type { ModuleSettings } from '../../HHModule';
 import { currentPage } from '../../game';
@@ -11,30 +12,30 @@ export class LoveRaidsAddon extends HHModule {
         const configSchema = {
             baseKey,
             default: false,
-            label: `Visual enhancements for Love Raids page`,
+            label: settingHelp("Love Raids display", "Customize names, icons, and poses on Love Raid cards."),
             subSettings: [{
                 key: 'raid_id',
-                label: `Show raid ID before raid name`,
+                label: settingHelp("Raid IDs", "Add the raid ID before its name."),
                 default: false
             }, {
                 key: 'names',
-                label: `Show names on mysterious girls`,
+                label: settingHelp("Hidden girl names", "Show the name on cards that use a mysterious girl label."),
                 default: true
             }, {
                 key: 'skin',
-                label: `Show 👙 icon if a girl has a skin (works on hidden ones)`,
+                label: settingHelp("Skin indicator", "Mark cards that include a girl with a skin."),
                 default: true
             }, {
                 key: 'color',
-                label: `Set the color based on rarity`,
+                label: settingHelp("Rarity colors", "Color the raid name based on the girl’s rarity."),
                 default: true
             }, {
                 key: 'fight_icon',
-                label: `Show better fight icon`,
+                label: settingHelp("Fight icon", "Use the clearer fight-energy icon."),
                 default: true
             }, {
                 key: 'shadows',
-                label: `Replace shadow poses`,
+                label: settingHelp("Unshadowed poses", "Show the normal artwork in place of shadow poses."),
                 default: true
             }]
         }

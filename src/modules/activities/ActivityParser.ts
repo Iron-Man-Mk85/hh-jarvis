@@ -1,3 +1,4 @@
+import { settingHelp } from '../../settingsHelp';
 import { HHModule } from '../../HHModule';
 import type { ModuleSettings } from '../../HHModule';
 import { currentPage } from '../../game';
@@ -8,10 +9,10 @@ export class ActivityParser extends HHModule {
         const configSchema = {
             baseKey,
             default: false,
-            label: `Helper for GSheet management`,
+            label: settingHelp("Mission copier", "Enable the copy tool for legendary mission details."),
             subSettings: [{
                 key: 'missionCopier',
-                label: `Legendary missions info copier`,
+                label: settingHelp("Legendary details", "Click a legendary mission’s title, description, or image to copy it."),
                 default: false
             }]
         }

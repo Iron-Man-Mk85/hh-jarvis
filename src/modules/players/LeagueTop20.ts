@@ -1,3 +1,4 @@
+import { settingHelp } from '../../settingsHelp';
 import { HHModule } from '../../HHModule';
 import { currentPage } from '../../game';
 
@@ -7,7 +8,7 @@ export class LeagueTop20 extends HHModule {
         const configSchema = {
             baseKey,
             default: true,
-            label: `Show the Top 20 promotion target in lower leagues`
+            label: settingHelp("Top 20 promotion target", "Show points needed for 20th place below the highest league tier.")
         }
         super({name: baseKey, configSchema});
     }

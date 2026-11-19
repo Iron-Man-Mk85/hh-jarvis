@@ -50,7 +50,7 @@ function runJarvis() {
 
             hhPlusPlusConfig.registerGroup({
                 key: 'JARVIS',
-                name: `HH Jarvis <small class="jarvis-version">v${USERSCRIPT_VERSION_LABEL}</small>`
+                name: `<span tooltip="By Iron Man · v${USERSCRIPT_VERSION_LABEL}">HH Jarvis</span>`
             })
             allModules.forEach(module => {
                 hhPlusPlusConfig.registerModule(module)

@@ -27,12 +27,25 @@ export function readContestDefaults() {
     return { kind, event, rank };
 }
 
-export function readPinnedRank(id: string, fallback: ContestRank): ContestRank {
+export function readContestRank(id: string, fallback: ContestRank): ContestRank {
+    const ranks = readContestSetting('ContestRanks');
+    if (ranks && typeof ranks === 'object' && Object.hasOwn(ranks, id)) {
+        const rank = (ranks as Record<string, unknown>)[id];
+        if (rank === 'mine' || rank === 'top') return rank;
+    }
+
+    // Older versions stored a rank override for a single contest.
     const saved = readContestSetting('ContestPinnedRank');
-    if (saved && typeof saved === 'object' && 'id' in saved && saved.id === id && 'rank' in saved) {
+    if (saved && typeof saved === 'object' && 'id' in saved && String(saved.id) === id && 'rank' in saved) {
         if (saved.rank === 'mine' || saved.rank === 'top') return saved.rank;
     }
     return fallback;
+}
+
+export function saveContestRank(id: string, rank: ContestRank) {
+    const saved = readContestSetting('ContestRanks');
+    const ranks = saved && typeof saved === 'object' && !Array.isArray(saved) ? saved : {};
+    lsSet('ContestRanks', { ...ranks, [id]: rank });
 }
 
 export function makeRankChoice(label: string, select: (rank: ContestRank) => void) {
@@ -103,7 +116,7 @@ export function installContestSettings() {
         const kindLabel = document.createElement('div');
         kindLabel.innerHTML = settingHelp('Preferred contest', 'Daily opens the first active daily contest. Event can prefer an event type or follow the game and open the bottom active contest.');
         const rankLabel = document.createElement('div');
-        rankLabel.innerHTML = settingHelp('Leaderboard start', 'Open at the top or at your rank. A starred contest can have its own position.');
+        rankLabel.innerHTML = settingHelp('Leaderboard start', 'Open at the top or at your rank. A position chosen on a contest card takes priority.');
         fieldset.append(kindLabel, kinds, eventLabel, events, rankLabel, ranks);
         const refreshEnabled = () => fieldset.disabled = !card.classList.contains('enabled');
         refreshEnabled();

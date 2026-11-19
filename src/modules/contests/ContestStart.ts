@@ -2,7 +2,7 @@ import { settingHelp } from '../../settingsHelp';
 import { HHModule, type ModuleSettings } from '../../HHModule';
 import { $, currentPage } from '../../game';
 import { lsGet, lsSet, lsRm } from '../../storage';
-import { makeRankChoice, readContestDefaults, readContestSetting, readPinnedRank, selectContestChoice, type ContestEvent, type ContestKind } from './contestPreferences';
+import { makeRankChoice, readContestDefaults, readContestRank, readContestSetting, saveContestRank, selectContestChoice, type ContestEvent, type ContestKind } from './contestPreferences';
 import { positionContestShortcuts, renderContestShortcuts } from './contestShortcuts';
 
 type ContestCategory = ContestKind | ContestEvent;
@@ -166,7 +166,7 @@ export class ContestStart extends HHModule {
         }
     }
 
-    updatePins(list: HTMLElement, contests: ContestCard[]) {
+    updateCardControls(list: HTMLElement, contests: ContestCard[]) {
         const hosts = new Set(contests.map(({ title, header }) => title || header));
         for (const control of list.querySelectorAll('.jarvis-contest-pin, .jarvis-contest-rank-start')) {
             if (!control.parentElement || !hosts.has(control.parentElement)) control.remove();
@@ -202,27 +202,31 @@ export class ContestStart extends HHModule {
             const pinned = this.preference === id;
             pin.setAttribute('aria-pressed', String(pinned));
             pin.setAttribute('aria-label', pinned ? `Unpin ${label}` : `Pin ${label} to open on reload`);
-            pin.title = pinned ? 'Pinned. Click to use your contest defaults.' : 'Open this contest when the page reloads';
+            pin.title = pinned ? 'Pinned. Click to unpin this contest.' : 'Open this contest when the page reloads';
 
             let position = host.querySelector<HTMLElement>(':scope > .jarvis-contest-rank-start');
-            if (!pinned) {
-                position?.remove();
-                continue;
-            }
             if (!position) {
-                const choice = makeRankChoice('Pinned leaderboard start', rank => {
+                const choice = makeRankChoice('Contest leaderboard start', rank => {
+                    const contestId = choice.closest('.contest[id_contest]')?.getAttribute('id_contest');
+                    if (!contestId) return;
                     try {
-                        lsSet('ContestPinnedRank', { id, rank });
+                        saveContestRank(contestId, rank);
                         selectContestChoice(choice, rank);
                     } catch (err) {
                         console.warn('Jarvis could not save the leaderboard position:', err);
+                        return;
+                    }
+                    if (this.right && this.getSelectedContestId(list, this.right) === contestId) {
+                        this.stopJump?.();
+                        this.positionSwitch(list, this.right, contestId);
                     }
                 });
                 choice.classList.add('jarvis-contest-rank-start');
+                choice.title = 'Leaderboard position for this contest';
                 pin.after(choice);
                 position = choice;
             }
-            selectContestChoice(position, readPinnedRank(id, this.defaults.rank));
+            selectContestChoice(position, readContestRank(id, this.defaults.rank));
         }
     }
 
@@ -346,7 +350,7 @@ export class ContestStart extends HHModule {
         this.switchScroll?.stop();
 
         const listTop = list.scrollTop;
-        const atOwnRank = this.defaults.rank === 'mine';
+        const atOwnRank = readContestRank(id, this.defaults.rank) === 'mine';
         const releaseList = this.stopSwitchScroll || shortcutCard ? this.lockScroll(list) : undefined;
         let board: HTMLElement | null | undefined;
         let releaseBoard: (() => void) | undefined;
@@ -390,7 +394,7 @@ export class ContestStart extends HHModule {
 
     openContest(list: HTMLElement, right: HTMLElement, { id, card, header, title }: ContestCard) {
         for (const pane of [list, right]) pane.classList.add('jarvis-contest-instant', 'jarvis-contest-loading');
-        const rank = id === this.preference ? readPinnedRank(id, this.defaults.rank) : this.defaults.rank;
+        const rank = readContestRank(id, this.defaults.rank);
         const placeAtOwnRank = rank === 'mine';
         const releaseList = this.lockScroll(list);
         let board: HTMLElement | null | undefined;
@@ -500,7 +504,7 @@ export class ContestStart extends HHModule {
         }
         const contests = this.getContests(list, finished);
         this.clearExpiredPin(list, contests, finished);
-        this.updatePins(list, contests);
+        this.updateCardControls(list, contests);
 
         if (this.reposition) {
             this.reposition();

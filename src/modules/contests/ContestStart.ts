@@ -2,7 +2,27 @@ import { settingHelp } from '../../settingsHelp';
 import { HHModule } from '../../HHModule';
 import { $, currentPage } from '../../game';
 import { lsGet, lsSet, lsRm } from '../../storage';
-import { makeRankChoice, readContestDefaults, readContestSetting, readPinnedRank, selectContestChoice, type ContestKind } from './contestPreferences';
+import { makeRankChoice, readContestDefaults, readContestSetting, readPinnedRank, selectContestChoice, type ContestEvent, type ContestKind } from './contestPreferences';
+
+type ContestCategory = ContestKind | ContestEvent;
+
+function getContestCategory(category: string | undefined): ContestCategory | null {
+    switch (category?.trim().toLowerCase().replace(/[- ]+/g, '_')) {
+        case 'daily':
+        case 'daily_contest': return 'daily';
+        case 'cumback':
+        case 'cumback_contest':
+        case 'cbc': return 'cbc';
+        case 'crazy_cumback':
+        case 'crazy_cumback_contest':
+        case 'ccbc':
+        case 'ccc': return 'ccc';
+        case 'legendary':
+        case 'legendary_contest':
+        case 'lc': return 'lc';
+        default: return category ? 'event' : null;
+    }
+}
 
 interface ContestCard {
     id: string;
@@ -10,7 +30,7 @@ interface ContestCard {
     header: HTMLElement;
     title: HTMLElement | null;
     label: string;
-    kind: ContestKind | null;
+    category: ContestCategory | null;
 }
 
 export function armContestStartupGuard() {
@@ -92,11 +112,12 @@ export class ContestStart extends HHModule {
             const name = title && Array.from(title.childNodes)
                 .filter(node => !(node instanceof Element) || !node.matches('.jarvis-contest-pin, .jarvis-contest-rank-start'))
                 .map(node => node.textContent).join('').trim();
+            const category = getContestCategory(contest?.category_type);
             return [{
                 id, card, header, title,
-                kind: contest?.category_type ? (contest.category_type === 'daily' ? 'daily' : 'event') : null,
+                category,
                 label: String(name || contest?.name || contest?.title ||
-                    (contest?.category_type === 'daily' ? 'Daily contest' : 'Contest')).trim()
+                    (category === 'daily' ? 'Daily contest' : 'Contest')).trim()
             }];
         });
     }
@@ -104,9 +125,15 @@ export class ContestStart extends HHModule {
     getTarget(contests: ContestCard[]) {
         if (this.preference) return contests.find(contest => contest.id === this.preference);
 
-        if (this.defaults.kind === 'event') return contests.at(-1);
-        return contests.find(contest => contest.kind === 'daily') ??
-            contests.find(contest => contest.kind === null) ?? contests[0];
+        if (this.defaults.kind === 'event') {
+            if (this.defaults.event !== 'any') {
+                const event = [...contests].reverse().find(contest => contest.category === this.defaults.event);
+                if (event || document.readyState !== 'complete') return event;
+            }
+            return contests.at(-1);
+        }
+        return contests.find(contest => contest.category === 'daily') ??
+            contests.find(contest => contest.category === null) ?? contests[0];
     }
 
     clearExpiredPin(list: HTMLElement, contests: ContestCard[], finished: ReadonlySet<string>) {

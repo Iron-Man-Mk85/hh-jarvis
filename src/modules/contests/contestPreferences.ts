@@ -6,7 +6,10 @@ export type ContestKind = 'daily' | 'event';
 export type ContestRank = 'top' | 'mine';
 
 const CONTEST_KINDS = [['daily', 'Daily'], ['event', 'Event']] as const;
+const CONTEST_EVENTS = [['any', 'Any'], ['cbc', 'CbC'], ['ccc', 'CCC'], ['lc', 'LC']] as const;
 const CONTEST_RANKS = [['top', 'Top'], ['mine', 'My rank']] as const;
+
+export type ContestEvent = Exclude<(typeof CONTEST_EVENTS)[number][0], 'any'>;
 
 export function readContestSetting(key: string): unknown {
     try {
@@ -18,8 +21,10 @@ export function readContestSetting(key: string): unknown {
 
 export function readContestDefaults() {
     const kind: ContestKind = readContestSetting('ContestKind') === 'daily' ? 'daily' : 'event';
+    const savedEvent = readContestSetting('ContestEvent');
+    const event = CONTEST_EVENTS.find(([value]) => value === savedEvent)?.[0] ?? 'any';
     const rank: ContestRank = readContestSetting('ContestRankStart') === 'top' ? 'top' : 'mine';
-    return { kind, rank };
+    return { kind, event, rank };
 }
 
 export function readPinnedRank(id: string, fallback: ContestRank): ContestRank {
@@ -75,21 +80,31 @@ export function installContestSettings() {
             try {
                 lsSet(key, value);
                 selectContestChoice(group, value);
+                return true;
             } catch (err) {
                 console.warn('Jarvis could not save the contest default:', err);
+                return false;
             }
         };
-        const kinds = makeChoice('Preferred contest', CONTEST_KINDS, value => save('ContestKind', value, kinds));
+        const eventLabel = document.createElement('div');
+        eventLabel.innerHTML = settingHelp('Event type', 'Prefer CbC (Cumback Contest), CCC (Crazy Cumback Contest), or LC (Legendary Contest) when active. Any opens the bottom active contest, as does an unavailable event type.');
+        const events = makeChoice('Event type', CONTEST_EVENTS, value => save('ContestEvent', value, events));
+        const showEvents = (kind: ContestKind) => eventLabel.hidden = events.hidden = kind === 'daily';
+        const kinds = makeChoice('Preferred contest', CONTEST_KINDS, value => {
+            if (save('ContestKind', value, kinds)) showEvents(value);
+        });
         const ranks = makeRankChoice('Default leaderboard position', value => save('ContestRankStart', value, ranks));
         const defaults = readContestDefaults();
         selectContestChoice(kinds, defaults.kind);
+        selectContestChoice(events, defaults.event);
         selectContestChoice(ranks, defaults.rank);
+        showEvents(defaults.kind);
 
         const kindLabel = document.createElement('div');
-        kindLabel.innerHTML = settingHelp('Preferred contest', 'Daily opens the first active daily contest. Event follows the game and opens the bottom active contest.');
+        kindLabel.innerHTML = settingHelp('Preferred contest', 'Daily opens the first active daily contest. Event can prefer an event type or follow the game and open the bottom active contest.');
         const rankLabel = document.createElement('div');
         rankLabel.innerHTML = settingHelp('Leaderboard start', 'Open at the top or at your rank. A starred contest can have its own position.');
-        fieldset.append(kindLabel, kinds, rankLabel, ranks);
+        fieldset.append(kindLabel, kinds, eventLabel, events, rankLabel, ranks);
         const refreshEnabled = () => fieldset.disabled = !card.classList.contains('enabled');
         refreshEnabled();
         new MutationObserver(refreshEnabled).observe(card, { attributeFilter: ['class'] });

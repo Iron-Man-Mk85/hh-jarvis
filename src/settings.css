@@ -135,6 +135,14 @@ button.jarvis-contest-pin {
     border: 0;
     font-size: .85em;
 }
+.jarvis-contest-settings .jarvis-contest-choice {
+    box-sizing: border-box;
+    max-width: 100%;
+    flex-wrap: wrap;
+}
+.jarvis-contest-settings [hidden] {
+    display: none;
+}
 .jarvis-contest-settings:disabled .jarvis-contest-choice {
     opacity: .5;
 }

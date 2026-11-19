@@ -83,7 +83,7 @@ export class ContestStart extends HHModule {
     private restoringCard: HTMLElement | null = null;
     private reposition: (() => void) | null = null;
     private stopJump: ((finish?: boolean) => void) | null = null;
-    private stopSwitchScroll = false;
+    private stopSwitchScroll = true;
     private switchScroll: { restore: () => void; stop: () => void } | null = null;
     private readonly leaderboardPositions = new Map<string, number>();
     private observer: MutationObserver | null = null;
@@ -98,7 +98,7 @@ export class ContestStart extends HHModule {
             subSettings: [{
                 key: 'noSwitchScroll',
                 label: settingHelp('Stop scrolling on contest switches', 'Keep the contest list in place and remember each leaderboard’s position when you switch cards. You can still scroll either pane by hand.'),
-                default: false
+                default: true
             }]
         }
         super({ name: baseKey, configSchema });
@@ -519,7 +519,7 @@ export class ContestStart extends HHModule {
         this.updateShortcuts(list, right, contests);
     }
 
-    run({ noSwitchScroll = false }: ModuleSettings) {
+    run({ noSwitchScroll = true }: ModuleSettings) {
         if (this.hasRun || !this.shouldRun()) {return}
 
         const pin = readContestSetting('ContestStartId');

@@ -53,6 +53,7 @@ export class Changelog extends HHModule {
     private settingsInstalled = false;
     private silent = false;
     private notice: HTMLButtonElement | null = null;
+    private noticeLayout: ResizeObserver | null = null;
     private waitingForNoticeAnchor = false;
 
     constructor() {
@@ -134,8 +135,9 @@ export class Changelog extends HHModule {
         this.waitingForNoticeAnchor = true;
         window.HHPlusPlus.Helpers.doWhenSelectorAvailable(selector, () => {
             this.waitingForNoticeAnchor = false;
-            const anchor = document.querySelector(selector);
-            if (!anchor || !this.silent || !this.hasUnreadUpdate()) return;
+            const anchor = document.querySelector<HTMLElement>(selector);
+            const parent = anchor?.parentElement;
+            if (!anchor || !parent || !this.silent || !this.hasUnreadUpdate()) return;
 
             const button = document.createElement('button');
             button.type = 'button';
@@ -151,11 +153,24 @@ export class Changelog extends HHModule {
                 event.stopPropagation();
                 this.open('manual', button);
             });
-            this.notice = anchor.appendChild(button);
+            // A sibling keeps the reactor outside HH++'s native tooltip target.
+            anchor.after(button);
+            this.notice = button;
+            const position = () => {
+                button.style.left = `${anchor.offsetLeft}px`;
+                button.style.top = `${anchor.offsetTop + anchor.offsetHeight / 2}px`;
+                button.style.height = `${anchor.offsetHeight * .7}px`;
+            };
+            position();
+            this.noticeLayout = new ResizeObserver(position);
+            this.noticeLayout.observe(anchor);
+            this.noticeLayout.observe(parent);
         });
     }
 
     private removeNotice() {
+        this.noticeLayout?.disconnect();
+        this.noticeLayout = null;
         this.notice?.remove();
         this.notice = null;
     }

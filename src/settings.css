@@ -315,12 +315,10 @@ td[data-jarvis-mark] > a {
 .jarvis-view-changelog {
     margin-top: .45em;
 }
-.hh-plus-plus-config-button > .jarvis-changelog-notice {
+.jarvis-changelog-notice {
     position: absolute;
-    inset-inline-end: calc(100% + .25em);
-    top: 50%;
-    translate: 0 -50%;
-    height: 70%;
+    z-index: 5;
+    translate: calc(-100% - .25em) -50%;
     aspect-ratio: 1;
     padding: 0;
     border: 0;

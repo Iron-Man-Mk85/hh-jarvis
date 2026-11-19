@@ -78,24 +78,55 @@ button.jarvis-contest-pin {
 .jarvis-contest-pin:focus-visible {
     outline: 1px solid currentColor;
 }
-select.jarvis-contest-rank-start {
+.jarvis-contest-choice {
+    display: inline-flex;
+    width: fit-content;
+    gap: .12em;
+    padding: .12em;
+    border: 1px solid color-mix(in srgb, currentColor 55%, transparent);
+    border-radius: .45em;
+    color: inherit;
+    line-height: 1.15;
+}
+.jarvis-contest-choice button {
     all: unset;
-    display: inline-block;
-    margin-inline-start: .25em;
-    padding-inline: .15em;
+    padding: .18em .38em;
+    border-radius: .26em;
     color: inherit;
     font: inherit;
-    font-size: .72em;
-    text-decoration: underline dotted;
-    text-underline-offset: 2px;
+    line-height: inherit;
+    white-space: nowrap;
     cursor: pointer;
 }
-.jarvis-contest-rank-start option {
-    background: #232936;
-    color: #fff;
+.jarvis-contest-choice button[aria-pressed="true"] {
+    background: color-mix(in srgb, currentColor 22%, transparent);
+    box-shadow: inset 0 -1px currentColor;
 }
-.jarvis-contest-rank-start:focus-visible {
+.jarvis-contest-choice button:hover {
+    background: color-mix(in srgb, currentColor 15%, transparent);
+}
+.jarvis-contest-choice button:focus-visible {
     outline: 1px solid currentColor;
+}
+.jarvis-contest-rank-start {
+    margin-inline-start: .28em;
+    font-size: .7em;
+    vertical-align: middle;
+}
+.jarvis-contest-settings {
+    display: grid;
+    gap: .3em;
+    min-width: 0;
+    margin: .45em 0 0;
+    padding: 0;
+    border: 0;
+    font-size: .85em;
+}
+.jarvis-contest-settings:disabled .jarvis-contest-choice {
+    opacity: .5;
+}
+.jarvis-contest-settings:disabled button {
+    cursor: default;
 }
 .jarvis-mark-menu {
     position: fixed;

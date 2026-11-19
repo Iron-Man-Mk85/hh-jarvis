@@ -2,6 +2,7 @@ import { settingHelp } from '../../settingsHelp';
 import { HHModule } from '../../HHModule';
 import { $, currentPage } from '../../game';
 import { lsGet, lsSet, lsRm } from '../../storage';
+import { makeRankChoice, readContestDefaults, readContestSetting, readPinnedRank, selectContestChoice, type ContestKind } from './contestPreferences';
 
 interface ContestCard {
     id: string;
@@ -9,6 +10,7 @@ interface ContestCard {
     header: HTMLElement;
     title: HTMLElement | null;
     label: string;
+    kind: ContestKind | null;
 }
 
 export function armContestStartupGuard() {
@@ -17,14 +19,12 @@ export function armContestStartupGuard() {
     if (location.pathname !== '/activities.html' || new URLSearchParams(location.search).get('tab') !== 'contests') return;
 
     try {
-        const pin = lsGet('ContestStartId');
-        if ((typeof pin !== 'string' && typeof pin !== 'number') || !pin ||
-            JSON.parse(localStorage.getItem('HHPlusPlusConfig') ?? 'null')?.JARVIS_contestStart === false) return;
+        if (JSON.parse(localStorage.getItem('HHPlusPlusConfig') ?? 'null')?.JARVIS_contestStart === false) return;
     } catch {
         return;
     }
 
-    // Keep both panes out of view until the pinned contest and its leaderboard are positioned.
+    // Keep both panes out of view until the chosen contest and its leaderboard are positioned.
     const guard = document.createElement('style');
     guard.id = 'jarvis-contest-startup';
     guard.textContent = `
@@ -51,13 +51,15 @@ export function armContestStartupGuard() {
 
 export class ContestStart extends HHModule {
     private preference = '';
-    private startId = '';
-    private rankStart: 'top' | 'mine' = 'top';
+    private startupPending = false;
+    private defaults = readContestDefaults();
     private list: HTMLElement | null = null;
     private right: HTMLElement | null = null;
     private restoringCard: HTMLElement | null = null;
     private reposition: (() => void) | null = null;
     private stopJump: ((finish?: boolean) => void) | null = null;
+    private observer: MutationObserver | null = null;
+    private listeners: AbortController | null = null;
 
     constructor() {
         const baseKey = 'contestStart'
@@ -92,10 +94,22 @@ export class ContestStart extends HHModule {
                 .map(node => node.textContent).join('').trim();
             return [{
                 id, card, header, title,
+                kind: contest?.category_type ? (contest.category_type === 'daily' ? 'daily' : 'event') : null,
                 label: String(name || contest?.name || contest?.title ||
                     (contest?.category_type === 'daily' ? 'Daily contest' : 'Contest')).trim()
             }];
         });
+    }
+
+    getTarget(contests: ContestCard[]) {
+        if (this.preference) return contests.find(contest => contest.id === this.preference);
+
+        if (this.defaults.kind === 'event') {
+            const event = [...contests].reverse().find(contest => contest.kind === 'event');
+            if (event) return event;
+        }
+        return contests.find(contest => contest.kind === 'daily') ??
+            contests.find(contest => contest.kind === null) ?? contests[0];
     }
 
     clearExpiredPin(list: HTMLElement, contests: ContestCard[], finished: ReadonlySet<string>) {
@@ -108,8 +122,7 @@ export class ContestStart extends HHModule {
 
         const expiredId = this.preference;
         this.preference = '';
-        this.startId = '';
-        this.stopJump?.();
+        this.stopJump?.(false);
         try {
             if (String(lsGet('ContestStartId')) === expiredId) lsRm('ContestStartId');
         } catch (err) {
@@ -141,7 +154,7 @@ export class ContestStart extends HHModule {
                         if (next) lsSet('ContestStartId', next);
                         else lsRm('ContestStartId');
                         this.preference = next;
-                        this.startId = '';
+                        this.startupPending = false;
                         this.stopJump?.();
                     } catch (err) {
                         console.warn('Jarvis could not save the contest preference:', err);
@@ -153,37 +166,27 @@ export class ContestStart extends HHModule {
             const pinned = this.preference === id;
             pin.setAttribute('aria-pressed', String(pinned));
             pin.setAttribute('aria-label', pinned ? `Unpin ${label}` : `Pin ${label} to open on reload`);
-            pin.title = pinned ? 'Pinned. Click to restore the game default.' : 'Open this contest when the page reloads';
+            pin.title = pinned ? 'Pinned. Click to use your contest defaults.' : 'Open this contest when the page reloads';
 
-            let position = host.querySelector<HTMLSelectElement>(':scope > .jarvis-contest-rank-start');
+            let position = host.querySelector<HTMLElement>(':scope > .jarvis-contest-rank-start');
             if (!pinned) {
                 position?.remove();
                 continue;
             }
             if (!position) {
-                const select = document.createElement('select');
-                select.className = 'jarvis-contest-rank-start';
-                select.setAttribute('aria-label', 'Leaderboard position on reload');
-                select.title = 'Where to open the pinned contest leaderboard';
-                select.add(new Option('Top', 'top'));
-                select.add(new Option('My rank', 'mine'));
-                select.addEventListener('click', event => event.stopPropagation());
-                select.addEventListener('keydown', event => event.stopPropagation());
-                select.addEventListener('change', event => {
-                    event.stopPropagation();
-                    const next = select.value === 'mine' ? 'mine' : 'top';
+                const choice = makeRankChoice('Pinned leaderboard start', rank => {
                     try {
-                        lsSet('ContestRankStart', next);
-                        this.rankStart = next;
+                        lsSet('ContestPinnedRank', { id, rank });
+                        selectContestChoice(choice, rank);
                     } catch (err) {
-                        select.value = this.rankStart;
                         console.warn('Jarvis could not save the leaderboard position:', err);
                     }
                 });
-                pin.after(select);
-                position = select;
+                choice.classList.add('jarvis-contest-rank-start');
+                pin.after(choice);
+                position = choice;
             }
-            position.value = this.rankStart;
+            selectContestChoice(position, readPinnedRank(id, this.defaults.rank));
         }
     }
 
@@ -261,7 +264,8 @@ export class ContestStart extends HHModule {
 
     openContest(list: HTMLElement, right: HTMLElement, { id, card, header, title }: ContestCard) {
         for (const pane of [list, right]) pane.classList.add('jarvis-contest-instant', 'jarvis-contest-loading');
-        const placeAtOwnRank = this.rankStart === 'mine';
+        const rank = id === this.preference ? readPinnedRank(id, this.defaults.rank) : this.defaults.rank;
+        const placeAtOwnRank = rank === 'mine';
         const releaseList = this.lockScroll(list);
         let board: HTMLElement | null | undefined;
         let releaseBoard: (() => void) | undefined;
@@ -335,7 +339,7 @@ export class ContestStart extends HHModule {
             this.reposition = null;
             this.restoringCard = null;
             if (finish) {
-                this.startId = '';
+                this.startupPending = false;
                 reveal();
             }
         };
@@ -373,36 +377,31 @@ export class ContestStart extends HHModule {
         this.clearExpiredPin(list, contests, finished);
         this.updatePins(list, contests);
 
-        if (!this.preference) {
-            this.showLeaderboard(right, null);
-            document.getElementById('jarvis-contest-startup')?.remove();
-            return;
-        }
         if (this.reposition) {
             this.reposition();
             return;
         }
-        const target = contests.find(contest => contest.id === this.startId);
-        if (target) this.openContest(list, right, target);
-        else if (!this.startId) this.showLeaderboard(right, this.getSelectedContestId(list, right));
+        if (this.startupPending) {
+            const target = this.getTarget(contests);
+            if (target) this.openContest(list, right, target);
+            else if (document.readyState === 'complete' && !this.preference) {
+                document.getElementById('jarvis-contest-startup')?.remove();
+            }
+        } else {
+            this.showLeaderboard(right, this.getSelectedContestId(list, right));
+        }
     }
 
     run() {
         if (this.hasRun || !this.shouldRun()) {return}
 
-        try {
-            const pin = lsGet('ContestStartId');
-            this.preference = ((typeof pin === 'string' || typeof pin === 'number') && pin) ? String(pin) : '';
-        } catch {
-            this.preference = '';
-        }
-        this.startId = this.preference;
-        try {
-            this.rankStart = lsGet('ContestRankStart') === 'mine' ? 'mine' : 'top';
-        } catch {
-            this.rankStart = 'top';
-        }
-        const observer = new MutationObserver(mutations => {
+        const pin = readContestSetting('ContestStartId');
+        this.preference = ((typeof pin === 'string' || typeof pin === 'number') && pin) ? String(pin) : '';
+        this.startupPending = true;
+        this.defaults = readContestDefaults();
+        this.listeners = new AbortController();
+        const { signal } = this.listeners;
+        this.observer = new MutationObserver(mutations => {
             const list = document.querySelector('#contests .left_part .scroll_area');
             const right = document.querySelector('#contests .right_part');
             if (list !== this.list || right !== this.right || mutations.some(({ target }) =>
@@ -411,14 +410,29 @@ export class ContestStart extends HHModule {
                 this.refresh();
             }
         });
-        observer.observe(document.body, { childList: true, subtree: true, attributes: true,
+        this.observer.observe(document.body, { childList: true, subtree: true, attributes: true,
             attributeFilter: ['class', 'style', 'hidden', 'id_contest'] });
-        if (document.readyState !== 'complete') window.addEventListener('load', () => this.refresh(), { once: true });
+        if (document.readyState !== 'complete') window.addEventListener('load', () => this.refresh(), { once: true, signal });
         document.body.addEventListener('click', event => {
-            if (event.isTrusted && event.target instanceof Element && this.preference && this.right && this.list?.contains(event.target) &&
-                event.target.closest('.contest_header')) this.showLeaderboard(this.right, null);
-        }, true);
+            if (event.isTrusted && event.target instanceof Element && this.right && this.list?.contains(event.target) &&
+                event.target.closest('.contest_header')) {
+                this.startupPending = false;
+                this.showLeaderboard(this.right, null);
+                document.getElementById('jarvis-contest-startup')?.remove();
+            }
+        }, { capture: true, signal });
         this.refresh();
         this.hasRun = true
+    }
+
+    tearDown() {
+        this.observer?.disconnect();
+        this.listeners?.abort();
+        this.stopJump?.();
+        this.startupPending = false;
+        this.list?.querySelectorAll('.jarvis-contest-pin, .jarvis-contest-rank-start').forEach(control => control.remove());
+        if (this.right) this.showLeaderboard(this.right, null);
+        document.getElementById('jarvis-contest-startup')?.remove();
+        this.hasRun = false;
     }
 }

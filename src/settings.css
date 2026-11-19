@@ -1,0 +1,338 @@
+.hh-plus-plus-config-panel .group-panel[rel="JARVIS"] .panel-contents {
+    align-content: start;
+    align-items: start;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    scrollbar-width: thin;
+}
+.hh-plus-plus-config-panel:has(> .group-panel[rel="JARVIS"].shown) {
+    overflow: clip;
+}
+.hh-plus-plus-config-panel .group-panel[rel="JARVIS"] .config-setting.has-subsettings {
+    grid-row-end: auto;
+}
+.hh-plus-plus-config-panel .group-panel[rel="JARVIS"] .jarvis-packed-settings {
+    grid-auto-flow: row dense;
+    grid-auto-rows: 1px;
+    row-gap: 0;
+}
+.hh-plus-plus-config-panel .group-panel[rel="JARVIS"] .jarvis-packed-settings .config-setting {
+    grid-row-end: span var(--jarvis-setting-rows, 1);
+}
+.hh-plus-plus-config-panel .tabs h4[rel="JARVIS"] {
+    position: relative;
+}
+.hh-plus-plus-config-panel .tabs h4[rel="JARVIS"].selected::after {
+    content: var(--jarvis-version);
+    position: absolute;
+    inset-block-start: 0;
+    inset-inline-end: .15rem;
+    font-size: .625rem;
+    font-weight: normal;
+    line-height: 1;
+    text-transform: none;
+    pointer-events: none;
+}
+.ironman-setting-help {
+    display: inline-grid;
+    place-items: center;
+    box-sizing: border-box;
+    inline-size: 1.25em;
+    block-size: 1.25em;
+    border: 1px solid currentColor;
+    border-radius: 50%;
+    font-size: .8em;
+    line-height: 1;
+    vertical-align: .08em;
+    cursor: help;
+}
+.ironman-setting-help:hover,
+.ironman-setting-help:focus-visible {
+    outline: 1px solid currentColor;
+    outline-offset: 2px;
+}
+.ironman-setting-tooltip {
+    position: fixed;
+    inset: auto;
+    z-index: 10010;
+    box-sizing: border-box;
+    max-width: min(18rem, calc(100vw - 16px));
+    margin: 0;
+    padding: .5em .7em;
+    border: 1px solid var(--config-setting-border, #a9a3bc);
+    border-radius: .4em;
+    background: var(--config-setting-background, #241e30);
+    color: #fff;
+    font: 14px/1.4 system-ui, sans-serif;
+    pointer-events: none;
+}
+.hh-plus-plus-config-panel .group-panel[rel="JARVIS"] .jarvis-mark-color input {
+    width: 30px;
+    height: 20px;
+    flex: none;
+    padding: 0;
+}
+button.jarvis-contest-pin {
+    all: unset;
+    display: inline-block;
+    margin-inline-start: .35em;
+    padding-inline: .2em;
+    color: inherit;
+    font-size: .9em;
+    line-height: 1;
+    cursor: pointer;
+}
+.jarvis-contest-pin::before {
+    content: '☆';
+}
+.jarvis-contest-pin[aria-pressed="true"]::before {
+    content: '★';
+    color: #ffd36b;
+}
+.jarvis-contest-pin:focus-visible {
+    outline: 1px solid currentColor;
+}
+.jarvis-contest-choice {
+    display: inline-flex;
+    width: fit-content;
+    gap: .12em;
+    padding: .12em;
+    border: 1px solid color-mix(in srgb, currentColor 55%, transparent);
+    border-radius: .45em;
+    color: inherit;
+    line-height: 1.15;
+}
+.jarvis-contest-choice button {
+    all: unset;
+    padding: .18em .38em;
+    border-radius: .26em;
+    color: inherit;
+    font: inherit;
+    line-height: inherit;
+    white-space: nowrap;
+    cursor: pointer;
+}
+.jarvis-contest-choice button[aria-pressed="true"] {
+    background: color-mix(in srgb, currentColor 22%, transparent);
+}
+.jarvis-contest-choice button:hover {
+    background: color-mix(in srgb, currentColor 15%, transparent);
+}
+.jarvis-contest-choice button:focus-visible {
+    outline: 1px solid currentColor;
+}
+.jarvis-contest-rank-start {
+    margin-inline-start: .28em;
+    font-size: .7em;
+    vertical-align: middle;
+}
+.jarvis-contest-settings {
+    display: grid;
+    gap: .3em;
+    min-width: 0;
+    margin: .45em 0 0;
+    padding: 0;
+    border: 0;
+    font-size: .85em;
+}
+.jarvis-contest-settings:disabled .jarvis-contest-choice {
+    opacity: .5;
+}
+.jarvis-contest-settings:disabled button {
+    cursor: default;
+}
+.jarvis-mark-menu {
+    position: fixed;
+    z-index: 10000;
+    display: grid;
+    gap: 2px;
+    padding: 4px;
+    border: 1px solid #8994a7;
+    border-radius: 6px;
+    background: #232936;
+    color: #fff;
+    box-shadow: 0 2px 10px #0008;
+    font: 13px/1.35 system-ui, sans-serif;
+}
+.jarvis-mark-menu button {
+    all: unset;
+    padding: 4px 9px;
+    border-radius: 3px;
+    cursor: pointer;
+}
+.jarvis-mark-menu button:hover,
+.jarvis-mark-menu button:focus-visible {
+    background: #414d64;
+}
+#contests .left_part .scroll_area.jarvis-contest-instant,
+#contests .right_part.jarvis-contest-instant .lead_table_view {
+    scroll-behavior: auto !important;
+    overflow-anchor: none !important;
+}
+#contests .jarvis-contest-loading {
+    opacity: 0 !important;
+    transition: none !important;
+    pointer-events: none;
+}
+#contests .right_part .ranking[id_contest].jarvis-contest-other {
+    display: none !important;
+}
+[data-jarvis-mark="friend"] {
+    color: var(--jarvis-friend-color) !important;
+}
+[data-jarvis-mark="foe"] {
+    color: var(--jarvis-foe-color) !important;
+}
+[data-jarvis-mark],
+td[data-jarvis-mark] > a {
+    text-shadow: 1px 0 #111827, -1px 0 #111827, 0 1px #111827, 0 -1px #111827 !important;
+}
+td[data-jarvis-mark] > a {
+    color: inherit !important;
+}
+.jarvis-setting-action {
+    appearance: none;
+    padding: .2em .5em;
+    border: 1px solid currentColor;
+    border-radius: .35em;
+    background: transparent;
+    color: inherit;
+    font: inherit;
+    cursor: pointer;
+}
+.jarvis-setting-action:hover,
+.jarvis-setting-action:focus-visible {
+    background: color-mix(in srgb, currentColor 16%, transparent);
+}
+.jarvis-setting-action:disabled {
+    cursor: default;
+    opacity: .5;
+}
+.jarvis-mark-setting-actions,
+.jarvis-mark-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: .4em;
+}
+.jarvis-mark-manager {
+    box-sizing: border-box;
+    width: min(34rem, calc(100vw - 2rem));
+    max-height: calc(100vh - 2rem);
+    padding: 1rem;
+    border: 1px solid var(--config-setting-border, #a9a3bc);
+    border-radius: .65rem;
+    background: var(--config-setting-background, #241e30);
+    color: #fff;
+    font: 15px/1.35 system-ui, sans-serif;
+}
+.jarvis-mark-manager::backdrop {
+    background: #080b12aa;
+}
+.jarvis-mark-manager h2,
+.jarvis-mark-manager h3,
+.jarvis-mark-manager p {
+    margin: 0;
+}
+.jarvis-mark-lists {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(min(13rem, 100%), 1fr));
+    gap: .9rem;
+    max-height: 50vh;
+    overflow-y: auto;
+    scrollbar-gutter: stable;
+    padding-inline-end: .7rem;
+    margin-block: .9rem;
+}
+.jarvis-mark-lists ul {
+    margin: .3em 0 0;
+    padding: 0;
+    list-style: none;
+}
+.jarvis-mark-lists li {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: .45em;
+    padding: .2em 0;
+    overflow-wrap: anywhere;
+}
+.jarvis-mark-lists li button {
+    flex: none;
+}
+.jarvis-mark-actions {
+    justify-content: space-between;
+}
+.jarvis-view-changelog {
+    margin-top: .45em;
+}
+dialog.jarvis-changelog-popup {
+    --jarvis-changelog-height: min(32rem, calc(100vh - 1.25rem));
+    box-sizing: border-box;
+    position: fixed;
+    inset: 0;
+    width: min(37rem, calc(100% - 1.25rem));
+    height: fit-content;
+    max-height: var(--jarvis-changelog-height);
+    margin: auto;
+    padding: 0;
+    overflow: hidden;
+    border: 1px solid var(--config-setting-border, #a9a3bc);
+    border-radius: .6rem;
+    background: var(--config-setting-background, #241e30);
+    color: #fff;
+    font: 15px/1.45 system-ui, sans-serif;
+    text-align: start;
+}
+@supports (height: 100dvh) {
+    dialog.jarvis-changelog-popup {
+        --jarvis-changelog-height: min(32rem, calc(100dvh - 1.25rem));
+    }
+}
+.jarvis-changelog-popup::backdrop {
+    background: #080b12aa;
+}
+.jarvis-changelog-content {
+    box-sizing: border-box;
+    display: grid;
+    grid-template-rows: auto minmax(0, 1fr) auto;
+    gap: clamp(.45rem, 2vw, .9rem);
+    max-height: calc(var(--jarvis-changelog-height) - 2px);
+    padding: clamp(.6rem, 3vw, 1rem);
+}
+.jarvis-changelog-content h2,
+.jarvis-changelog-content h3 {
+    margin: 0;
+}
+.jarvis-changelog-content h2 {
+    font-size: 1.3em;
+}
+.jarvis-changelog-content h3 {
+    color: var(--config-setting-border, #d9c7fb);
+    font-size: 1em;
+}
+.jarvis-changelog-content section + section,
+.jarvis-changelog-content details {
+    margin-top: .75rem;
+}
+.jarvis-changelog-notes {
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    scrollbar-width: thin;
+    overflow-wrap: anywhere;
+}
+.jarvis-changelog-notes ul {
+    margin: .2em 0 0;
+    padding-inline-start: 1.2em;
+    list-style: disc;
+}
+.jarvis-changelog-notes li + li {
+    margin-top: .25em;
+}
+.jarvis-changelog-notes summary {
+    margin-bottom: .4rem;
+    cursor: pointer;
+}
+.jarvis-changelog-content footer {
+    display: flex;
+    justify-content: end;
+}

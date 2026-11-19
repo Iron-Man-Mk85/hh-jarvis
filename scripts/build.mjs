@@ -1,0 +1,143 @@
+import { readFile } from 'node:fs/promises';
+import { dirname, resolve } from 'node:path';
+import { fileURLToPath } from 'node:url';
+import { build, context, transform } from 'esbuild';
+
+const [mode, flag, ...extra] = process.argv.slice(2);
+const check = mode === 'check';
+const channel = check ? flag ?? 'testing' : mode;
+const testing = channel === 'testing';
+const watch = testing && flag === '--watch' && !check;
+const install = channel === 'stable' && flag === '--install';
+
+if (extra.length || !['testing', 'stable'].includes(channel) || (!check && flag && !watch && !install)) {
+    throw new Error('Usage: build.mjs testing [--watch] | stable [--install] | check [testing|stable]');
+}
+
+const root = fileURLToPath(new URL('../', import.meta.url));
+const { name, version, description, author, repository, userscript } = JSON.parse(
+    await readFile(resolve(root, 'package.json'), 'utf8')
+);
+const filename = name + '.user.js';
+const branch = testing ? 'testing' : 'main';
+const namespace = repository.url.replace(/\.git$/, '');
+const slug = new URL(namespace).pathname.slice(1);
+const updateUrl = 'https://raw.githubusercontent.com/' + slug + '/' + branch + '/' + filename;
+const matches = ['pornstarharem', 'hentaiheroes', 'comixharem', 'mangarpg', 'amouragent'];
+const metadata = [
+    ['name', userscript.name + (testing ? ' (Dev)' : '')],
+    ['version', version],
+    ['description', description],
+    ['author', author],
+    ...matches.map(domain => ['match', 'https://*.' + domain + '.com/*']),
+    ['run-at', userscript.runAt],
+    ['namespace', namespace + (testing ? '/testing' : '')],
+    ['downloadURL', updateUrl],
+    ['updateURL', updateUrl],
+    ['icon', 'https://www.google.com/s2/favicons?sz=64&domain=hentaiheroes.com'],
+    ['grant', 'none']
+];
+
+const minifyCss = {
+    name: 'minify-css',
+    setup(builder) {
+        builder.onLoad({ filter: /\.css$/ }, async ({ path }) => {
+            const css = await readFile(path, 'utf8');
+            const { code, warnings } = await transform(css, { loader: 'css', minify: true, legalComments: 'none' });
+            return { contents: code.trim(), loader: 'text', resolveDir: dirname(path), warnings };
+        });
+    }
+};
+
+async function readReleaseNotes(path) {
+    const markdown = await readFile(path, 'utf8');
+    const releases = [];
+    for (const line of markdown.split(/\r?\n/)) {
+        const header = /^- \*\*(\d+\.\d+\.\d+)\*\*\s*(.*)$/.exec(line);
+        if (header) {
+            const [, version, summary] = header;
+            releases.push({ version, changes: summary ? [summary.trim()] : [] });
+            continue;
+        }
+        const bullet = /^\s{2,}- (.+)$/.exec(line);
+        if (bullet && releases.length) releases.at(-1).changes.push(bullet[1].trim());
+    }
+    if (!releases.length || releases.some(release => !release.changes.length)) {
+        throw new Error(path + ' must contain release versions with notes.');
+    }
+    return releases;
+}
+
+const releaseNotes = {
+    name: 'release-notes',
+    setup(builder) {
+        builder.onLoad({ filter: /[\\/]CHANGELOG\.md$/ }, async ({ path }) => {
+            const watchFiles = [path];
+            const byVersion = new Map((await readReleaseNotes(path)).map(release => [release.version, release]));
+            if (testing) {
+                const devNotesPath = resolve(dirname(path), 'CHANGELOG-DEV.md');
+                watchFiles.push(devNotesPath);
+                for (const release of await readReleaseNotes(devNotesPath)) {
+                    const publicRelease = byVersion.get(release.version);
+                    if (publicRelease) publicRelease.changes.push(...release.changes);
+                    else byVersion.set(release.version, release);
+                }
+            }
+            const compareVersions = (a, b) => a.localeCompare(b, 'en', { numeric: true });
+            const releases = [...byVersion.values()].sort((a, b) => compareVersions(b.version, a.version));
+            const latest = releases[0].version;
+            if (compareVersions(latest, version) > 0 || (testing && latest !== version)) {
+                throw new Error('Changelog versions must match or precede the package version. Add notes for the current Dev version.');
+            }
+            return { contents: JSON.stringify(releases), loader: 'json', watchFiles };
+        });
+    }
+};
+
+const output = testing || install || check ? filename : 'dist/' + filename;
+const options = {
+    absWorkingDir: root,
+    entryPoints: ['src/index.ts'],
+    outfile: output,
+    write: !check,
+    bundle: true,
+    format: 'iife',
+    platform: 'browser',
+    target: 'es2022',
+    charset: 'utf8',
+    treeShaking: true,
+    minify: !testing,
+    legalComments: 'none',
+    sourcemap: testing ? 'inline' : false,
+    loader: { '.css': 'text' },
+    plugins: testing ? [releaseNotes] : [releaseNotes, minifyCss],
+    define: {
+        USERSCRIPT_VERSION: JSON.stringify(version),
+        USERSCRIPT_CHANNEL: JSON.stringify(testing ? 'Dev' : 'Stable')
+    },
+    banner: {
+        js: [
+            '// ==UserScript==',
+            ...metadata.map(([key, value]) => '// ' + ('@' + key).padEnd(16) + value),
+            '// ==/UserScript==',
+            '',
+            '"use strict";'
+        ].join('\n')
+    }
+};
+
+if (watch) {
+    const watcher = await context(options);
+    await watcher.watch();
+    console.log('Watching src/ for the testing build');
+} else {
+    const result = await build(options);
+    if (check) {
+        const current = await readFile(resolve(root, output), 'utf8');
+        if (current !== result.outputFiles[0].text) {
+            const command = testing ? 'npm run build:testing' : 'npm run build:release';
+            throw new Error(output + ' is out of date. Rebuild with ' + command);
+        }
+    }
+    console.log((check ? 'Verified ' : 'Built ') + output + ' (' + channel + ')');
+}

@@ -61,6 +61,7 @@ interface ContestCard {
     title: HTMLElement | null;
     label: string;
     category: ContestCategory | null;
+    ended: boolean;
 }
 
 export function armContestStartupGuard() {
@@ -142,8 +143,8 @@ export class ContestStart extends HHModule {
             if (!id) return [];
             const contest = active.get(id);
             const header = card.querySelector<HTMLElement>('.contest_header');
-            if (!header || finished.has(id)) return [];
-            if (!contest && !header.matches('.in_progress')) return [];
+            const ended = finished.has(id);
+            if (!header || (!ended && !contest && !header.matches('.in_progress'))) return [];
 
             const title = header.querySelector<HTMLElement>(CONTEST_TITLE_SELECTOR);
             const name = title && Array.from(title.childNodes)
@@ -151,7 +152,7 @@ export class ContestStart extends HHModule {
                 .map(node => node.textContent).join('').trim();
             const category = getContestCategory(contest?.category_type);
             return [{
-                id, card, header, title,
+                id, card, header, title, ended,
                 category,
                 label: String(name || contest?.name || contest?.title ||
                     (category === 'daily' ? 'Daily contest' : 'Contest')).trim()
@@ -320,7 +321,7 @@ export class ContestStart extends HHModule {
 
     prepareSwitch(list: HTMLElement, right: HTMLElement, id: string | null, shortcutCard?: HTMLElement) {
         this.startupPending = false;
-        if (id && (shortcutCard || id !== this.getSelectedContestId(list, right))) this.positionSwitch(list, right, id, shortcutCard);
+        if (id) this.positionSwitch(list, right, id, shortcutCard);
         this.showLeaderboard(right, null);
         document.getElementById('jarvis-contest-startup')?.remove();
     }
@@ -540,14 +541,19 @@ export class ContestStart extends HHModule {
             const id = ended.closest('.contest[id_contest]')?.getAttribute('id_contest');
             if (id) finished.add(id);
         }
-        const contests = this.getContests(list, finished);
+        const cards = this.getContests(list, finished);
+        const contests = cards.filter(card => !card.ended);
         this.clearExpiredPin(list, contests, finished);
         this.updateCardControls(list, contests);
 
         if (this.reposition) {
             this.reposition();
         } else if (this.startupPending) {
-            const target = this.getTarget(contests);
+            let target = this.getTarget(contests);
+            if (!contests.length && !this.preference && document.readyState === 'complete') {
+                const selected = this.getSelectedContestId(list, right);
+                target = cards.find(card => card.id === selected) ?? cards.at(-1);
+            }
             if (target) this.openContest(list, right, target);
             else if (document.readyState === 'complete' && !this.preference) {
                 document.getElementById('jarvis-contest-startup')?.remove();

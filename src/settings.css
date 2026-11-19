@@ -244,10 +244,3 @@ td[data-jarvis-mark] > a {
 .jarvis-mark-actions {
     justify-content: space-between;
 }
-.jarvis-mark-mode [data-jarvis-player] {
-    cursor: crosshair;
-}
-.jarvis-mark-mode [data-jarvis-player]:hover,
-.jarvis-mark-mode [data-jarvis-player]:focus-visible {
-    outline: 1px solid currentColor;
-}

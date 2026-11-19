@@ -6,13 +6,10 @@ import type { ContestData } from '../../game-types';
 import { LS_CONFIG_NAME, lsGet, lsSet } from '../../storage';
 import { openMarkManager, type Mark, type SavedMark } from './markManager';
 
-type MarkMode = Mark | '';
 const DEFAULT_COLORS: Record<Mark, string> = { friend: '#48a9ff', foe: '#ff6173' };
 
 export class FriendAndFoes extends HHModule {
     private names = new Map<HTMLElement, string>();
-    private readonly focusableNames = new Map<HTMLElement, string | null>();
-    private mode: MarkMode = '';
     private markMenu: HTMLDivElement | null = null;
     private root: HTMLElement | null = null;
     private rootSelector = '';
@@ -23,7 +20,7 @@ export class FriendAndFoes extends HHModule {
         const configSchema = {
             baseKey,
             default: true,
-            label: settingHelp("Friends and foes", "Right-click a name to mark or unmark it. Click more names to keep marking and press Esc to exit. Manage saved marks below."),
+            label: settingHelp("Friends and foes", "Right-click each player's name to add or remove a mark. Manage saved marks below."),
             subSettings: [{
                 key: 'league',
                 label: settingHelp("In leagues", "Show marks and allow marking in league tables."),
@@ -191,21 +188,16 @@ export class FriendAndFoes extends HHModule {
             button.textContent = text;
             button.addEventListener('click', () => {
                 this.closeMarkMenu();
-                act();
-                if (name.isConnected && this.mode) name.focus({ preventScroll: true });
+                if (name.isConnected && this.names.get(name) === id) act();
             });
             menu.appendChild(button);
         };
-        for (const [mode, text] of [['friend', 'Mark as friend'], ['foe', 'Mark as foe']] as const) {
-            addAction(text, () => {
-                this.setMode(mode);
-                if (this.names.get(name) === id) this.applyMark(id);
-            });
+        for (const [mark, text] of [['friend', 'Mark as friend'], ['foe', 'Mark as foe']] as const) {
+            addAction(text, () => this.applyMark(id, mark));
         }
         if (name.dataset.jarvisMark) addAction('Remove this player’s mark', () => {
             if (this.removeMark(id)) this.refresh();
         });
-        if (this.mode) addAction('Exit marking mode (Esc)', () => this.setMode(''));
         menu.addEventListener('click', click => click.stopPropagation());
         document.body.appendChild(menu);
         this.markMenu = menu;
@@ -216,28 +208,6 @@ export class FriendAndFoes extends HHModule {
         menu.style.left = Math.max(0, Math.min(x, document.documentElement.clientWidth - menu.offsetWidth)) + 'px';
         menu.style.top = Math.max(0, Math.min(y, document.documentElement.clientHeight - menu.offsetHeight)) + 'px';
         menu.querySelector('button')?.focus({ preventScroll: true });
-    }
-
-    setMode(mode: MarkMode) {
-        this.mode = mode;
-        this.root?.classList.toggle('jarvis-mark-mode', !!mode);
-
-        for (const name of this.names.keys()) {
-            if (mode && name.tabIndex < 0) {
-                this.focusableNames.set(name, name.getAttribute('tabindex'));
-                name.tabIndex = 0;
-            } else if (!mode) {
-                this.restoreFocus(name);
-            }
-        }
-    }
-
-    restoreFocus(name: HTMLElement) {
-        const tabindex = this.focusableNames.get(name);
-        if (tabindex === undefined) return;
-        if (tabindex === null) name.removeAttribute('tabindex');
-        else name.setAttribute('tabindex', tabindex);
-        this.focusableNames.delete(name);
     }
 
     getContestNames(root: HTMLElement) {
@@ -276,7 +246,6 @@ export class FriendAndFoes extends HHModule {
 
     refresh() {
         const root = document.querySelector<HTMLElement>(this.rootSelector);
-        if (this.root && this.root !== root) this.root.classList.remove('jarvis-mark-mode');
         this.root = root;
         const names = !root ? new Map<HTMLElement, string>() : this.inLeague
             ? new Map(Array.from(root.querySelectorAll<HTMLElement>('.nickname[id-member]'), name => [name, name.getAttribute('id-member')] as const)
@@ -287,7 +256,6 @@ export class FriendAndFoes extends HHModule {
             if (names.has(name)) continue;
             delete name.dataset.jarvisPlayer;
             delete name.dataset.jarvisMark;
-            this.restoreFocus(name);
         }
 
         this.names = names;
@@ -315,43 +283,25 @@ export class FriendAndFoes extends HHModule {
             }
         }
         if (namesChanged) this.saveNames(savedNames);
-        this.setMode(this.mode);
     }
 
-    applyMark(id: string) {
-        if (!this.mode) return;
+    applyMark(id: string, mark: Mark) {
         const marks = this.readMarks();
-        marks[id] = this.mode;
+        marks[id] = mark;
 
-        this.saveSetting('PlayerMarks', marks);
-        this.refresh();
+        if (this.saveSetting('PlayerMarks', marks)) this.refresh();
     }
 
-    markPlayer(event: MouseEvent | KeyboardEvent) {
-        const key = event instanceof KeyboardEvent ? event.key : undefined;
-        if (key === 'Escape' && (this.mode || this.markMenu)) {
-            event.preventDefault();
-            event.stopPropagation();
-            this.closeMarkMenu();
-            this.setMode('');
-            return;
-        }
+    handleMarkMenu(event: MouseEvent) {
         if (event.target instanceof Node && this.markMenu?.contains(event.target)) return;
-        if (event.type === 'click') this.closeMarkMenu();
+        this.closeMarkMenu();
+        if (event.type !== 'contextmenu' && !event.altKey) return;
 
         const name = event.target instanceof Element ? event.target.closest<HTMLElement>('[data-jarvis-player]') : null;
         if (!name) return;
         const id = this.names.get(name);
         if (!id) return;
-        if (event instanceof MouseEvent && (event.type === 'contextmenu' || (event.type === 'click' && event.altKey))) {
-            this.openMarkMenu(event, name, id);
-            return;
-        }
-        if (!this.mode || (event.type === 'keydown' && key !== 'Enter' && key !== ' ')) return;
-
-        event.preventDefault();
-        event.stopPropagation();
-        this.applyMark(id);
+        this.openMarkMenu(event, name, id);
     }
 
     run({ league, contests }: ModuleSettings) {
@@ -361,10 +311,15 @@ export class FriendAndFoes extends HHModule {
         if (this.inLeague ? !league : !contests) return;
 
         this.rootSelector = this.inLeague ? '.league_table' : '#contests .right_part';
-        const markPlayer = (event: MouseEvent | KeyboardEvent) => this.markPlayer(event);
-        document.addEventListener('click', markPlayer, true);
-        document.addEventListener('keydown', markPlayer, true);
-        document.addEventListener('contextmenu', markPlayer, true);
+        const handleMarkMenu = (event: MouseEvent) => this.handleMarkMenu(event);
+        document.addEventListener('click', handleMarkMenu, true);
+        document.addEventListener('contextmenu', handleMarkMenu, true);
+        document.addEventListener('keydown', event => {
+            if (event.key !== 'Escape' || !this.markMenu) return;
+            event.preventDefault();
+            event.stopPropagation();
+            this.closeMarkMenu();
+        }, true);
         window.addEventListener('storage', event => {
             if (!event.key || ['PlayerMarks', 'PlayerMarkColors', 'FriendList', 'FoeList']
                 .some(key => event.key === LS_CONFIG_NAME + key)) this.refresh();

@@ -2,7 +2,7 @@ import { settingHelp } from '../../settingsHelp';
 import { HHModule, type ModuleSettings } from '../../HHModule';
 import { $, currentPage } from '../../game';
 import { lsGet, lsSet, lsRm } from '../../storage';
-import { makeRankChoice, readContestDefaults, readContestRank, readContestSetting, saveContestRank, selectContestChoice, type ContestEvent, type ContestKind } from './contestPreferences';
+import { makeRankChoice, pruneContestRanks, readContestDefaults, readContestRank, readContestSetting, saveContestRank, selectContestChoice, type ContestEvent, type ContestKind } from './contestPreferences';
 import { positionContestShortcuts, renderContestShortcuts } from './contestShortcuts';
 
 type ContestCategory = ContestKind | ContestEvent;
@@ -114,6 +114,7 @@ export class ContestStart extends HHModule {
     private observer: MutationObserver | null = null;
     private titleSizes: ResizeObserver | null = null;
     private readonly titleLabels = new Map<HTMLElement, HTMLElement>();
+    private prunedRankRoster: string | null = null;
     private listeners: AbortController | null = null;
 
     constructor() {
@@ -191,6 +192,29 @@ export class ContestStart extends HHModule {
             if (String(lsGet('ContestStartId')) === expiredId) lsRm('ContestStartId');
         } catch (err) {
             console.warn('Jarvis could not clear the expired contest preference:', err);
+        }
+    }
+
+    pruneUnavailableRanks(list: HTMLElement, finished: ReadonlySet<string>) {
+        const data = window.contests;
+        // A partial roster can be visible while the game loads the contest tab.
+        if (document.readyState !== 'complete' || !data?.active || !data.finished) return;
+
+        const available = new Set(finished);
+        for (const contest of Object.values(data.active)) {
+            if (contest?.id_contest != null) available.add(String(contest.id_contest));
+        }
+        for (const card of list.querySelectorAll('.contest[id_contest]')) {
+            const id = card.getAttribute('id_contest');
+            if (id) available.add(id);
+        }
+        const roster = Array.from(available).sort().join(',');
+        if (this.prunedRankRoster === roster) return;
+        this.prunedRankRoster = roster;
+        try {
+            pruneContestRanks(available);
+        } catch (err) {
+            console.warn('Jarvis could not clean up old contest rank choices:', err);
         }
     }
 
@@ -581,6 +605,7 @@ export class ContestStart extends HHModule {
         }
         const cards = this.getContests(list, finished);
         const contests = cards.filter(card => !card.ended);
+        this.pruneUnavailableRanks(list, finished);
         this.clearExpiredPin(list, contests, finished);
         this.updateCardControls(list, contests);
 
@@ -611,6 +636,7 @@ export class ContestStart extends HHModule {
         this.startupPending = true;
         this.stopSwitchScroll = noSwitchScroll;
         this.defaults = readContestDefaults();
+        this.prunedRankRoster = null;
         this.listeners = new AbortController();
         const { signal } = this.listeners;
         this.titleSizes = new ResizeObserver(entries => {

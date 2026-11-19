@@ -9,6 +9,7 @@ import { LoveRaidsAddon } from './modules/love-raids/LoveRaidsAddon';
 import { LoveRaidsParser } from './modules/love-raids/LoveRaidsParser';
 import { ActivityParser } from './modules/activities/ActivityParser';
 import { Changelog } from './modules/updates/Changelog';
+import { GameLinks } from './modules/navigation/GameLinks';
 
 armContestStartupGuard();
 
@@ -45,7 +46,8 @@ function runJarvis() {
         new LoveRaidsAddon(),
         new LoveRaidsParser(),
         new ActivityParser(),
-        changelog
+        changelog,
+        new GameLinks()
     ]
 
     setTimeout(() => {

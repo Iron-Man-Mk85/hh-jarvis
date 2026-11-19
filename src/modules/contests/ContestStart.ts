@@ -276,21 +276,22 @@ export class ContestStart extends HHModule {
 
     openShortcut(id: string) {
         const { list, right } = this;
-        if (!list || !right || this.getSelectedContestId(list, right) === id) return;
+        if (!list || !right) return;
 
-        const card = list.querySelector(`.contest[id_contest="${CSS.escape(id)}"]`);
+        const card = list.querySelector<HTMLElement>(`.contest[id_contest="${CSS.escape(id)}"]`);
         const header = card?.querySelector<HTMLElement>('.contest_header');
-        if (!header || header.matches('.ended') || card?.matches('.ended')) return;
+        if (!card || !header || header.matches('.ended') || card.matches('.ended')) return;
 
+        const alreadySelected = this.getSelectedContestId(list, right) === id;
         this.stopJump?.();
-        this.prepareSwitch(list, right, id, true);
-        (header.querySelector<HTMLElement>(CONTEST_TITLE_SELECTOR) || header).click();
+        this.prepareSwitch(list, right, id, card);
+        if (!alreadySelected) (header.querySelector<HTMLElement>(CONTEST_TITLE_SELECTOR) || header).click();
         this.refresh();
     }
 
-    prepareSwitch(list: HTMLElement, right: HTMLElement, id: string | null, keepListPosition: boolean) {
+    prepareSwitch(list: HTMLElement, right: HTMLElement, id: string | null, shortcutCard?: HTMLElement) {
         this.startupPending = false;
-        if (id && id !== this.getSelectedContestId(list, right)) this.positionSwitch(list, right, id, keepListPosition);
+        if (id && (shortcutCard || id !== this.getSelectedContestId(list, right))) this.positionSwitch(list, right, id, shortcutCard);
         this.showLeaderboard(right, null);
         document.getElementById('jarvis-contest-startup')?.remove();
     }
@@ -341,12 +342,12 @@ export class ContestStart extends HHModule {
         }
     }
 
-    positionSwitch(list: HTMLElement, right: HTMLElement, id: string, keepListPosition: boolean) {
+    positionSwitch(list: HTMLElement, right: HTMLElement, id: string, shortcutCard?: HTMLElement) {
         this.switchScroll?.stop();
 
         const listTop = list.scrollTop;
         const atOwnRank = this.defaults.rank === 'mine';
-        const releaseList = keepListPosition ? this.lockScroll(list) : undefined;
+        const releaseList = this.stopSwitchScroll || shortcutCard ? this.lockScroll(list) : undefined;
         let board: HTMLElement | null | undefined;
         let releaseBoard: (() => void) | undefined;
         const restore = () => {
@@ -356,7 +357,8 @@ export class ContestStart extends HHModule {
                 board = next;
                 releaseBoard = board ? this.lockScroll(board) : undefined;
             }
-            if (keepListPosition) this.scrollInstantly(list, listTop);
+            if (shortcutCard && list.contains(shortcutCard)) this.jumpTo(list, shortcutCard);
+            else if (releaseList) this.scrollInstantly(list, listTop);
             if (board?.clientHeight && this.getSelectedContestId(list, right) === id) {
                 this.jumpTo(board, atOwnRank ? this.getOwnRow(board) : null, atOwnRank);
             }
@@ -373,7 +375,7 @@ export class ContestStart extends HHModule {
         };
         const timer = setTimeout(stop, 4000);
         const onScroll = (event: Event) => {
-            if ((keepListPosition && event.target === list) || event.target === board) restore();
+            if ((releaseList && event.target === list) || event.target === board) restore();
         };
         for (const pane of [list, right]) {
             pane.addEventListener('scroll', onScroll, options);
@@ -548,7 +550,7 @@ export class ContestStart extends HHModule {
             if (!header || event.target.closest('.jarvis-contest-pin, .jarvis-contest-rank-start')) return;
 
             const id = header.closest('.contest[id_contest]')?.getAttribute('id_contest');
-            this.prepareSwitch(this.list, this.right, id ?? null, this.stopSwitchScroll);
+            this.prepareSwitch(this.list, this.right, id ?? null);
         }, { capture: true, signal });
         this.refresh();
         this.hasRun = true

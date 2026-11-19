@@ -36,14 +36,16 @@ Run `npm ci` with Node.js 20 or newer.
 
 | Command | Result |
 | --- | --- |
-| `npm run build:testing` | Writes the readable `hh-jarvis.user.js` with inline TypeScript source maps. Commit this file with the source on `testing`. |
+| `npm run build:testing` | Writes the minified `hh-jarvis-dev.user.js` and a transition copy for the old Dev install URL on `testing`. |
 | `npm run watch` | Rebuilds the testing userscript when source files change. |
 | `npm run build` | Writes a minified stable userscript to `dist/hh-jarvis.user.js`. |
 | `npm run check` | Type-checks the source and verifies the committed testing userscript. |
 
-Install the [Dev userscript](https://raw.githubusercontent.com/Iron-Man-Mk85/hh-jarvis/testing/hh-jarvis.user.js) from the testing branch in Tampermonkey and enable one channel at a time.
+Install the [Dev userscript](https://raw.githubusercontent.com/Iron-Man-Mk85/hh-jarvis/testing/hh-jarvis-dev.user.js) from the testing branch in Tampermonkey and enable one channel at a time. The transition copy retains the Dev identity and points to the new update URL.
 
-For an approved stable release, use a release branch, run `npm run build:release` to write the stable build to the root, and run `npm run check -- stable` before opening the PR to `main`. If merging `main` into the release branch conflicts on the generated file, rebuild it from the merged source and stage the result.
+For an approved stable release, fast-forward the reusable `release` branch to `main`. Merge the approved `testing` commit if the full batch is approved, or cherry-pick the approved source commits and their dependencies for a partial release. Set the release version and notes for the selected changes. Run `npm run build:release` to write the stable userscript and remove the Dev artifact, then run `npm run check -- stable` before opening the PR from `release` to `main`.
+
+After the merge, sync `main` into `testing` and run `npm run build:testing` and `npm run check`. Keep any newer work and version already on `testing`.
 
 ## License & Disclaimer
 

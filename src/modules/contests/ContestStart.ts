@@ -203,7 +203,7 @@ export class ContestStart extends HHModule {
             if (hosts.has(title) && text.parentElement === title) continue;
             this.titleSizes?.unobserve(text);
             if (text.parentElement === title) text.replaceWith(...text.childNodes);
-            title.classList.remove('jarvis-contest-title');
+            title.classList.remove('jarvis-contest-title', 'jarvis-contest-title-stacked');
             this.titleLabels.delete(title);
         }
 
@@ -282,8 +282,15 @@ export class ContestStart extends HHModule {
     }
 
     fitTitle(text: HTMLElement) {
-        if (!text.clientWidth) return;
+        const heading = text.parentElement;
+        if (!heading?.clientWidth) return;
+
+        heading.classList.remove('jarvis-contest-title-stacked');
         text.style.removeProperty('font-size');
+        const minimumReadableWidth = 4 * parseFloat(getComputedStyle(text).fontSize);
+        if (text.clientWidth < minimumReadableWidth && text.scrollWidth > text.clientWidth) {
+            heading.classList.add('jarvis-contest-title-stacked');
+        }
         if (text.scrollWidth > text.clientWidth) text.style.fontSize = '.8em';
     }
 

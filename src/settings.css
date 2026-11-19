@@ -143,6 +143,21 @@ button.jarvis-contest-pin {
     flex: none;
     margin-inline-start: 0;
 }
+#contests .contest_header .jarvis-contest-title-stacked {
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr);
+    row-gap: .12em;
+}
+.jarvis-contest-title-stacked .jarvis-contest-title-label {
+    grid-column: 1 / -1;
+}
+#contests .contest_title_timer:has(> .jarvis-contest-title-stacked) > .contest_timer {
+    align-self: flex-start;
+}
+.jarvis-contest-title-stacked .jarvis-contest-rank-start {
+    justify-self: start;
+    font-size: .64em;
+}
 .jarvis-contest-settings {
     display: grid;
     gap: .3em;

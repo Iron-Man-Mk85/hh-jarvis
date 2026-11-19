@@ -1,5 +1,6 @@
 # Changelog
 
+- **0.6.6** Name the testing install Dev, move HH++ version and setting details to tooltips, improve mark contrast and management, and add automatic contest defaults.
 - **0.6.5** Move the userscript source into TypeScript modules and add separate stable and testing builds.
 - **0.6.4** Prevent pinned contest startup scrolling, keep native startup without a pin, and clear finished pins
 - **0.6.3** Stop both contest startup scrolls, isolate the selected leaderboard, and restore pinned contests at Top or My rank

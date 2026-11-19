@@ -1,5 +1,6 @@
 # Changelog
 
+- **0.7.8** Clear saved Top and My rank choices once their contests are no longer available.
 - **0.7.7**
   - Apply Don’t show again when the changelog closes and update the HH++ setting immediately.
   - Give the silent update icon its own tooltip.

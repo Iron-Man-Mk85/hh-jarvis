@@ -265,10 +265,17 @@ td[data-jarvis-mark] > a {
 .jarvis-view-changelog {
     margin-top: .45em;
 }
-.jarvis-changelog-popup {
+dialog.jarvis-changelog-popup {
+    --jarvis-changelog-height: min(32rem, calc(100vh - 1.25rem));
     box-sizing: border-box;
-    width: min(37rem, calc(100% - 2rem));
+    position: fixed;
+    inset: 0;
+    width: min(37rem, calc(100% - 1.25rem));
+    height: fit-content;
+    max-height: var(--jarvis-changelog-height);
+    margin: auto;
     padding: 0;
+    overflow: hidden;
     border: 1px solid var(--config-setting-border, #a9a3bc);
     border-radius: .6rem;
     background: var(--config-setting-background, #241e30);
@@ -276,12 +283,10 @@ td[data-jarvis-mark] > a {
     font: 15px/1.45 system-ui, sans-serif;
     text-align: start;
 }
-.jarvis-changelog-native > .jarvis-changelog-popup {
-    position: absolute;
-    inset: 50% auto auto 50%;
-    height: auto;
-    margin: 0;
-    transform: translate(-50%, -50%);
+@supports (height: 100dvh) {
+    dialog.jarvis-changelog-popup {
+        --jarvis-changelog-height: min(32rem, calc(100dvh - 1.25rem));
+    }
 }
 .jarvis-changelog-popup::backdrop {
     background: #080b12aa;
@@ -290,9 +295,9 @@ td[data-jarvis-mark] > a {
     box-sizing: border-box;
     display: grid;
     grid-template-rows: auto minmax(0, 1fr) auto;
-    gap: .9rem;
-    max-height: min(32rem, 75vh);
-    padding: 1rem;
+    gap: clamp(.45rem, 2vw, .9rem);
+    max-height: calc(var(--jarvis-changelog-height) - 2px);
+    padding: clamp(.6rem, 3vw, 1rem);
 }
 .jarvis-changelog-content h2,
 .jarvis-changelog-content h3 {

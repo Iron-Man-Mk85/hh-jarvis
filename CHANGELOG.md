@@ -1,5 +1,8 @@
 # Changelog
 
+- **0.7.2**
+  - Open the bottom active contest at your rank by default. Choose CbC, CCC, or LC to prefer that event when available.
+  - Turn off automatic update notices with Don’t show again in the changelog popup. View changelog stays available in settings.
 - **0.7.1**
   - Keep the changelog centered when the game window is resized.
   - Clean up saved player names, explain unknown names on hover, and give Remove buttons more room.

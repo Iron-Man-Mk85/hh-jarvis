@@ -10,6 +10,13 @@ const latestVersion = releaseNotes[0].version;
 const configKey = 'JARVIS_changelog';
 const silentKey = `${configKey}_silent`;
 const settingsCard = `.group-panel[rel="JARVIS"] .config-setting[rel="${configKey}"]`;
+const hhPlusPlusStorage = 'HHPlusPlus';
+
+function readHHPlusPlusSettings(): Record<string, unknown> {
+    const saved = lsGet('Config', hhPlusPlusStorage);
+    if (saved && typeof saved === 'object' && !Array.isArray(saved)) return saved as Record<string, unknown>;
+    return {};
+}
 
 function readSeenVersion() {
     try {
@@ -82,7 +89,6 @@ export class Changelog extends HHModule {
             const card = document.querySelector(settingsCard);
             if (!card || card.querySelector('.jarvis-view-changelog')) return;
 
-            this.syncNoticeSettings();
             const button = document.createElement('button');
             button.type = 'button';
             button.className = 'jarvis-setting-action jarvis-view-changelog';
@@ -175,18 +181,15 @@ export class Changelog extends HHModule {
         this.notice = null;
     }
 
-    private syncNoticeSettings() {
-        const config = window.hhPlusPlusConfig?.config;
-        if (!config) return;
-
+    private syncNoticeSettings(config: Record<string, unknown>) {
         for (const card of document.querySelectorAll(settingsCard)) {
-            const enabled = config[configKey];
+            const enabled = config[configKey] !== false;
             const checkbox = card.querySelector<HTMLInputElement>(`input[name="${configKey}"]`);
             const silent = card.querySelector<HTMLInputElement>(`input[name="${silentKey}"]`);
             card.classList.toggle('enabled', enabled);
             if (checkbox) checkbox.checked = enabled;
             if (silent) {
-                silent.checked = config[silentKey];
+                silent.checked = config[silentKey] === true;
                 silent.disabled = !enabled;
             }
         }
@@ -196,26 +199,17 @@ export class Changelog extends HHModule {
         const config = window.hhPlusPlusConfig;
         if (!config) return;
 
-        let previous = config.config[key];
         try {
+            // The live HH++ build keeps its in-memory settings private.
+            const saved = { ...readHHPlusPlusSettings(), [key]: value };
+            lsSet('Config', saved, hhPlusPlusStorage);
             config.loadConfig();
-            previous = config.config[key];
-            if (config.$configPane && config.updateConfig) {
-                config.updateConfig(key, value);
-            } else {
-                // HH++ builds its settings pane the first time it is opened.
-                config.config[key] = value;
-                config.saveConfig();
-                if (key === silentKey) this.updateSubSetting('silent', value);
-                else if (!value) this.tearDown();
-            }
+            if (key === silentKey) this.updateSubSetting('silent', value);
+            else if (!value) this.tearDown();
+            this.syncNoticeSettings(saved);
         } catch (err) {
-            config.config[key] = previous;
             console.warn('Jarvis could not save the update notice preference:', err);
-            return;
         }
-
-        this.syncNoticeSettings();
     }
 
     private open(mode: 'automatic' | 'manual', opener: HTMLButtonElement | null = null) {

@@ -49,13 +49,9 @@ declare global {
     interface Window {
         $?: JQueryStatic;
         hhPlusPlusConfig?: {
-            config: Record<string, boolean>;
-            $configPane?: JQuery<HTMLElement> | null;
             registerGroup(group: { key: string; name: string }): void;
             registerModule(module: HHModule): void;
             loadConfig(): void;
-            saveConfig(): void;
-            updateConfig?(key: string, value: boolean): void;
             runModules(): void;
         };
         HHPlusPlus: {

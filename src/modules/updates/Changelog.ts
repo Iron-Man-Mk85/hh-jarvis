@@ -63,7 +63,7 @@ export class Changelog extends HHModule {
             default: true,
             subSettings: [{
                 key: 'silent',
-                label: settingHelp('Silent changelog', 'Put a New button beside HH++ on the homepage when an update is available. Click it to read the changelog.'),
+                label: settingHelp('Silent changelog', 'Show a small arc-reactor icon beside HH++ on the homepage after an update. Click it to read the changelog.'),
                 default: false
             }]
         } });
@@ -139,9 +139,13 @@ export class Changelog extends HHModule {
             const button = document.createElement('button');
             button.type = 'button';
             button.className = 'jarvis-changelog-notice';
-            button.textContent = 'New';
-            button.title = 'Read the Jarvis changelog';
-            button.setAttribute('aria-label', 'New Jarvis update. Read the changelog.');
+            button.dataset.tooltip = 'Jarvis was updated';
+            button.setAttribute('aria-label', 'Jarvis was updated. View changelog.');
+            button.innerHTML = `<svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.35" stroke-linejoin="round">
+                <circle cx="12" cy="12" r="10"/>
+                <circle cx="12" cy="12" r="7.4" stroke-dasharray="3 1.65"/>
+                <path d="M12 7.6l4.4 7.6H7.6Z"/>
+            </svg>`;
             button.addEventListener('click', event => {
                 event.stopPropagation();
                 this.open('manual', button);
@@ -228,7 +232,7 @@ export class Changelog extends HHModule {
         const useSilent = document.createElement('input');
         useSilent.type = 'checkbox';
         useSilent.checked = this.silent;
-        silentOption.title = 'Show a New button by HH++ for future updates.';
+        silentOption.title = 'Show an update icon beside HH++ for future updates.';
         silentOption.append(useSilent, 'Silent changelog');
         dontShowAgain.addEventListener('change', () => useSilent.disabled = dontShowAgain.checked);
         options.append(optOut, silentOption);

@@ -49,6 +49,30 @@ const minifyCss = {
     }
 };
 
+const releaseNotes = {
+    name: 'release-notes',
+    setup(builder) {
+        builder.onLoad({ filter: /[\\/]CHANGELOG\.md$/ }, async ({ path }) => {
+            const markdown = await readFile(path, 'utf8');
+            const releases = [];
+            for (const line of markdown.split(/\r?\n/)) {
+                const header = /^- \*\*(\d+\.\d+\.\d+)\*\*\s*(.*)$/.exec(line);
+                if (header) {
+                    const [, version, summary] = header;
+                    releases.push({ version, changes: summary ? [summary.trim()] : [] });
+                    continue;
+                }
+                const bullet = /^\s{2,}- (.+)$/.exec(line);
+                if (bullet && releases.length) releases.at(-1).changes.push(bullet[1].trim());
+            }
+            if (releases[0]?.version !== version || releases.some(release => !release.changes.length)) {
+                throw new Error('CHANGELOG.md must start with the package version and include notes for each version.');
+            }
+            return { contents: JSON.stringify(releases), loader: 'json', watchFiles: [path] };
+        });
+    }
+};
+
 const output = testing || install || check ? filename : 'dist/' + filename;
 const options = {
     absWorkingDir: root,
@@ -65,9 +89,10 @@ const options = {
     legalComments: 'none',
     sourcemap: testing ? 'inline' : false,
     loader: { '.css': 'text' },
-    plugins: testing ? [] : [minifyCss],
+    plugins: testing ? [releaseNotes] : [releaseNotes, minifyCss],
     define: {
-        USERSCRIPT_VERSION: JSON.stringify(version)
+        USERSCRIPT_VERSION: JSON.stringify(version),
+        USERSCRIPT_CHANNEL: JSON.stringify(testing ? 'Dev' : 'Stable')
     },
     banner: {
         js: [

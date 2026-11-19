@@ -257,3 +257,72 @@ td[data-jarvis-mark] > a {
 .jarvis-mark-actions {
     justify-content: space-between;
 }
+.jarvis-view-changelog {
+    margin-top: .45em;
+}
+.jarvis-changelog-popup {
+    box-sizing: border-box;
+    width: min(37rem, calc(100% - 2rem));
+    padding: 0;
+    border: 1px solid var(--config-setting-border, #a9a3bc);
+    border-radius: .6rem;
+    background: var(--config-setting-background, #241e30);
+    color: #fff;
+    font: 15px/1.45 system-ui, sans-serif;
+    text-align: start;
+}
+.jarvis-changelog-native > .jarvis-changelog-popup {
+    position: absolute;
+    inset: 50% auto auto 50%;
+    height: auto;
+    margin: 0;
+    transform: translate(-50%, -50%);
+}
+.jarvis-changelog-popup::backdrop {
+    background: #080b12aa;
+}
+.jarvis-changelog-content {
+    box-sizing: border-box;
+    display: grid;
+    grid-template-rows: auto minmax(0, 1fr) auto;
+    gap: .9rem;
+    max-height: min(32rem, 75vh);
+    padding: 1rem;
+}
+.jarvis-changelog-content h2,
+.jarvis-changelog-content h3 {
+    margin: 0;
+}
+.jarvis-changelog-content h2 {
+    font-size: 1.3em;
+}
+.jarvis-changelog-content h3 {
+    color: var(--config-setting-border, #d9c7fb);
+    font-size: 1em;
+}
+.jarvis-changelog-content section + section,
+.jarvis-changelog-content details {
+    margin-top: .75rem;
+}
+.jarvis-changelog-notes {
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    scrollbar-width: thin;
+    overflow-wrap: anywhere;
+}
+.jarvis-changelog-notes ul {
+    margin: .2em 0 0;
+    padding-inline-start: 1.2em;
+    list-style: disc;
+}
+.jarvis-changelog-notes li + li {
+    margin-top: .25em;
+}
+.jarvis-changelog-notes summary {
+    margin-bottom: .4rem;
+    cursor: pointer;
+}
+.jarvis-changelog-content footer {
+    display: flex;
+    justify-content: end;
+}

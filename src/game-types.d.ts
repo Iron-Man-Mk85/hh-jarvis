@@ -43,6 +43,19 @@ interface LeagueOpponent {
     player_league_points?: number | string;
 }
 
+interface CommonPopup {
+    type: 'common';
+    popup_name: string;
+    close_on_esc: boolean;
+    $dom_element: JQuery<HTMLElement>;
+    init(): void;
+    onOpen(): void;
+    addEventListeners(): void;
+    onClose(): void;
+    removeEventListeners(): void;
+    destroy(): void;
+}
+
 declare global {
     const love_raids: LoveRaid[] | undefined;
 
@@ -66,7 +79,13 @@ declare global {
             finished?: ContestData[] | Record<string, ContestData>;
         };
         Hero?: HeroData;
-        shared?: { Hero?: HeroData };
+        shared?: {
+            Hero?: HeroData;
+            PopupQueueManager?: {
+                add(options: { popup: CommonPopup }): void;
+                close(options: { type: 'common' }): void;
+            };
+        };
         opponents_list?: LeagueOpponent[];
         current_tier_number?: number | string;
         max_league?: number | string;

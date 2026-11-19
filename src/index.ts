@@ -8,6 +8,7 @@ import { RemovePassLock } from './modules/progression/RemovePassLock';
 import { LoveRaidsAddon } from './modules/love-raids/LoveRaidsAddon';
 import { LoveRaidsParser } from './modules/love-raids/LoveRaidsParser';
 import { ActivityParser } from './modules/activities/ActivityParser';
+import { Changelog } from './modules/updates/Changelog';
 
 armContestStartupGuard();
 
@@ -35,6 +36,7 @@ function runJarvis() {
     injectStyles();
 
     const friendsAndFoes = new FriendAndFoes();
+    const changelog = new Changelog();
     const allModules = [
         friendsAndFoes,
         new ContestStart(),
@@ -42,7 +44,8 @@ function runJarvis() {
         new RemovePassLock(),
         new LoveRaidsAddon(),
         new LoveRaidsParser(),
-        new ActivityParser()
+        new ActivityParser(),
+        changelog
     ]
 
     setTimeout(() => {
@@ -61,6 +64,7 @@ function runJarvis() {
             hhPlusPlusConfig.runModules()
             friendsAndFoes.installSettings();
             installContestSettings();
+            changelog.installSettings();
             packSettings();
         }
 

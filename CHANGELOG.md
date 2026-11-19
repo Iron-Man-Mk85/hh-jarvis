@@ -1,5 +1,6 @@
 # Changelog
 
+- **0.8.0** Middle-click or Ctrl-click the game logo, Path of Valor, or Path of Glory to open the page in a new tab.
 - **0.7.10** Keep Home, End, and the arrow keys working after a contest click while automatic scrolling is blocked.
 - **0.7.9** Save Don’t show again and Silent changelog when closing the update popup, including with HH++ builds that keep settings private.
 - **0.7.8** Clear saved Top and My rank choices once their contests are no longer available.

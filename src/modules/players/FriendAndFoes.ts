@@ -4,9 +4,9 @@ import type { ModuleSettings } from '../../HHModule';
 import { currentPage } from '../../game';
 import type { ContestData } from '../../game-types';
 import { LS_CONFIG_NAME, lsGet, lsSet } from '../../storage';
+import { openMarkManager, type Mark, type SavedMark } from './markManager';
 
-type Mark = 'friend' | 'foe';
-type MarkMode = Mark | 'clear' | '';
+type MarkMode = Mark | '';
 const DEFAULT_COLORS: Record<Mark, string> = { friend: '#48a9ff', foe: '#ff6173' };
 
 export class FriendAndFoes extends HHModule {
@@ -23,7 +23,7 @@ export class FriendAndFoes extends HHModule {
         const configSchema = {
             baseKey,
             default: true,
-            label: settingHelp("Friends and foes", "Right-click a player name to mark a friend or foe. Click more names to keep marking and press Esc to exit."),
+            label: settingHelp("Friends and foes", "Right-click a name to mark or unmark it. Click more names to keep marking and press Esc to exit. Manage saved marks below."),
             subSettings: [{
                 key: 'league',
                 label: settingHelp("In leagues", "Show marks and allow marking in league tables."),
@@ -38,7 +38,7 @@ export class FriendAndFoes extends HHModule {
     }
 
     shouldRun() {
-        return ['/home.html', '/leagues.html', '/activities.html'].includes(currentPage);
+        return ['/leagues.html', '/activities.html'].includes(currentPage);
     }
 
     readSetting(key: string) {
@@ -73,6 +73,40 @@ export class FriendAndFoes extends HHModule {
         };
     }
 
+    readSavedNames(): Record<string, string> {
+        const saved = this.readSetting('PlayerMarkNames');
+        if (!saved || typeof saved !== 'object' || Array.isArray(saved)) return {};
+        return Object.fromEntries(Object.entries(saved).filter((entry): entry is [string, string] => typeof entry[1] === 'string'));
+    }
+
+    saveNames(names: Record<string, string>) {
+        try {
+            lsSet('PlayerMarkNames', names);
+        } catch (err) {
+            console.warn('Jarvis could not remember marked player names:', err);
+        }
+    }
+
+    removeMark(id: string) {
+        const marks = this.readMarks();
+        delete marks[id];
+        if (!this.saveSetting('PlayerMarks', marks)) return false;
+        const names = this.readSavedNames();
+        if (id in names) {
+            delete names[id];
+            this.saveNames(names);
+        }
+        return true;
+    }
+
+    readSavedMarks() {
+        const names = this.readSavedNames();
+        return Object.entries(this.readMarks()).flatMap<SavedMark>(([id, mark]) =>
+            /^[1-9]\d*$/.test(id) && (mark === 'friend' || mark === 'foe')
+                ? [{ id, name: names[id] || `Player #${id}`, mark }]
+                : []);
+    }
+
     saveSetting(key: string, value: unknown) {
         try {
             lsSet(key, value);
@@ -83,7 +117,9 @@ export class FriendAndFoes extends HHModule {
         }
     }
 
-    addColorSettings() {
+    installSettings() {
+        if (currentPage !== '/home.html') return;
+
         const selector = '.group-panel[rel="JARVIS"] .config-setting[rel="JARVIS_friendAndFoes"] .sub-settings';
         window.HHPlusPlus.Helpers.doWhenSelectorAvailable(selector, () => {
             const settings = document.querySelector(selector);
@@ -115,7 +151,23 @@ export class FriendAndFoes extends HHModule {
                 if (!this.saveSetting('PlayerMarkColors', {})) return;
                 for (const [mark, input] of inputs) input.value = DEFAULT_COLORS[mark];
             });
-            settings.appendChild(reset);
+            const manage = document.createElement('button');
+            manage.type = 'button';
+            manage.className = 'jarvis-setting-action';
+            manage.textContent = 'Manage marks';
+            manage.addEventListener('click', () => openMarkManager(
+                () => this.readSavedMarks(),
+                id => this.removeMark(id),
+                () => {
+                    if (!this.saveSetting('PlayerMarks', {})) return false;
+                    this.saveNames({});
+                    return true;
+                }
+            ));
+            const actions = document.createElement('div');
+            actions.className = 'jarvis-mark-setting-actions';
+            actions.append(reset, manage);
+            settings.appendChild(actions);
         });
     }
 
@@ -133,21 +185,27 @@ export class FriendAndFoes extends HHModule {
         menu.className = 'jarvis-mark-menu';
         menu.setAttribute('role', 'group');
         menu.setAttribute('aria-label', 'Mark player');
-        const actions: [MarkMode, string][] = [['friend', 'Mark friend'], ['foe', 'Mark foe'], ['clear', 'Clear mark']];
-        if (this.mode) actions.push(['', 'Stop marking']);
-
-        for (const [mode, text] of actions) {
+        const addAction = (text: string, act: () => void) => {
             const button = document.createElement('button');
             button.type = 'button';
             button.textContent = text;
             button.addEventListener('click', () => {
                 this.closeMarkMenu();
-                this.setMode(mode);
-                if (mode && this.names.get(name) === id) this.applyMark(id);
-                if (mode) name.focus({ preventScroll: true });
+                act();
+                if (name.isConnected && this.mode) name.focus({ preventScroll: true });
             });
             menu.appendChild(button);
+        };
+        for (const [mode, text] of [['friend', 'Mark as friend'], ['foe', 'Mark as foe']] as const) {
+            addAction(text, () => {
+                this.setMode(mode);
+                if (this.names.get(name) === id) this.applyMark(id);
+            });
         }
+        if (name.dataset.jarvisMark) addAction('Remove this player’s mark', () => {
+            if (this.removeMark(id)) this.refresh();
+        });
+        if (this.mode) addAction('Exit marking mode (Esc)', () => this.setMode(''));
         menu.addEventListener('click', click => click.stopPropagation());
         document.body.appendChild(menu);
         this.markMenu = menu;
@@ -235,6 +293,8 @@ export class FriendAndFoes extends HHModule {
         this.names = names;
         if (!root) return;
         const marks = this.readMarks();
+        const savedNames = this.readSavedNames();
+        let namesChanged = false;
         const colors = this.readColors();
         for (const [mark, color] of Object.entries(colors)) {
             const property = '--jarvis-' + mark + '-color';
@@ -245,17 +305,23 @@ export class FriendAndFoes extends HHModule {
             const mark = marks[id];
             if (mark === 'friend' || mark === 'foe') {
                 if (name.dataset.jarvisMark !== mark) name.dataset.jarvisMark = mark;
+                const displayName = name.textContent?.trim();
+                if (displayName && savedNames[id] !== displayName) {
+                    savedNames[id] = displayName;
+                    namesChanged = true;
+                }
             } else if (name.dataset.jarvisMark) {
                 delete name.dataset.jarvisMark;
             }
         }
+        if (namesChanged) this.saveNames(savedNames);
         this.setMode(this.mode);
     }
 
     applyMark(id: string) {
+        if (!this.mode) return;
         const marks = this.readMarks();
-        if (this.mode === 'clear') delete marks[id];
-        else marks[id] = this.mode;
+        marks[id] = this.mode;
 
         this.saveSetting('PlayerMarks', marks);
         this.refresh();
@@ -292,11 +358,6 @@ export class FriendAndFoes extends HHModule {
         if (this.hasRun || !this.shouldRun()) {return}
 
         this.inLeague = currentPage === '/leagues.html';
-        if (currentPage === '/home.html') {
-            this.addColorSettings();
-            this.hasRun = true;
-            return;
-        }
         if (this.inLeague ? !league : !contests) return;
 
         this.rootSelector = this.inLeague ? '.league_table' : '#contests .right_part';

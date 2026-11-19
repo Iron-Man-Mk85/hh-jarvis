@@ -33,8 +33,9 @@ function runJarvis() {
     initGame($);
     injectStyles();
 
+    const friendsAndFoes = new FriendAndFoes();
     const allModules = [
-        new FriendAndFoes(),
+        friendsAndFoes,
         new ContestStart(),
         new LeagueTop20(),
         new RemovePassLock(),
@@ -57,6 +58,7 @@ function runJarvis() {
             })
             hhPlusPlusConfig.loadConfig()
             hhPlusPlusConfig.runModules()
+            friendsAndFoes.installSettings();
             packSettings();
         }
 

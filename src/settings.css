@@ -160,6 +160,59 @@ td[data-jarvis-mark] > a {
 .jarvis-setting-action:focus-visible {
     background: color-mix(in srgb, currentColor 16%, transparent);
 }
+.jarvis-setting-action:disabled {
+    cursor: default;
+    opacity: .5;
+}
+.jarvis-mark-setting-actions,
+.jarvis-mark-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: .4em;
+}
+.jarvis-mark-manager {
+    box-sizing: border-box;
+    width: min(34rem, calc(100vw - 2rem));
+    max-height: calc(100vh - 2rem);
+    padding: 1rem;
+    border: 1px solid var(--config-setting-border, #a9a3bc);
+    border-radius: .65rem;
+    background: var(--config-setting-background, #241e30);
+    color: #fff;
+    font: 15px/1.35 system-ui, sans-serif;
+}
+.jarvis-mark-manager::backdrop {
+    background: #080b12aa;
+}
+.jarvis-mark-manager h2,
+.jarvis-mark-manager h3,
+.jarvis-mark-manager p {
+    margin: 0;
+}
+.jarvis-mark-lists {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(min(13rem, 100%), 1fr));
+    gap: .9rem;
+    max-height: 50vh;
+    overflow-y: auto;
+    margin-block: .9rem;
+}
+.jarvis-mark-lists ul {
+    margin: .3em 0 0;
+    padding: 0;
+    list-style: none;
+}
+.jarvis-mark-lists li {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: .45em;
+    padding: .2em 0;
+    overflow-wrap: anywhere;
+}
+.jarvis-mark-actions {
+    justify-content: space-between;
+}
 .jarvis-mark-mode [data-jarvis-player] {
     cursor: crosshair;
 }

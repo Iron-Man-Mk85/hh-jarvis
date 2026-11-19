@@ -1,6 +1,6 @@
 import { currentPage } from '../../game';
 import { settingHelp } from '../../settingsHelp';
-import { lsGet, lsSet } from '../../storage';
+import { lsGet, lsRm, lsSet } from '../../storage';
 
 export type ContestKind = 'daily' | 'event';
 export type ContestRank = 'top' | 'mine';
@@ -46,6 +46,21 @@ export function saveContestRank(id: string, rank: ContestRank) {
     const saved = readContestSetting('ContestRanks');
     const ranks = saved && typeof saved === 'object' && !Array.isArray(saved) ? saved : {};
     lsSet('ContestRanks', { ...ranks, [id]: rank });
+}
+
+export function pruneContestRanks(available: ReadonlySet<string>) {
+    const saved = readContestSetting('ContestRanks');
+    if (saved && typeof saved === 'object' && !Array.isArray(saved)) {
+        const entries = Object.entries(saved);
+        const kept = entries.filter(([id, rank]) => available.has(id) && (rank === 'top' || rank === 'mine'));
+        if (!kept.length) lsRm('ContestRanks');
+        else if (kept.length !== entries.length) lsSet('ContestRanks', Object.fromEntries(kept));
+    }
+
+    const legacy = readContestSetting('ContestPinnedRank');
+    if (legacy && typeof legacy === 'object' && 'id' in legacy && !available.has(String(legacy.id))) {
+        lsRm('ContestPinnedRank');
+    }
 }
 
 export function makeRankChoice(label: string, select: (rank: ContestRank) => void) {

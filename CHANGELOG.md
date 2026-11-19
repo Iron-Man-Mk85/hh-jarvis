@@ -1,5 +1,14 @@
 # Changelog
 
+- **0.8.0** Middle-click or Ctrl-click the game logo, Path of Valor, or Path of Glory to open the page in a new tab.
+- **0.7.10** Keep Home, End, and the arrow keys working after a contest click while automatic scrolling is blocked.
+- **0.7.9** Save Don’t show again and Silent changelog when closing the update popup, including with HH++ builds that keep settings private.
+- **0.7.8** Clear saved Top and My rank choices once their contests are no longer available.
+- **0.7.7**
+  - Apply Don’t show again when the changelog closes and update the HH++ setting immediately.
+  - Give the silent update icon its own tooltip.
+  - Keep long contest titles in the card header alongside the rank controls.
+  - Identify the Dev build beside its version in settings.
 - **0.7.6**
   - Choose Top or My rank on any active contest. Jarvis remembers each contest’s choice when switching and applies the same position and scroll rules to finished contests.
   - Keep game scroll animations from restarting while you scroll by hand during a contest switch.

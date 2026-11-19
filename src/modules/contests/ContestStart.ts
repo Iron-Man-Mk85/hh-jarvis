@@ -1,5 +1,5 @@
 import { settingHelp } from '../../settingsHelp';
-import { HHModule } from '../../HHModule';
+import { HHModule, type ModuleSettings } from '../../HHModule';
 import { $, currentPage } from '../../game';
 import { lsGet, lsSet, lsRm } from '../../storage';
 import { makeRankChoice, readContestDefaults, readContestSetting, readPinnedRank, selectContestChoice, type ContestEvent, type ContestKind } from './contestPreferences';
@@ -78,6 +78,9 @@ export class ContestStart extends HHModule {
     private restoringCard: HTMLElement | null = null;
     private reposition: (() => void) | null = null;
     private stopJump: ((finish?: boolean) => void) | null = null;
+    private stopSwitchScroll = false;
+    private switchScroll: { restore: () => void; stop: () => void } | null = null;
+    private readonly leaderboardPositions = new Map<string, number>();
     private observer: MutationObserver | null = null;
     private listeners: AbortController | null = null;
 
@@ -86,7 +89,12 @@ export class ContestStart extends HHModule {
         const configSchema = {
             baseKey,
             default: true,
-            label: settingHelp("Contest startup", "Open the preferred contest and leaderboard position on load. A starred contest takes priority.")
+            label: settingHelp("Contest startup", "Open the preferred contest and leaderboard position on load. A starred contest takes priority."),
+            subSettings: [{
+                key: 'noSwitchScroll',
+                label: settingHelp('Stop scrolling on contest switches', 'Keep the contest list in place and remember each leaderboard’s position when you switch cards. You can still scroll either pane by hand.'),
+                default: false
+            }]
         }
         super({ name: baseKey, configSchema });
     }
@@ -244,6 +252,11 @@ export class ContestStart extends HHModule {
             .find(row => row.getAttribute('sorting_id') === String(heroId));
     }
 
+    getLeaderboardScroller(right: HTMLElement, id: string) {
+        return Array.from(right.querySelectorAll('.ranking[id_contest]'))
+            .find(panel => panel.getAttribute('id_contest') === id)?.querySelector<HTMLElement>('.lead_table_view');
+    }
+
     lockScroll(scroller: HTMLElement) {
         $(scroller).stop(true, false);
         // The game can start another jQuery tween after load. Block its writes on this pane only.
@@ -279,11 +292,63 @@ export class ContestStart extends HHModule {
             top = scroller.scrollTop + (item.top - bounds.top) / scale - scroller.clientTop;
             if (center) top -= (scroller.clientHeight - item.height / scale) / 2;
         }
-        top = Math.max(0, Math.min(scroller.scrollHeight - scroller.clientHeight, top));
+        this.scrollInstantly(scroller, top);
+    }
+
+    scrollInstantly(scroller: HTMLElement, position: number) {
+        const top = Math.max(0, Math.min(scroller.scrollHeight - scroller.clientHeight, position));
         if (Math.abs(top - scroller.scrollTop) >= 1) {
             const scrollTo = Element.prototype.scrollTo as (options: ScrollToOptions) => void;
             scrollTo.call(scroller, { top, behavior: 'instant' });
         }
+    }
+
+    holdSwitchPosition(list: HTMLElement, right: HTMLElement, id: string) {
+        this.switchScroll?.stop();
+        const selected = this.getSelectedContestId(list, right);
+        if (selected) {
+            const previous = this.getLeaderboardScroller(right, selected);
+            if (previous?.clientHeight) this.leaderboardPositions.set(selected, previous.scrollTop);
+        }
+
+        const listTop = list.scrollTop;
+        const boardTop = this.leaderboardPositions.get(id) ?? 0;
+        const releaseList = this.lockScroll(list);
+        let board: HTMLElement | null | undefined;
+        let releaseBoard: (() => void) | undefined;
+        const restore = () => {
+            const next = this.getLeaderboardScroller(right, id);
+            if (next !== board) {
+                releaseBoard?.();
+                board = next;
+                releaseBoard = board ? this.lockScroll(board) : undefined;
+            }
+            this.scrollInstantly(list, listTop);
+            if (board?.clientHeight) this.scrollInstantly(board, boardTop);
+        };
+
+        const handlers = new AbortController();
+        const options = { capture: true, passive: true, signal: handlers.signal };
+        const stop = () => {
+            clearTimeout(timer);
+            handlers.abort();
+            releaseList();
+            releaseBoard?.();
+            this.switchScroll = null;
+        };
+        const timer = setTimeout(stop, 4000);
+        const onScroll = (event: Event) => {
+            if (event.target === list || event.target === board) restore();
+        };
+        for (const pane of [list, right]) {
+            pane.addEventListener('scroll', onScroll, options);
+            for (const type of ['wheel', 'touchmove', 'pointerdown']) pane.addEventListener(type, stop, options);
+        }
+        document.addEventListener('keydown', event => {
+            if (['ArrowUp', 'ArrowDown', 'PageUp', 'PageDown', 'Home', 'End', ' '].includes(event.key)) stop();
+        }, options);
+        this.switchScroll = { restore, stop };
+        restore();
     }
 
     openContest(list: HTMLElement, right: HTMLElement, { id, card, header, title }: ContestCard) {
@@ -296,10 +361,8 @@ export class ContestStart extends HHModule {
         let positioned = false;
         let lastAttempt: string | null | undefined;
 
-        const getBoard = () => Array.from(right.querySelectorAll('.ranking[id_contest]'))
-            .find(panel => panel.getAttribute('id_contest') === id)?.querySelector<HTMLElement>('.lead_table_view');
         const updateBoard = () => {
-            const next = getBoard();
+            const next = this.getLeaderboardScroller(right, id);
             if (board === next) return;
             releaseBoard?.();
             board = next;
@@ -383,6 +446,7 @@ export class ContestStart extends HHModule {
     refresh() {
         const list = document.querySelector<HTMLElement>('#contests .left_part .scroll_area');
         const right = document.querySelector<HTMLElement>('#contests .right_part');
+        if (this.list !== list || this.right !== right) this.switchScroll?.stop();
         if (this.stopJump && (this.list !== list || this.right !== right || !list?.contains(this.restoringCard))) {
             this.stopJump(false);
             if (this.right) this.showLeaderboard(this.right, null);
@@ -413,15 +477,17 @@ export class ContestStart extends HHModule {
             }
         } else {
             this.showLeaderboard(right, this.getSelectedContestId(list, right));
+            this.switchScroll?.restore();
         }
     }
 
-    run() {
+    run({ noSwitchScroll = false }: ModuleSettings) {
         if (this.hasRun || !this.shouldRun()) {return}
 
         const pin = readContestSetting('ContestStartId');
         this.preference = ((typeof pin === 'string' || typeof pin === 'number') && pin) ? String(pin) : '';
         this.startupPending = true;
+        this.stopSwitchScroll = noSwitchScroll;
         this.defaults = readContestDefaults();
         this.listeners = new AbortController();
         const { signal } = this.listeners;
@@ -438,21 +504,34 @@ export class ContestStart extends HHModule {
             attributeFilter: ['class', 'style', 'hidden', 'id_contest'] });
         if (document.readyState !== 'complete') window.addEventListener('load', () => this.refresh(), { once: true, signal });
         document.body.addEventListener('click', event => {
-            if (event.isTrusted && event.target instanceof Element && this.right && this.list?.contains(event.target) &&
-                event.target.closest('.contest_header')) {
-                this.startupPending = false;
-                this.showLeaderboard(this.right, null);
-                document.getElementById('jarvis-contest-startup')?.remove();
+            if (!event.isTrusted || !(event.target instanceof Element) || !this.right || !this.list?.contains(event.target)) return;
+            const header = event.target.closest('.contest_header');
+            if (!header || event.target.closest('.jarvis-contest-pin, .jarvis-contest-rank-start')) return;
+
+            this.startupPending = false;
+            const id = header.closest('.contest[id_contest]')?.getAttribute('id_contest');
+            if (this.stopSwitchScroll && id && id !== this.getSelectedContestId(this.list, this.right)) {
+                this.holdSwitchPosition(this.list, this.right, id);
             }
+            this.showLeaderboard(this.right, null);
+            document.getElementById('jarvis-contest-startup')?.remove();
         }, { capture: true, signal });
         this.refresh();
         this.hasRun = true
+    }
+
+    updateSubSetting(key: string, value: boolean) {
+        if (key !== 'noSwitchScroll') return;
+        this.stopSwitchScroll = value;
+        if (!value) this.switchScroll?.stop();
     }
 
     tearDown() {
         this.observer?.disconnect();
         this.listeners?.abort();
         this.stopJump?.();
+        this.switchScroll?.stop();
+        this.leaderboardPositions.clear();
         this.startupPending = false;
         this.list?.querySelectorAll('.jarvis-contest-pin, .jarvis-contest-rank-start').forEach(control => control.remove());
         if (this.right) this.showLeaderboard(this.right, null);

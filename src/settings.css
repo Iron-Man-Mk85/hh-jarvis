@@ -135,11 +135,61 @@ button.jarvis-contest-pin {
     border: 0;
     font-size: .85em;
 }
+.jarvis-contest-settings .jarvis-contest-choice {
+    box-sizing: border-box;
+    max-width: 100%;
+    flex-wrap: wrap;
+}
+.jarvis-contest-settings [hidden] {
+    display: none;
+}
 .jarvis-contest-settings:disabled .jarvis-contest-choice {
     opacity: .5;
 }
 .jarvis-contest-settings:disabled button {
     cursor: default;
+}
+.jarvis-contest-shortcuts {
+    position: absolute;
+    inset-block-start: 1.3rem;
+    inset-inline-end: 3rem;
+    z-index: 10;
+    display: flex;
+    align-items: center;
+    gap: .3em;
+    transform: translateY(-50%);
+}
+.jarvis-contest-shortcuts button {
+    all: unset;
+    box-sizing: border-box;
+    display: grid;
+    place-content: center;
+    gap: .15em;
+    min-inline-size: 2.85em;
+    padding: .28em .45em;
+    border: 1px solid color-mix(in srgb, currentColor 40%, transparent);
+    border-radius: .4em;
+    background: color-mix(in srgb, currentColor 10%, transparent);
+    color: inherit;
+    font: inherit;
+    font-size: .9em;
+    line-height: 1;
+    text-align: center;
+    white-space: nowrap;
+    cursor: pointer;
+}
+.jarvis-contest-shortcuts button span {
+    font-size: .75em;
+}
+.jarvis-contest-shortcuts button:hover {
+    background: color-mix(in srgb, currentColor 18%, transparent);
+}
+.jarvis-contest-shortcuts button[aria-pressed="true"] {
+    background: color-mix(in srgb, currentColor 27%, transparent);
+}
+.jarvis-contest-shortcuts button:focus-visible {
+    outline: 2px solid currentColor;
+    outline-offset: 2px;
 }
 .jarvis-mark-menu {
     position: fixed;
@@ -265,6 +315,47 @@ td[data-jarvis-mark] > a {
 .jarvis-view-changelog {
     margin-top: .45em;
 }
+.hh-plus-plus-config-button > .jarvis-changelog-notice {
+    position: absolute;
+    inset-inline-end: calc(100% + .25em);
+    top: 50%;
+    translate: 0 -50%;
+    height: 70%;
+    aspect-ratio: 1;
+    padding: 0;
+    border: 0;
+    border-radius: 50%;
+    background: transparent;
+    color: #a9e4ff;
+    cursor: pointer;
+}
+.jarvis-changelog-notice svg {
+    display: block;
+    width: 100%;
+    height: 100%;
+    filter: drop-shadow(0 1px 1px #071625);
+}
+.jarvis-changelog-notice:hover {
+    color: #dbf5ff;
+}
+.jarvis-changelog-notice:focus-visible {
+    outline: 2px solid currentColor;
+    outline-offset: 2px;
+}
+.jarvis-changelog-notice:is(:hover, :focus-visible)::after {
+    content: attr(data-tooltip);
+    position: absolute;
+    inset-block-start: calc(100% + .4em);
+    inset-inline-end: 0;
+    padding: .35em .55em;
+    border: 1px solid var(--config-setting-border, #a9a3bc);
+    border-radius: .35em;
+    background: var(--config-setting-background, #241e30);
+    color: #fff;
+    font: 500 .75rem/1.25 system-ui, sans-serif;
+    white-space: nowrap;
+    pointer-events: none;
+}
 dialog.jarvis-changelog-popup {
     --jarvis-changelog-height: min(32rem, calc(100vh - 1.25rem));
     box-sizing: border-box;
@@ -334,5 +425,20 @@ dialog.jarvis-changelog-popup {
 }
 .jarvis-changelog-content footer {
     display: flex;
+    flex-wrap: wrap;
+    align-items: center;
     justify-content: end;
+    gap: .5em;
+}
+.jarvis-changelog-options {
+    display: flex;
+    flex-wrap: wrap;
+    gap: .4em .9em;
+    margin-inline-end: auto;
+}
+.jarvis-changelog-options label {
+    display: inline-flex;
+    align-items: center;
+    gap: .4em;
+    cursor: pointer;
 }

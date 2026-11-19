@@ -1,5 +1,21 @@
 # Changelog
 
+- **0.7.6**
+  - Choose Top or My rank on any active contest. Jarvis remembers each contest’s choice when switching and applies the same position and scroll rules to finished contests.
+  - Keep game scroll animations from restarting while you scroll by hand during a contest switch.
+  - See a small arc-reactor icon beside HH++ when a silent update notice is available.
+- **0.7.5**
+  - Keep the homepage responsive after closing the changelog and choose Silent changelog from the popup.
+  - Stop automatic sidebar scrolling on contest switches by default and use Top or My rank whenever you switch.
+  - Bring the selected card into view when you use a contest shortcut.
+- **0.7.4** See your rank in each active contest beside the close button and switch leaderboards without moving the contest list.
+- **0.7.3**
+  - See automatic changelogs only when loading the homepage after an update.
+  - Enable Silent changelog to get a New button beside HH++ and open the notes when you’re ready.
+  - Keep the contest list and each leaderboard in place when switching contests with Stop scrolling on contest switches.
+- **0.7.2**
+  - Open the bottom active contest at your rank by default. Choose CbC, CCC, or LC to prefer that event when available.
+  - Turn off automatic update notices with Don’t show again in the changelog popup. View changelog stays available in settings.
 - **0.7.1**
   - Keep the changelog centered when the game window is resized.
   - Clean up saved player names, explain unknown names on hover, and give Remove buttons more room.

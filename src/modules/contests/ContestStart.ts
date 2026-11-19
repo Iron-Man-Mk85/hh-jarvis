@@ -1,8 +1,58 @@
 import { settingHelp } from '../../settingsHelp';
-import { HHModule } from '../../HHModule';
+import { HHModule, type ModuleSettings } from '../../HHModule';
 import { $, currentPage } from '../../game';
 import { lsGet, lsSet, lsRm } from '../../storage';
-import { makeRankChoice, readContestDefaults, readContestSetting, readPinnedRank, selectContestChoice, type ContestKind } from './contestPreferences';
+import { makeRankChoice, readContestDefaults, readContestRank, readContestSetting, saveContestRank, selectContestChoice, type ContestEvent, type ContestKind } from './contestPreferences';
+import { positionContestShortcuts, renderContestShortcuts } from './contestShortcuts';
+
+type ContestCategory = ContestKind | ContestEvent;
+const CONTEST_SHORT_LABELS: Record<ContestCategory, string> = {
+    daily: 'DC', cbc: 'CbC', ccc: 'CCC', lc: 'LC', event: 'Event'
+};
+const CONTEST_TITLE_SELECTOR = '.contest_title, .contest_name, h3, h4, h5';
+const protectedPanes = new Set<HTMLElement>();
+let restoreScrollIntoView: (() => void) | undefined;
+
+function guardScrollIntoView(pane: HTMLElement) {
+    if (!protectedPanes.size) {
+        const previous = Element.prototype.scrollIntoView;
+        const guarded = function (this: Element, options?: boolean | ScrollIntoViewOptions) {
+            // scrollIntoView can move a pane without calling its scroll methods.
+            if (Array.from(protectedPanes).some(scroller => scroller.contains(this))) return;
+            previous.call(this, options);
+        };
+        Element.prototype.scrollIntoView = guarded;
+        restoreScrollIntoView = () => {
+            if (Element.prototype.scrollIntoView === guarded) Element.prototype.scrollIntoView = previous;
+        };
+    }
+    protectedPanes.add(pane);
+
+    return () => {
+        protectedPanes.delete(pane);
+        if (protectedPanes.size) return;
+        restoreScrollIntoView?.();
+        restoreScrollIntoView = undefined;
+    };
+}
+
+function getContestCategory(category: string | undefined): ContestCategory | null {
+    switch (category?.trim().toLowerCase().replace(/[- ]+/g, '_')) {
+        case 'daily':
+        case 'daily_contest': return 'daily';
+        case 'cumback':
+        case 'cumback_contest':
+        case 'cbc': return 'cbc';
+        case 'crazy_cumback':
+        case 'crazy_cumback_contest':
+        case 'ccbc':
+        case 'ccc': return 'ccc';
+        case 'legendary':
+        case 'legendary_contest':
+        case 'lc': return 'lc';
+        default: return category ? 'event' : null;
+    }
+}
 
 interface ContestCard {
     id: string;
@@ -10,7 +60,8 @@ interface ContestCard {
     header: HTMLElement;
     title: HTMLElement | null;
     label: string;
-    kind: ContestKind | null;
+    category: ContestCategory | null;
+    ended: boolean;
 }
 
 export function armContestStartupGuard() {
@@ -58,6 +109,8 @@ export class ContestStart extends HHModule {
     private restoringCard: HTMLElement | null = null;
     private reposition: (() => void) | null = null;
     private stopJump: ((finish?: boolean) => void) | null = null;
+    private stopSwitchScroll = true;
+    private switchScroll: { restore: () => void; stop: () => void } | null = null;
     private observer: MutationObserver | null = null;
     private listeners: AbortController | null = null;
 
@@ -66,7 +119,12 @@ export class ContestStart extends HHModule {
         const configSchema = {
             baseKey,
             default: true,
-            label: settingHelp("Contest startup", "Open the preferred contest and leaderboard position on load. A starred contest takes priority.")
+            label: settingHelp("Contest startup", "Open the preferred contest and rank on load, and switch active contests from the header. A starred contest takes priority on load."),
+            subSettings: [{
+                key: 'noSwitchScroll',
+                label: settingHelp('Stop scrolling on contest switches', 'Keep the contest list in place when you switch by clicking a card. The leaderboard opens at your preferred position, and you can still scroll by hand.'),
+                default: true
+            }]
         }
         super({ name: baseKey, configSchema });
     }
@@ -85,18 +143,19 @@ export class ContestStart extends HHModule {
             if (!id) return [];
             const contest = active.get(id);
             const header = card.querySelector<HTMLElement>('.contest_header');
-            if (!header || finished.has(id)) return [];
-            if (!contest && !header.matches('.in_progress')) return [];
+            const ended = finished.has(id);
+            if (!header || (!ended && !contest && !header.matches('.in_progress'))) return [];
 
-            const title = header.querySelector<HTMLElement>('.contest_title, .contest_name, h3, h4, h5');
+            const title = header.querySelector<HTMLElement>(CONTEST_TITLE_SELECTOR);
             const name = title && Array.from(title.childNodes)
                 .filter(node => !(node instanceof Element) || !node.matches('.jarvis-contest-pin, .jarvis-contest-rank-start'))
                 .map(node => node.textContent).join('').trim();
+            const category = getContestCategory(contest?.category_type);
             return [{
-                id, card, header, title,
-                kind: contest?.category_type ? (contest.category_type === 'daily' ? 'daily' : 'event') : null,
+                id, card, header, title, ended,
+                category,
                 label: String(name || contest?.name || contest?.title ||
-                    (contest?.category_type === 'daily' ? 'Daily contest' : 'Contest')).trim()
+                    (category === 'daily' ? 'Daily contest' : 'Contest')).trim()
             }];
         });
     }
@@ -105,11 +164,14 @@ export class ContestStart extends HHModule {
         if (this.preference) return contests.find(contest => contest.id === this.preference);
 
         if (this.defaults.kind === 'event') {
-            const event = [...contests].reverse().find(contest => contest.kind === 'event');
-            if (event) return event;
+            if (this.defaults.event !== 'any') {
+                const event = [...contests].reverse().find(contest => contest.category === this.defaults.event);
+                if (event || document.readyState !== 'complete') return event;
+            }
+            return contests.at(-1);
         }
-        return contests.find(contest => contest.kind === 'daily') ??
-            contests.find(contest => contest.kind === null) ?? contests[0];
+        return contests.find(contest => contest.category === 'daily') ??
+            contests.find(contest => contest.category === null) ?? contests[0];
     }
 
     clearExpiredPin(list: HTMLElement, contests: ContestCard[], finished: ReadonlySet<string>) {
@@ -130,7 +192,7 @@ export class ContestStart extends HHModule {
         }
     }
 
-    updatePins(list: HTMLElement, contests: ContestCard[]) {
+    updateCardControls(list: HTMLElement, contests: ContestCard[]) {
         const hosts = new Set(contests.map(({ title, header }) => title || header));
         for (const control of list.querySelectorAll('.jarvis-contest-pin, .jarvis-contest-rank-start')) {
             if (!control.parentElement || !hosts.has(control.parentElement)) control.remove();
@@ -166,27 +228,31 @@ export class ContestStart extends HHModule {
             const pinned = this.preference === id;
             pin.setAttribute('aria-pressed', String(pinned));
             pin.setAttribute('aria-label', pinned ? `Unpin ${label}` : `Pin ${label} to open on reload`);
-            pin.title = pinned ? 'Pinned. Click to use your contest defaults.' : 'Open this contest when the page reloads';
+            pin.title = pinned ? 'Pinned. Click to unpin this contest.' : 'Open this contest when the page reloads';
 
             let position = host.querySelector<HTMLElement>(':scope > .jarvis-contest-rank-start');
-            if (!pinned) {
-                position?.remove();
-                continue;
-            }
             if (!position) {
-                const choice = makeRankChoice('Pinned leaderboard start', rank => {
+                const choice = makeRankChoice('Contest leaderboard start', rank => {
+                    const contestId = choice.closest('.contest[id_contest]')?.getAttribute('id_contest');
+                    if (!contestId) return;
                     try {
-                        lsSet('ContestPinnedRank', { id, rank });
+                        saveContestRank(contestId, rank);
                         selectContestChoice(choice, rank);
                     } catch (err) {
                         console.warn('Jarvis could not save the leaderboard position:', err);
+                        return;
+                    }
+                    if (this.right && this.getSelectedContestId(list, this.right) === contestId) {
+                        this.stopJump?.();
+                        this.positionSwitch(list, this.right, contestId);
                     }
                 });
                 choice.classList.add('jarvis-contest-rank-start');
+                choice.title = 'Leaderboard position for this contest';
                 pin.after(choice);
                 position = choice;
             }
-            selectContestChoice(position, readPinnedRank(id, this.defaults.rank));
+            selectContestChoice(position, readContestRank(id, this.defaults.rank));
         }
     }
 
@@ -220,7 +286,47 @@ export class ContestStart extends HHModule {
             .find(row => row.getAttribute('sorting_id') === String(heroId));
     }
 
-    lockScroll(scroller: HTMLElement) {
+    getLeaderboardScroller(right: HTMLElement, id: string) {
+        return Array.from(right.querySelectorAll('.ranking[id_contest]'))
+            .find(panel => panel.getAttribute('id_contest') === id)?.querySelector<HTMLElement>('.lead_table_view');
+    }
+
+    updateShortcuts(list: HTMLElement, right: HTMLElement, contests: ContestCard[]) {
+        const canvas = list.closest<HTMLElement>('#contests');
+        if (!canvas) return;
+
+        const shortcuts = contests.map(({ id, header, label, category }) => {
+            const board = this.getLeaderboardScroller(right, id);
+            const rank = header.querySelector('.personal_rewards .rank')?.textContent?.trim() ||
+                (board && this.getOwnRow(board)?.querySelector('td')?.textContent?.trim()) || '';
+            return { id, name: label, category: category ? CONTEST_SHORT_LABELS[category] : 'Contest', rank };
+        });
+        renderContestShortcuts(canvas, shortcuts, this.getSelectedContestId(list, right), id => this.openShortcut(id));
+    }
+
+    openShortcut(id: string) {
+        const { list, right } = this;
+        if (!list || !right) return;
+
+        const card = list.querySelector<HTMLElement>(`.contest[id_contest="${CSS.escape(id)}"]`);
+        const header = card?.querySelector<HTMLElement>('.contest_header');
+        if (!card || !header || header.matches('.ended') || card.matches('.ended')) return;
+
+        const alreadySelected = this.getSelectedContestId(list, right) === id;
+        this.stopJump?.();
+        this.prepareSwitch(list, right, id, card);
+        if (!alreadySelected) (header.querySelector<HTMLElement>(CONTEST_TITLE_SELECTOR) || header).click();
+        this.refresh();
+    }
+
+    prepareSwitch(list: HTMLElement, right: HTMLElement, id: string | null, shortcutCard?: HTMLElement) {
+        this.startupPending = false;
+        if (id) this.positionSwitch(list, right, id, shortcutCard);
+        this.showLeaderboard(right, null);
+        document.getElementById('jarvis-contest-startup')?.remove();
+    }
+
+    lockScroll(scroller: HTMLElement, guardDescendants = false) {
         $(scroller).stop(true, false);
         // The game can start another jQuery tween after load. Block its writes on this pane only.
         const ignoreScroll = () => {};
@@ -234,9 +340,11 @@ export class ContestStart extends HHModule {
         for (const [key, descriptor] of descriptors) {
             Object.defineProperty(scroller, key, { ...descriptor, configurable: true });
         }
+        const releaseDescendants = guardDescendants ? guardScrollIntoView(scroller) : undefined;
 
         return () => {
             $(scroller).stop(true, false);
+            releaseDescendants?.();
             for (const [key, descriptor] of descriptors) {
                 const current = Object.getOwnPropertyDescriptor(scroller, key);
                 if (current && current.value === descriptor.value && current.set === descriptor.set) Reflect.deleteProperty(scroller, key);
@@ -255,16 +363,77 @@ export class ContestStart extends HHModule {
             top = scroller.scrollTop + (item.top - bounds.top) / scale - scroller.clientTop;
             if (center) top -= (scroller.clientHeight - item.height / scale) / 2;
         }
-        top = Math.max(0, Math.min(scroller.scrollHeight - scroller.clientHeight, top));
+        this.scrollInstantly(scroller, top);
+    }
+
+    scrollInstantly(scroller: HTMLElement, position: number) {
+        const top = Math.max(0, Math.min(scroller.scrollHeight - scroller.clientHeight, position));
         if (Math.abs(top - scroller.scrollTop) >= 1) {
             const scrollTo = Element.prototype.scrollTo as (options: ScrollToOptions) => void;
             scrollTo.call(scroller, { top, behavior: 'instant' });
         }
     }
 
+    positionSwitch(list: HTMLElement, right: HTMLElement, id: string, shortcutCard?: HTMLElement) {
+        this.switchScroll?.stop();
+
+        const listTop = list.scrollTop;
+        const atOwnRank = readContestRank(id, this.defaults.rank) === 'mine';
+        const releaseList = this.stopSwitchScroll || shortcutCard ? this.lockScroll(list, true) : undefined;
+        let manualList = false;
+        let manualBoard = false;
+        let board: HTMLElement | null | undefined;
+        let releaseBoard: (() => void) | undefined;
+        const restore = () => {
+            const next = this.getLeaderboardScroller(right, id);
+            if (next !== board) {
+                releaseBoard?.();
+                board = next;
+                releaseBoard = board ? this.lockScroll(board, true) : undefined;
+                manualBoard = false;
+            }
+            if (!manualList && releaseList) {
+                if (shortcutCard && list.contains(shortcutCard)) this.jumpTo(list, shortcutCard);
+                else this.scrollInstantly(list, listTop);
+            }
+            if (!manualBoard && board?.clientHeight && this.getSelectedContestId(list, right) === id) {
+                this.jumpTo(board, atOwnRank ? this.getOwnRow(board) : null, atOwnRank);
+            }
+        };
+
+        const handlers = new AbortController();
+        const options = { capture: true, passive: true, signal: handlers.signal };
+        const stop = () => {
+            clearTimeout(timer);
+            handlers.abort();
+            releaseList?.();
+            releaseBoard?.();
+            this.switchScroll = null;
+        };
+        const timer = setTimeout(stop, 4000);
+        const onScroll = (event: Event) => {
+            if ((releaseList && event.target === list) || event.target === board) restore();
+        };
+        // Let user input move its pane without allowing a delayed game animation to take over.
+        const onManualInput = (event: Event) => {
+            if (!event.isTrusted || !(event.target instanceof Node)) return;
+            if (list.contains(event.target)) manualList = true;
+            if (board?.contains(event.target) && this.getSelectedContestId(list, right) === id) manualBoard = true;
+        };
+        for (const pane of [list, right]) {
+            pane.addEventListener('scroll', onScroll, options);
+            for (const type of ['wheel', 'touchmove', 'pointerdown']) pane.addEventListener(type, onManualInput, options);
+        }
+        document.addEventListener('keydown', event => {
+            if (['ArrowUp', 'ArrowDown', 'PageUp', 'PageDown', 'Home', 'End', ' '].includes(event.key)) onManualInput(event);
+        }, options);
+        this.switchScroll = { restore, stop };
+        restore();
+    }
+
     openContest(list: HTMLElement, right: HTMLElement, { id, card, header, title }: ContestCard) {
         for (const pane of [list, right]) pane.classList.add('jarvis-contest-instant', 'jarvis-contest-loading');
-        const rank = id === this.preference ? readPinnedRank(id, this.defaults.rank) : this.defaults.rank;
+        const rank = readContestRank(id, this.defaults.rank);
         const placeAtOwnRank = rank === 'mine';
         const releaseList = this.lockScroll(list);
         let board: HTMLElement | null | undefined;
@@ -272,10 +441,8 @@ export class ContestStart extends HHModule {
         let positioned = false;
         let lastAttempt: string | null | undefined;
 
-        const getBoard = () => Array.from(right.querySelectorAll('.ranking[id_contest]'))
-            .find(panel => panel.getAttribute('id_contest') === id)?.querySelector<HTMLElement>('.lead_table_view');
         const updateBoard = () => {
-            const next = getBoard();
+            const next = this.getLeaderboardScroller(right, id);
             if (board === next) return;
             releaseBoard?.();
             board = next;
@@ -359,6 +526,7 @@ export class ContestStart extends HHModule {
     refresh() {
         const list = document.querySelector<HTMLElement>('#contests .left_part .scroll_area');
         const right = document.querySelector<HTMLElement>('#contests .right_part');
+        if (this.list !== list || this.right !== right) this.switchScroll?.stop();
         if (this.stopJump && (this.list !== list || this.right !== right || !list?.contains(this.restoringCard))) {
             this.stopJump(false);
             if (this.right) this.showLeaderboard(this.right, null);
@@ -373,31 +541,37 @@ export class ContestStart extends HHModule {
             const id = ended.closest('.contest[id_contest]')?.getAttribute('id_contest');
             if (id) finished.add(id);
         }
-        const contests = this.getContests(list, finished);
+        const cards = this.getContests(list, finished);
+        const contests = cards.filter(card => !card.ended);
         this.clearExpiredPin(list, contests, finished);
-        this.updatePins(list, contests);
+        this.updateCardControls(list, contests);
 
         if (this.reposition) {
             this.reposition();
-            return;
-        }
-        if (this.startupPending) {
-            const target = this.getTarget(contests);
+        } else if (this.startupPending) {
+            let target = this.getTarget(contests);
+            if (!contests.length && !this.preference && document.readyState === 'complete') {
+                const selected = this.getSelectedContestId(list, right);
+                target = cards.find(card => card.id === selected) ?? cards.at(-1);
+            }
             if (target) this.openContest(list, right, target);
             else if (document.readyState === 'complete' && !this.preference) {
                 document.getElementById('jarvis-contest-startup')?.remove();
             }
         } else {
             this.showLeaderboard(right, this.getSelectedContestId(list, right));
+            this.switchScroll?.restore();
         }
+        this.updateShortcuts(list, right, contests);
     }
 
-    run() {
+    run({ noSwitchScroll = true }: ModuleSettings) {
         if (this.hasRun || !this.shouldRun()) {return}
 
         const pin = readContestSetting('ContestStartId');
         this.preference = ((typeof pin === 'string' || typeof pin === 'number') && pin) ? String(pin) : '';
         this.startupPending = true;
+        this.stopSwitchScroll = noSwitchScroll;
         this.defaults = readContestDefaults();
         this.listeners = new AbortController();
         const { signal } = this.listeners;
@@ -410,26 +584,39 @@ export class ContestStart extends HHModule {
                 this.refresh();
             }
         });
-        this.observer.observe(document.body, { childList: true, subtree: true, attributes: true,
+        this.observer.observe(document.body, { childList: true, characterData: true, subtree: true, attributes: true,
             attributeFilter: ['class', 'style', 'hidden', 'id_contest'] });
         if (document.readyState !== 'complete') window.addEventListener('load', () => this.refresh(), { once: true, signal });
+        window.addEventListener('resize', () => {
+            const canvas = this.list?.closest<HTMLElement>('#contests');
+            const bar = canvas?.querySelector<HTMLElement>(':scope > .jarvis-contest-shortcuts');
+            if (canvas && bar) positionContestShortcuts(canvas, bar);
+        }, { signal });
         document.body.addEventListener('click', event => {
-            if (event.isTrusted && event.target instanceof Element && this.right && this.list?.contains(event.target) &&
-                event.target.closest('.contest_header')) {
-                this.startupPending = false;
-                this.showLeaderboard(this.right, null);
-                document.getElementById('jarvis-contest-startup')?.remove();
-            }
+            if (!event.isTrusted || !(event.target instanceof Element) || !this.right || !this.list?.contains(event.target)) return;
+            const header = event.target.closest('.contest_header');
+            if (!header || event.target.closest('.jarvis-contest-pin, .jarvis-contest-rank-start')) return;
+
+            const id = header.closest('.contest[id_contest]')?.getAttribute('id_contest');
+            this.prepareSwitch(this.list, this.right, id ?? null);
         }, { capture: true, signal });
         this.refresh();
         this.hasRun = true
+    }
+
+    updateSubSetting(key: string, value: boolean) {
+        if (key !== 'noSwitchScroll') return;
+        this.stopSwitchScroll = value;
+        if (!value) this.switchScroll?.stop();
     }
 
     tearDown() {
         this.observer?.disconnect();
         this.listeners?.abort();
         this.stopJump?.();
+        this.switchScroll?.stop();
         this.startupPending = false;
+        this.list?.closest('#contests')?.querySelector(':scope > .jarvis-contest-shortcuts')?.remove();
         this.list?.querySelectorAll('.jarvis-contest-pin, .jarvis-contest-rank-start').forEach(control => control.remove());
         if (this.right) this.showLeaderboard(this.right, null);
         document.getElementById('jarvis-contest-startup')?.remove();

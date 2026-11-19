@@ -43,28 +43,17 @@ interface LeagueOpponent {
     player_league_points?: number | string;
 }
 
-interface CommonPopup {
-    type: 'common';
-    popup_name: string;
-    close_on_esc: boolean;
-    $dom_element: JQuery<HTMLElement>;
-    init(): void;
-    onOpen(): void;
-    addEventListeners(): void;
-    onClose(): void;
-    removeEventListeners(): void;
-    destroy(): void;
-}
-
 declare global {
     const love_raids: LoveRaid[] | undefined;
 
     interface Window {
         $?: JQueryStatic;
         hhPlusPlusConfig?: {
+            config: Record<string, boolean>;
             registerGroup(group: { key: string; name: string }): void;
             registerModule(module: HHModule): void;
             loadConfig(): void;
+            saveConfig(): void;
             runModules(): void;
         };
         HHPlusPlus: {
@@ -81,10 +70,6 @@ declare global {
         Hero?: HeroData;
         shared?: {
             Hero?: HeroData;
-            PopupQueueManager?: {
-                add(options: { popup: CommonPopup }): void;
-                close(options: { type: 'common' }): void;
-            };
         };
         opponents_list?: LeagueOpponent[];
         current_tier_number?: number | string;

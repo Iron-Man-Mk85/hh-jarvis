@@ -6,7 +6,10 @@ export type ContestKind = 'daily' | 'event';
 export type ContestRank = 'top' | 'mine';
 
 const CONTEST_KINDS = [['daily', 'Daily'], ['event', 'Event']] as const;
+const CONTEST_EVENTS = [['any', 'Any'], ['cbc', 'CbC'], ['ccc', 'CCC'], ['lc', 'LC']] as const;
 const CONTEST_RANKS = [['top', 'Top'], ['mine', 'My rank']] as const;
+
+export type ContestEvent = Exclude<(typeof CONTEST_EVENTS)[number][0], 'any'>;
 
 export function readContestSetting(key: string): unknown {
     try {
@@ -17,17 +20,32 @@ export function readContestSetting(key: string): unknown {
 }
 
 export function readContestDefaults() {
-    const kind: ContestKind = readContestSetting('ContestKind') === 'event' ? 'event' : 'daily';
-    const rank: ContestRank = readContestSetting('ContestRankStart') === 'mine' ? 'mine' : 'top';
-    return { kind, rank };
+    const kind: ContestKind = readContestSetting('ContestKind') === 'daily' ? 'daily' : 'event';
+    const savedEvent = readContestSetting('ContestEvent');
+    const event = CONTEST_EVENTS.find(([value]) => value === savedEvent)?.[0] ?? 'any';
+    const rank: ContestRank = readContestSetting('ContestRankStart') === 'top' ? 'top' : 'mine';
+    return { kind, event, rank };
 }
 
-export function readPinnedRank(id: string, fallback: ContestRank): ContestRank {
+export function readContestRank(id: string, fallback: ContestRank): ContestRank {
+    const ranks = readContestSetting('ContestRanks');
+    if (ranks && typeof ranks === 'object' && Object.hasOwn(ranks, id)) {
+        const rank = (ranks as Record<string, unknown>)[id];
+        if (rank === 'mine' || rank === 'top') return rank;
+    }
+
+    // Older versions stored a rank override for a single contest.
     const saved = readContestSetting('ContestPinnedRank');
-    if (saved && typeof saved === 'object' && 'id' in saved && saved.id === id && 'rank' in saved) {
+    if (saved && typeof saved === 'object' && 'id' in saved && String(saved.id) === id && 'rank' in saved) {
         if (saved.rank === 'mine' || saved.rank === 'top') return saved.rank;
     }
     return fallback;
+}
+
+export function saveContestRank(id: string, rank: ContestRank) {
+    const saved = readContestSetting('ContestRanks');
+    const ranks = saved && typeof saved === 'object' && !Array.isArray(saved) ? saved : {};
+    lsSet('ContestRanks', { ...ranks, [id]: rank });
 }
 
 export function makeRankChoice(label: string, select: (rank: ContestRank) => void) {
@@ -75,21 +93,31 @@ export function installContestSettings() {
             try {
                 lsSet(key, value);
                 selectContestChoice(group, value);
+                return true;
             } catch (err) {
                 console.warn('Jarvis could not save the contest default:', err);
+                return false;
             }
         };
-        const kinds = makeChoice('Preferred contest', CONTEST_KINDS, value => save('ContestKind', value, kinds));
+        const eventLabel = document.createElement('div');
+        eventLabel.innerHTML = settingHelp('Event type', 'Prefer CbC (Cumback Contest), CCC (Crazy Cumback Contest), or LC (Legendary Contest) when active. Any opens the bottom active contest, as does an unavailable event type.');
+        const events = makeChoice('Event type', CONTEST_EVENTS, value => save('ContestEvent', value, events));
+        const showEvents = (kind: ContestKind) => eventLabel.hidden = events.hidden = kind === 'daily';
+        const kinds = makeChoice('Preferred contest', CONTEST_KINDS, value => {
+            if (save('ContestKind', value, kinds)) showEvents(value);
+        });
         const ranks = makeRankChoice('Default leaderboard position', value => save('ContestRankStart', value, ranks));
         const defaults = readContestDefaults();
         selectContestChoice(kinds, defaults.kind);
+        selectContestChoice(events, defaults.event);
         selectContestChoice(ranks, defaults.rank);
+        showEvents(defaults.kind);
 
         const kindLabel = document.createElement('div');
-        kindLabel.innerHTML = settingHelp('Preferred contest', 'Daily opens the first active daily contest. Event opens the last active event contest, or the daily contest if there is no event.');
+        kindLabel.innerHTML = settingHelp('Preferred contest', 'Daily opens the first active daily contest. Event can prefer an event type or follow the game and open the bottom active contest.');
         const rankLabel = document.createElement('div');
-        rankLabel.innerHTML = settingHelp('Leaderboard start', 'Open at the top or at your rank. A starred contest can have its own position.');
-        fieldset.append(kindLabel, kinds, rankLabel, ranks);
+        rankLabel.innerHTML = settingHelp('Leaderboard start', 'Open at the top or at your rank. A position chosen on a contest card takes priority.');
+        fieldset.append(kindLabel, kinds, eventLabel, events, rankLabel, ranks);
         const refreshEnabled = () => fieldset.disabled = !card.classList.contains('enabled');
         refreshEnabled();
         new MutationObserver(refreshEnabled).observe(card, { attributeFilter: ['class'] });

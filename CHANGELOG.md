@@ -1,5 +1,9 @@
 # Changelog
 
+- **0.7.0**
+  - See what changed in Jarvis the first time a new version runs.
+  - Open View changelog from HH++ settings at any time, even with automatic notices turned off.
+  - Expand Earlier versions to read past updates.
 - **0.6.7** Make marking one action per player, backfill names for older marks, use the bracket-based promotion target, and simplify the selected contest buttons and version badge.
 - **0.6.6** Name the testing install Dev, move HH++ version and setting details to tooltips, improve mark contrast and management, and add automatic contest defaults.
 - **0.6.5** Move the userscript source into TypeScript modules and add separate stable and testing builds.

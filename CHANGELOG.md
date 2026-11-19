@@ -1,5 +1,9 @@
 # Changelog
 
+- **0.7.6**
+  - Choose Top or My rank on any active contest. Jarvis remembers each contest’s choice when switching and applies the same position and scroll rules to finished contests.
+  - Keep game scroll animations from restarting while you scroll by hand during a contest switch.
+  - See a small arc-reactor icon beside HH++ when a silent update notice is available.
 - **0.7.5**
   - Keep the homepage responsive after closing the changelog and choose Silent changelog from the popup.
   - Stop automatic sidebar scrolling on contest switches by default and use Top or My rank whenever you switch.

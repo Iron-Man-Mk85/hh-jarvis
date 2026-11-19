@@ -49,22 +49,24 @@ export class Changelog extends HHModule {
     private opener: HTMLButtonElement | null = null;
     private viewedThisPage = false;
     private loadListener: AbortController | null = null;
+    private settingsInstalled = false;
 
     constructor() {
         const baseKey = 'changelog';
         super({ name: baseKey, configSchema: {
             baseKey,
-            label: settingHelp('Update notices', 'Show the changelog once after an update. Use View changelog to open it whenever you like.'),
+            label: settingHelp('Update notices', 'Show the changelog the first time you load the homepage after an update. Use View changelog to open it whenever you like.'),
             default: true
         } });
     }
 
     shouldRun() {
-        return true;
+        return currentPage === '/home.html';
     }
 
     installSettings() {
-        if (currentPage !== '/home.html') return;
+        if (!this.shouldRun()) return;
+        this.settingsInstalled = true;
 
         window.HHPlusPlus.Helpers.doWhenSelectorAvailable(settingsCard, () => {
             const card = document.querySelector(settingsCard);
@@ -80,8 +82,10 @@ export class Changelog extends HHModule {
     }
 
     run() {
-        if (this.hasRun) return;
+        if (this.hasRun || !this.shouldRun()) return;
         this.hasRun = true;
+        // HH++ can run the module again when the user turns notices on in the settings pane.
+        if (this.settingsInstalled) return;
 
         const check = () => {
             if (this.hasRun && !this.viewedThisPage && isNewer(latestVersion, readSeenVersion())) this.open('automatic');
@@ -121,6 +125,7 @@ export class Changelog extends HHModule {
     }
 
     private open(mode: 'automatic' | 'manual', opener: HTMLButtonElement | null = null) {
+        if (!this.shouldRun()) return;
         if (mode === 'manual') this.opener = opener;
         if (this.pending) {
             if (mode === 'manual') this.pending = mode;

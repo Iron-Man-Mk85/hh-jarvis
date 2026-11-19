@@ -3,8 +3,13 @@ import { HHModule, type ModuleSettings } from '../../HHModule';
 import { $, currentPage } from '../../game';
 import { lsGet, lsSet, lsRm } from '../../storage';
 import { makeRankChoice, readContestDefaults, readContestSetting, readPinnedRank, selectContestChoice, type ContestEvent, type ContestKind } from './contestPreferences';
+import { positionContestShortcuts, renderContestShortcuts } from './contestShortcuts';
 
 type ContestCategory = ContestKind | ContestEvent;
+const CONTEST_SHORT_LABELS: Record<ContestCategory, string> = {
+    daily: 'DC', cbc: 'CbC', ccc: 'CCC', lc: 'LC', event: 'Event'
+};
+const CONTEST_TITLE_SELECTOR = '.contest_title, .contest_name, h3, h4, h5';
 
 function getContestCategory(category: string | undefined): ContestCategory | null {
     switch (category?.trim().toLowerCase().replace(/[- ]+/g, '_')) {
@@ -89,7 +94,7 @@ export class ContestStart extends HHModule {
         const configSchema = {
             baseKey,
             default: true,
-            label: settingHelp("Contest startup", "Open the preferred contest and leaderboard position on load. A starred contest takes priority."),
+            label: settingHelp("Contest startup", "Open the preferred contest and rank on load, and switch active contests from the header. A starred contest takes priority on load."),
             subSettings: [{
                 key: 'noSwitchScroll',
                 label: settingHelp('Stop scrolling on contest switches', 'Keep the contest list in place and remember each leaderboard’s position when you switch cards. You can still scroll either pane by hand.'),
@@ -116,7 +121,7 @@ export class ContestStart extends HHModule {
             if (!header || finished.has(id)) return [];
             if (!contest && !header.matches('.in_progress')) return [];
 
-            const title = header.querySelector<HTMLElement>('.contest_title, .contest_name, h3, h4, h5');
+            const title = header.querySelector<HTMLElement>(CONTEST_TITLE_SELECTOR);
             const name = title && Array.from(title.childNodes)
                 .filter(node => !(node instanceof Element) || !node.matches('.jarvis-contest-pin, .jarvis-contest-rank-start'))
                 .map(node => node.textContent).join('').trim();
@@ -255,6 +260,40 @@ export class ContestStart extends HHModule {
     getLeaderboardScroller(right: HTMLElement, id: string) {
         return Array.from(right.querySelectorAll('.ranking[id_contest]'))
             .find(panel => panel.getAttribute('id_contest') === id)?.querySelector<HTMLElement>('.lead_table_view');
+    }
+
+    updateShortcuts(list: HTMLElement, right: HTMLElement, contests: ContestCard[]) {
+        const canvas = list.closest<HTMLElement>('#contests');
+        if (!canvas) return;
+
+        const shortcuts = contests.map(({ id, header, label, category }) => {
+            const board = this.getLeaderboardScroller(right, id);
+            const rank = header.querySelector('.personal_rewards .rank')?.textContent?.trim() ||
+                (board && this.getOwnRow(board)?.querySelector('td')?.textContent?.trim()) || '';
+            return { id, name: label, category: category ? CONTEST_SHORT_LABELS[category] : 'Contest', rank };
+        });
+        renderContestShortcuts(canvas, shortcuts, this.getSelectedContestId(list, right), id => this.openShortcut(id));
+    }
+
+    openShortcut(id: string) {
+        const { list, right } = this;
+        if (!list || !right || this.getSelectedContestId(list, right) === id) return;
+
+        const card = list.querySelector(`.contest[id_contest="${CSS.escape(id)}"]`);
+        const header = card?.querySelector<HTMLElement>('.contest_header');
+        if (!header || header.matches('.ended') || card?.matches('.ended')) return;
+
+        this.stopJump?.();
+        this.prepareSwitch(list, right, id, true);
+        (header.querySelector<HTMLElement>(CONTEST_TITLE_SELECTOR) || header).click();
+        this.refresh();
+    }
+
+    prepareSwitch(list: HTMLElement, right: HTMLElement, id: string | null, keepPosition: boolean) {
+        this.startupPending = false;
+        if (keepPosition && id && id !== this.getSelectedContestId(list, right)) this.holdSwitchPosition(list, right, id);
+        this.showLeaderboard(right, null);
+        document.getElementById('jarvis-contest-startup')?.remove();
     }
 
     lockScroll(scroller: HTMLElement) {
@@ -467,9 +506,7 @@ export class ContestStart extends HHModule {
 
         if (this.reposition) {
             this.reposition();
-            return;
-        }
-        if (this.startupPending) {
+        } else if (this.startupPending) {
             const target = this.getTarget(contests);
             if (target) this.openContest(list, right, target);
             else if (document.readyState === 'complete' && !this.preference) {
@@ -479,6 +516,7 @@ export class ContestStart extends HHModule {
             this.showLeaderboard(right, this.getSelectedContestId(list, right));
             this.switchScroll?.restore();
         }
+        this.updateShortcuts(list, right, contests);
     }
 
     run({ noSwitchScroll = false }: ModuleSettings) {
@@ -500,21 +538,21 @@ export class ContestStart extends HHModule {
                 this.refresh();
             }
         });
-        this.observer.observe(document.body, { childList: true, subtree: true, attributes: true,
+        this.observer.observe(document.body, { childList: true, characterData: true, subtree: true, attributes: true,
             attributeFilter: ['class', 'style', 'hidden', 'id_contest'] });
         if (document.readyState !== 'complete') window.addEventListener('load', () => this.refresh(), { once: true, signal });
+        window.addEventListener('resize', () => {
+            const canvas = this.list?.closest<HTMLElement>('#contests');
+            const bar = canvas?.querySelector<HTMLElement>(':scope > .jarvis-contest-shortcuts');
+            if (canvas && bar) positionContestShortcuts(canvas, bar);
+        }, { signal });
         document.body.addEventListener('click', event => {
             if (!event.isTrusted || !(event.target instanceof Element) || !this.right || !this.list?.contains(event.target)) return;
             const header = event.target.closest('.contest_header');
             if (!header || event.target.closest('.jarvis-contest-pin, .jarvis-contest-rank-start')) return;
 
-            this.startupPending = false;
             const id = header.closest('.contest[id_contest]')?.getAttribute('id_contest');
-            if (this.stopSwitchScroll && id && id !== this.getSelectedContestId(this.list, this.right)) {
-                this.holdSwitchPosition(this.list, this.right, id);
-            }
-            this.showLeaderboard(this.right, null);
-            document.getElementById('jarvis-contest-startup')?.remove();
+            this.prepareSwitch(this.list, this.right, id ?? null, this.stopSwitchScroll);
         }, { capture: true, signal });
         this.refresh();
         this.hasRun = true
@@ -533,6 +571,7 @@ export class ContestStart extends HHModule {
         this.switchScroll?.stop();
         this.leaderboardPositions.clear();
         this.startupPending = false;
+        this.list?.closest('#contests')?.querySelector(':scope > .jarvis-contest-shortcuts')?.remove();
         this.list?.querySelectorAll('.jarvis-contest-pin, .jarvis-contest-rank-start').forEach(control => control.remove());
         if (this.right) this.showLeaderboard(this.right, null);
         document.getElementById('jarvis-contest-startup')?.remove();

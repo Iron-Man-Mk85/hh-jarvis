@@ -149,6 +149,48 @@ button.jarvis-contest-pin {
 .jarvis-contest-settings:disabled button {
     cursor: default;
 }
+.jarvis-contest-shortcuts {
+    position: absolute;
+    inset-block-start: 1.3rem;
+    inset-inline-end: 3rem;
+    z-index: 10;
+    display: flex;
+    align-items: center;
+    gap: .3em;
+    transform: translateY(-50%);
+}
+.jarvis-contest-shortcuts button {
+    all: unset;
+    box-sizing: border-box;
+    display: grid;
+    place-content: center;
+    gap: .15em;
+    min-inline-size: 2.85em;
+    padding: .28em .45em;
+    border: 1px solid color-mix(in srgb, currentColor 40%, transparent);
+    border-radius: .4em;
+    background: color-mix(in srgb, currentColor 10%, transparent);
+    color: inherit;
+    font: inherit;
+    font-size: .9em;
+    line-height: 1;
+    text-align: center;
+    white-space: nowrap;
+    cursor: pointer;
+}
+.jarvis-contest-shortcuts button span {
+    font-size: .75em;
+}
+.jarvis-contest-shortcuts button:hover {
+    background: color-mix(in srgb, currentColor 18%, transparent);
+}
+.jarvis-contest-shortcuts button[aria-pressed="true"] {
+    background: color-mix(in srgb, currentColor 27%, transparent);
+}
+.jarvis-contest-shortcuts button:focus-visible {
+    outline: 2px solid currentColor;
+    outline-offset: 2px;
+}
 .jarvis-mark-menu {
     position: fixed;
     z-index: 10000;

@@ -334,5 +334,15 @@ dialog.jarvis-changelog-popup {
 }
 .jarvis-changelog-content footer {
     display: flex;
+    flex-wrap: wrap;
+    align-items: center;
     justify-content: end;
+    gap: .5em;
+}
+.jarvis-changelog-opt-out {
+    display: inline-flex;
+    align-items: center;
+    gap: .4em;
+    margin-inline-end: auto;
+    cursor: pointer;
 }

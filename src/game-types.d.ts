@@ -62,9 +62,11 @@ declare global {
     interface Window {
         $?: JQueryStatic;
         hhPlusPlusConfig?: {
+            config: Record<string, boolean>;
             registerGroup(group: { key: string; name: string }): void;
             registerModule(module: HHModule): void;
             loadConfig(): void;
+            saveConfig(): void;
             runModules(): void;
         };
         HHPlusPlus: {

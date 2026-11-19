@@ -7,6 +7,8 @@ import { showChangelogPopup } from './changelogPopup';
 
 const seenKey = `ChangelogSeen${USERSCRIPT_CHANNEL}`;
 const latestVersion = releaseNotes[0].version;
+const configKey = 'JARVIS_changelog';
+const settingsCard = `.group-panel[rel="JARVIS"] .config-setting[rel="${configKey}"]`;
 
 function readSeenVersion() {
     try {
@@ -64,9 +66,8 @@ export class Changelog extends HHModule {
     installSettings() {
         if (currentPage !== '/home.html') return;
 
-        const selector = '.group-panel[rel="JARVIS"] .config-setting[rel="JARVIS_changelog"]';
-        window.HHPlusPlus.Helpers.doWhenSelectorAvailable(selector, () => {
-            const card = document.querySelector(selector);
+        window.HHPlusPlus.Helpers.doWhenSelectorAvailable(settingsCard, () => {
+            const card = document.querySelector(settingsCard);
             if (!card || card.querySelector('.jarvis-view-changelog')) return;
 
             const button = document.createElement('button');
@@ -95,6 +96,28 @@ export class Changelog extends HHModule {
     tearDown() {
         this.loadListener?.abort();
         this.hasRun = false;
+    }
+
+    private disableNotices() {
+        const config = window.hhPlusPlusConfig;
+        if (!config || !config.config[configKey]) return;
+
+        try {
+            config.loadConfig();
+            config.config[configKey] = false;
+            config.saveConfig();
+        } catch (err) {
+            config.config[configKey] = true;
+            console.warn('Jarvis could not turn off update notices:', err);
+            return;
+        }
+
+        // HH++ creates its settings pane lazily, so the popup can close before the pane exists.
+        const card = document.querySelector(settingsCard);
+        const checkbox = card?.querySelector<HTMLInputElement>(`input[name="${configKey}"]`);
+        if (checkbox) checkbox.checked = false;
+        card?.classList.remove('enabled');
+        this.tearDown();
     }
 
     private open(mode: 'automatic' | 'manual', opener: HTMLButtonElement | null = null) {
@@ -127,6 +150,11 @@ export class Changelog extends HHModule {
         }
 
         const footer = document.createElement('footer');
+        const optOut = document.createElement('label');
+        optOut.className = 'jarvis-changelog-opt-out';
+        const dontShowAgain = document.createElement('input');
+        dontShowAgain.type = 'checkbox';
+        optOut.append(dontShowAgain, 'Don’t show again');
         const closeButton = document.createElement('button');
         closeButton.type = 'button';
         closeButton.className = 'jarvis-setting-action';
@@ -141,6 +169,7 @@ export class Changelog extends HHModule {
                 (this.hasRun && !this.viewedThisPage && isNewer(latestVersion, readSeenVersion())),
             onOpen: () => {
                 this.viewedThisPage = true;
+                if (this.hasRun) footer.prepend(optOut);
                 try {
                     if (isNewer(latestVersion, readSeenVersion())) lsSet(seenKey, latestVersion);
                 } catch (err) {
@@ -149,6 +178,7 @@ export class Changelog extends HHModule {
             },
             onClose: () => {
                 this.pending = null;
+                if (dontShowAgain.checked) this.disableNotices();
                 this.opener?.focus({ preventScroll: true });
                 this.opener = null;
             }

@@ -1,8 +1,10 @@
+import { LS_CONFIG_NAME } from '../../storage';
+
 export type Mark = 'friend' | 'foe';
 
 export interface SavedMark {
     id: string;
-    name: string;
+    name?: string;
     mark: Mark;
 }
 
@@ -30,7 +32,8 @@ export function openMarkManager(read: () => SavedMark[], remove: (id: string) =>
     actions.append(clearAll, close);
 
     function render() {
-        const entries = read().sort((a, b) => a.name.localeCompare(b.name, undefined, { numeric: true }));
+        const entries = read().sort((a, b) => Number(!a.name) - Number(!b.name) ||
+            (a.name || a.id).localeCompare(b.name || b.id, undefined, { numeric: true }));
         const sections = (['friend', 'foe'] as const).map(mark => {
             const section = document.createElement('section');
             const heading = document.createElement('h3');
@@ -49,8 +52,8 @@ export function openMarkManager(read: () => SavedMark[], remove: (id: string) =>
             for (const { id, name } of matches) {
                 const row = document.createElement('li');
                 const player = document.createElement('span');
-                player.textContent = name;
-                player.title = `Player ID ${id}`;
+                player.textContent = name ? `${name} · ${id}` : id;
+                if (!name) player.title = 'The name will appear after Jarvis sees this player.';
                 const button = makeButton('Remove', () => {
                     const index = Array.from(lists.querySelectorAll('button')).indexOf(button);
                     if (remove(id)) {
@@ -59,7 +62,7 @@ export function openMarkManager(read: () => SavedMark[], remove: (id: string) =>
                         (remaining[Math.min(index, remaining.length - 1)] || close).focus();
                     }
                 });
-                button.setAttribute('aria-label', `Remove ${name} from ${mark === 'friend' ? 'friends' : 'foes'}`);
+                button.setAttribute('aria-label', `Remove ${name || `player ${id}`} from ${mark === 'friend' ? 'friends' : 'foes'}`);
                 row.append(player, button);
                 list.appendChild(row);
             }
@@ -72,7 +75,15 @@ export function openMarkManager(read: () => SavedMark[], remove: (id: string) =>
 
     render();
     dialog.append(title, lists, actions);
-    dialog.addEventListener('close', () => dialog.remove(), { once: true });
+    const listeners = new AbortController();
+    window.addEventListener('storage', event => {
+        if (!event.key || ['PlayerMarks', 'PlayerMarkNames', 'FriendList', 'FoeList']
+            .some(key => event.key === LS_CONFIG_NAME + key)) render();
+    }, { signal: listeners.signal });
+    dialog.addEventListener('close', () => {
+        listeners.abort();
+        dialog.remove();
+    }, { once: true });
     document.body.appendChild(dialog);
     dialog.showModal();
     close.focus();

@@ -100,7 +100,7 @@ export class FriendAndFoes extends HHModule {
         const names = this.readSavedNames();
         return Object.entries(this.readMarks()).flatMap<SavedMark>(([id, mark]) =>
             /^[1-9]\d*$/.test(id) && (mark === 'friend' || mark === 'foe')
-                ? [{ id, name: names[id] || `Player #${id}`, mark }]
+                ? [{ id, name: names[id], mark }]
                 : []);
     }
 
@@ -210,10 +210,9 @@ export class FriendAndFoes extends HHModule {
         menu.querySelector('button')?.focus({ preventScroll: true });
     }
 
-    getContestNames(root: HTMLElement) {
+    getContestNames(root: HTMLElement, contests: ContestData[]) {
         const names = new Map<HTMLElement, string>();
         const byContest = new Map<string, Map<string, Set<string>>>();
-        const contests = Object.values(window.contests || {}).filter((list): list is ContestData[] => Array.isArray(list)).flat();
 
         for (const row of root.querySelectorAll<HTMLTableRowElement>('.leadTable tr')) {
             const cell = row.cells?.[1];
@@ -247,10 +246,14 @@ export class FriendAndFoes extends HHModule {
     refresh() {
         const root = document.querySelector<HTMLElement>(this.rootSelector);
         this.root = root;
+        const contests = this.inLeague ? [] : [
+            ...Object.values(window.contests?.active ?? {}),
+            ...Object.values(window.contests?.finished ?? {})
+        ].filter(contest => contest?.id_contest != null);
         const names = !root ? new Map<HTMLElement, string>() : this.inLeague
             ? new Map(Array.from(root.querySelectorAll<HTMLElement>('.nickname[id-member]'), name => [name, name.getAttribute('id-member')] as const)
                 .filter((entry): entry is readonly [HTMLElement, string] => !!entry[1] && /^[1-9]\d*$/.test(entry[1])))
-            : this.getContestNames(root);
+            : this.getContestNames(root, contests);
 
         for (const name of this.names.keys()) {
             if (names.has(name)) continue;
@@ -262,7 +265,31 @@ export class FriendAndFoes extends HHModule {
         if (!root) return;
         const marks = this.readMarks();
         const savedNames = this.readSavedNames();
+        const rosterNames = new Set<string>();
         let namesChanged = false;
+        const rememberName = (id: string, text?: string | null) => {
+            const displayName = typeof text === 'string' ? text.trim() : '';
+            if (!displayName || (marks[id] !== 'friend' && marks[id] !== 'foe')) return false;
+            if (savedNames[id] !== displayName) {
+                savedNames[id] = displayName;
+                namesChanged = true;
+            }
+            return true;
+        };
+        if (this.inLeague) {
+            for (const { player, nickname } of window.opponents_list ?? []) {
+                const id = String(player?.id_fighter);
+                if (rememberName(id, nickname)) rosterNames.add(id);
+            }
+        } else {
+            // Prefer the active roster if a player appears in both old and current contests.
+            for (const contest of contests) {
+                for (const { id_member, nickname } of Object.values(contest.participants ?? {})) {
+                    const id = String(id_member);
+                    if (!rosterNames.has(id) && rememberName(id, nickname)) rosterNames.add(id);
+                }
+            }
+        }
         const colors = this.readColors();
         for (const [mark, color] of Object.entries(colors)) {
             const property = '--jarvis-' + mark + '-color';
@@ -273,11 +300,7 @@ export class FriendAndFoes extends HHModule {
             const mark = marks[id];
             if (mark === 'friend' || mark === 'foe') {
                 if (name.dataset.jarvisMark !== mark) name.dataset.jarvisMark = mark;
-                const displayName = name.textContent?.trim();
-                if (displayName && savedNames[id] !== displayName) {
-                    savedNames[id] = displayName;
-                    namesChanged = true;
-                }
+                if (!rosterNames.has(id)) rememberName(id, name.textContent);
             } else if (name.dataset.jarvisMark) {
                 delete name.dataset.jarvisMark;
             }

@@ -38,6 +38,7 @@ interface HeroData {
 
 interface LeagueOpponent {
     player?: { id_fighter?: GameId };
+    nickname?: string;
     place?: number | string;
     player_league_points?: number | string;
 }

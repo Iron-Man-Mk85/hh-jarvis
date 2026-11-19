@@ -8,6 +8,7 @@ import { showChangelogPopup } from './changelogPopup';
 const seenKey = `ChangelogSeen${USERSCRIPT_CHANNEL}`;
 const latestVersion = releaseNotes[0].version;
 const configKey = 'JARVIS_changelog';
+const silentKey = `${configKey}_silent`;
 const settingsCard = `.group-panel[rel="JARVIS"] .config-setting[rel="${configKey}"]`;
 
 function readSeenVersion() {
@@ -154,26 +155,34 @@ export class Changelog extends HHModule {
         this.notice = null;
     }
 
-    private disableNotices() {
+    private saveNoticeSetting(key: typeof configKey | typeof silentKey, value: boolean) {
         const config = window.hhPlusPlusConfig;
-        if (!config || !config.config[configKey]) return;
+        if (!config) return false;
 
+        let previous = config.config[key];
         try {
             config.loadConfig();
-            config.config[configKey] = false;
+            previous = config.config[key];
+            config.config[key] = value;
             config.saveConfig();
         } catch (err) {
-            config.config[configKey] = true;
-            console.warn('Jarvis could not turn off update notices:', err);
-            return;
+            config.config[key] = previous;
+            console.warn('Jarvis could not save the update notice preference:', err);
+            return false;
         }
 
         // HH++ creates its settings pane lazily, so the popup can close before the pane exists.
+        const checkbox = document.querySelector<HTMLInputElement>(`${settingsCard} input[name="${key}"]`);
+        if (checkbox) checkbox.checked = value;
+        return true;
+    }
+
+    private disableNotices() {
+        if (!this.saveNoticeSetting(configKey, false)) return;
+
         const card = document.querySelector(settingsCard);
-        const checkbox = card?.querySelector<HTMLInputElement>(`input[name="${configKey}"]`);
-        if (checkbox) checkbox.checked = false;
         card?.classList.remove('enabled');
-        const silent = card?.querySelector<HTMLInputElement>(`input[name="${configKey}_silent"]`);
+        const silent = card?.querySelector<HTMLInputElement>(`input[name="${silentKey}"]`);
         if (silent) silent.disabled = true;
         this.tearDown();
     }
@@ -209,11 +218,20 @@ export class Changelog extends HHModule {
         }
 
         const footer = document.createElement('footer');
+        const options = document.createElement('div');
+        options.className = 'jarvis-changelog-options';
         const optOut = document.createElement('label');
-        optOut.className = 'jarvis-changelog-opt-out';
         const dontShowAgain = document.createElement('input');
         dontShowAgain.type = 'checkbox';
         optOut.append(dontShowAgain, 'Don’t show again');
+        const silentOption = document.createElement('label');
+        const useSilent = document.createElement('input');
+        useSilent.type = 'checkbox';
+        useSilent.checked = this.silent;
+        silentOption.title = 'Show a New button by HH++ for future updates.';
+        silentOption.append(useSilent, 'Silent changelog');
+        dontShowAgain.addEventListener('change', () => useSilent.disabled = dontShowAgain.checked);
+        options.append(optOut, silentOption);
         const closeButton = document.createElement('button');
         closeButton.type = 'button';
         closeButton.className = 'jarvis-setting-action';
@@ -228,7 +246,7 @@ export class Changelog extends HHModule {
             onOpen: () => {
                 this.viewedThisPage = true;
                 this.removeNotice();
-                if (this.hasRun) footer.prepend(optOut);
+                if (this.hasRun) footer.prepend(options);
                 try {
                     if (isNewer(latestVersion, readSeenVersion())) lsSet(seenKey, latestVersion);
                 } catch (err) {
@@ -238,6 +256,9 @@ export class Changelog extends HHModule {
             onClose: () => {
                 this.pending = null;
                 if (dontShowAgain.checked) this.disableNotices();
+                else if (this.hasRun && useSilent.checked !== this.silent && this.saveNoticeSetting(silentKey, useSilent.checked)) {
+                    this.updateSubSetting('silent', useSilent.checked);
+                }
                 this.opener?.focus({ preventScroll: true });
                 this.opener = null;
             }

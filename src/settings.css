@@ -410,10 +410,15 @@ dialog.jarvis-changelog-popup {
     justify-content: end;
     gap: .5em;
 }
-.jarvis-changelog-opt-out {
+.jarvis-changelog-options {
+    display: flex;
+    flex-wrap: wrap;
+    gap: .4em .9em;
+    margin-inline-end: auto;
+}
+.jarvis-changelog-options label {
     display: inline-flex;
     align-items: center;
     gap: .4em;
-    margin-inline-end: auto;
     cursor: pointer;
 }

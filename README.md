@@ -30,7 +30,7 @@ HH J.A.R.V.I.S. is a Quality of Life userscript for Kinkoid games.
 
 Edit the TypeScript modules in `src/modules/`. `src/index.ts` starts Jarvis and registers the modules with HH++. `package.json` supplies the version for both the userscript header and the HH++ tab. Record changes in `CHANGELOG.md`.
 
-The changelog popup uses the notes in `CHANGELOG.md`. Put the current version first as `- **x.y.z**` and add a summary or indented bullets below it.
+The changelog popup uses `CHANGELOG.md` for player-facing changes. Keep development and testing notes in `CHANGELOG-DEV.md`, which only the Dev build includes. Start an entry with `- **x.y.z**` and add a summary or indented bullets below it.
 
 Run `npm ci` with Node.js 20 or newer.
 

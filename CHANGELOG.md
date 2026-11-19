@@ -5,8 +5,7 @@
   - Open View changelog from HH++ settings at any time, even with automatic notices turned off.
   - Expand Earlier versions to read past updates.
 - **0.6.7** Make marking one action per player, backfill names for older marks, use the bracket-based promotion target, and simplify the selected contest buttons and version badge.
-- **0.6.6** Name the testing install Dev, move HH++ version and setting details to tooltips, improve mark contrast and management, and add automatic contest defaults.
-- **0.6.5** Move the userscript source into TypeScript modules and add separate stable and testing builds.
+- **0.6.6** Add setting help in HH++, improve mark contrast and management, and add automatic contest defaults.
 - **0.6.4** Prevent pinned contest startup scrolling, keep native startup without a pin, and clear finished pins
 - **0.6.3** Stop both contest startup scrolls, isolate the selected leaderboard, and restore pinned contests at Top or My rank
 - **0.6.2** Pin contests on their cards, hide the startup scroll, and use right-click marking with isolated settings scrolling

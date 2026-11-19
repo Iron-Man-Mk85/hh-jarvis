@@ -6,6 +6,7 @@ import { lsGet, lsSet } from '../../storage';
 import { showChangelogPopup } from './changelogPopup';
 
 const seenKey = `ChangelogSeen${USERSCRIPT_CHANNEL}`;
+const latestVersion = releaseNotes[0].version;
 
 function readSeenVersion() {
     try {
@@ -82,7 +83,7 @@ export class Changelog extends HHModule {
         this.hasRun = true;
 
         const check = () => {
-            if (this.hasRun && !this.viewedThisPage && isNewer(USERSCRIPT_VERSION, readSeenVersion())) this.open('automatic');
+            if (this.hasRun && !this.viewedThisPage && isNewer(latestVersion, readSeenVersion())) this.open('automatic');
         };
         if (document.readyState === 'complete') check();
         else {
@@ -112,7 +113,7 @@ export class Changelog extends HHModule {
         title.textContent = 'Jarvis changelog';
         const notes = document.createElement('div');
         notes.className = 'jarvis-changelog-notes';
-        const newReleases = previous && isNewer(USERSCRIPT_VERSION, previous)
+        const newReleases = previous && isNewer(latestVersion, previous)
             ? releaseNotes.filter(release => isNewer(release.version, previous)).length
             : 1;
         notes.append(...releaseNotes.slice(0, newReleases).map(releaseSection));
@@ -137,11 +138,11 @@ export class Changelog extends HHModule {
             content,
             closeButton,
             shouldOpen: () => this.pending === 'manual' ||
-                (this.hasRun && !this.viewedThisPage && isNewer(USERSCRIPT_VERSION, readSeenVersion())),
+                (this.hasRun && !this.viewedThisPage && isNewer(latestVersion, readSeenVersion())),
             onOpen: () => {
                 this.viewedThisPage = true;
                 try {
-                    if (isNewer(USERSCRIPT_VERSION, readSeenVersion())) lsSet(seenKey, USERSCRIPT_VERSION);
+                    if (isNewer(latestVersion, readSeenVersion())) lsSet(seenKey, latestVersion);
                 } catch (err) {
                     console.warn('Jarvis could not save the viewed changelog version:', err);
                 }

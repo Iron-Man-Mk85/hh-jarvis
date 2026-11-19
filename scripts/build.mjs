@@ -49,26 +49,47 @@ const minifyCss = {
     }
 };
 
+async function readReleaseNotes(path) {
+    const markdown = await readFile(path, 'utf8');
+    const releases = [];
+    for (const line of markdown.split(/\r?\n/)) {
+        const header = /^- \*\*(\d+\.\d+\.\d+)\*\*\s*(.*)$/.exec(line);
+        if (header) {
+            const [, version, summary] = header;
+            releases.push({ version, changes: summary ? [summary.trim()] : [] });
+            continue;
+        }
+        const bullet = /^\s{2,}- (.+)$/.exec(line);
+        if (bullet && releases.length) releases.at(-1).changes.push(bullet[1].trim());
+    }
+    if (!releases.length || releases.some(release => !release.changes.length)) {
+        throw new Error(path + ' must contain release versions with notes.');
+    }
+    return releases;
+}
+
 const releaseNotes = {
     name: 'release-notes',
     setup(builder) {
         builder.onLoad({ filter: /[\\/]CHANGELOG\.md$/ }, async ({ path }) => {
-            const markdown = await readFile(path, 'utf8');
-            const releases = [];
-            for (const line of markdown.split(/\r?\n/)) {
-                const header = /^- \*\*(\d+\.\d+\.\d+)\*\*\s*(.*)$/.exec(line);
-                if (header) {
-                    const [, version, summary] = header;
-                    releases.push({ version, changes: summary ? [summary.trim()] : [] });
-                    continue;
+            const watchFiles = [path];
+            const byVersion = new Map((await readReleaseNotes(path)).map(release => [release.version, release]));
+            if (testing) {
+                const devNotesPath = resolve(dirname(path), 'CHANGELOG-DEV.md');
+                watchFiles.push(devNotesPath);
+                for (const release of await readReleaseNotes(devNotesPath)) {
+                    const publicRelease = byVersion.get(release.version);
+                    if (publicRelease) publicRelease.changes.push(...release.changes);
+                    else byVersion.set(release.version, release);
                 }
-                const bullet = /^\s{2,}- (.+)$/.exec(line);
-                if (bullet && releases.length) releases.at(-1).changes.push(bullet[1].trim());
             }
-            if (releases[0]?.version !== version || releases.some(release => !release.changes.length)) {
-                throw new Error('CHANGELOG.md must start with the package version and include notes for each version.');
+            const compareVersions = (a, b) => a.localeCompare(b, 'en', { numeric: true });
+            const releases = [...byVersion.values()].sort((a, b) => compareVersions(b.version, a.version));
+            const latest = releases[0].version;
+            if (compareVersions(latest, version) > 0 || (testing && latest !== version)) {
+                throw new Error('Changelog versions must match or precede the package version. Add notes for the current Dev version.');
             }
-            return { contents: JSON.stringify(releases), loader: 'json', watchFiles: [path] };
+            return { contents: JSON.stringify(releases), loader: 'json', watchFiles };
         });
     }
 };

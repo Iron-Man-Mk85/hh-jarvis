@@ -1,5 +1,8 @@
 # Changelog
 
+- **0.7.1**
+  - Keep the changelog centered when the game window is resized.
+  - Clean up saved player names, explain unknown names on hover, and give Remove buttons more room.
 - **0.7.0**
   - See what changed in Jarvis the first time a new version runs.
   - Open View changelog from HH++ settings at any time, even with automatic notices turned off.

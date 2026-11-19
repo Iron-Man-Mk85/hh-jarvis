@@ -7,6 +7,26 @@ import { LS_CONFIG_NAME, lsGet, lsSet } from '../../storage';
 import { openMarkManager, type Mark, type SavedMark } from './markManager';
 
 const DEFAULT_COLORS: Record<Mark, string> = { friend: '#48a9ff', foe: '#ff6173' };
+type SavedName = string | { name: string };
+
+function readRowName(element: HTMLElement) {
+    const text = element.textContent?.trim() ?? '';
+    if (!text.endsWith('+')) return text;
+    const withoutStandalonePlus = text.replace(/\s+\+$/, '');
+    if (!element.childElementCount) return withoutStandalonePlus;
+
+    const label = element.cloneNode(true) as HTMLElement;
+    for (const child of label.querySelectorAll('*')) {
+        if (child.textContent?.trim() === '+') child.remove();
+    }
+    return label.textContent?.trim().replace(/\s+\+$/, '') || withoutStandalonePlus;
+}
+
+function displaySavedName(saved?: SavedName) {
+    if (typeof saved !== 'string') return saved?.name;
+    // Old entries stored the full row text, including a trailing add control.
+    return saved.trim().replace(/([^+])\+$/, '$1').trimEnd();
+}
 
 export class FriendAndFoes extends HHModule {
     private names = new Map<HTMLElement, string>();
@@ -70,13 +90,16 @@ export class FriendAndFoes extends HHModule {
         };
     }
 
-    readSavedNames(): Record<string, string> {
+    readSavedNames(): Record<string, SavedName> {
         const saved = this.readSetting('PlayerMarkNames');
         if (!saved || typeof saved !== 'object' || Array.isArray(saved)) return {};
-        return Object.fromEntries(Object.entries(saved).filter((entry): entry is [string, string] => typeof entry[1] === 'string'));
+        return Object.fromEntries(Object.entries(saved).filter((entry): entry is [string, SavedName] => {
+            const [, value] = entry;
+            return typeof value === 'string' || Boolean(value && typeof value === 'object' && typeof value.name === 'string');
+        }));
     }
 
-    saveNames(names: Record<string, string>) {
+    saveNames(names: Record<string, SavedName>) {
         try {
             lsSet('PlayerMarkNames', names);
         } catch (err) {
@@ -100,7 +123,7 @@ export class FriendAndFoes extends HHModule {
         const names = this.readSavedNames();
         return Object.entries(this.readMarks()).flatMap<SavedMark>(([id, mark]) =>
             /^[1-9]\d*$/.test(id) && (mark === 'friend' || mark === 'foe')
-                ? [{ id, name: names[id], mark }]
+                ? [{ id, name: displaySavedName(names[id]), mark }]
                 : []);
     }
 
@@ -235,7 +258,7 @@ export class FriendAndFoes extends HHModule {
                     }
                     byContest.set(contestId, byName);
                 }
-                const matches = byName.get((name.textContent ?? '').trim());
+                const matches = byName.get(readRowName(name));
                 if (matches && !matches.has(id ?? '')) id = matches.size === 1 ? matches.values().next().value : null;
             }
             if (id && /^[1-9]\d*$/.test(id)) names.set(name, id);
@@ -270,8 +293,9 @@ export class FriendAndFoes extends HHModule {
         const rememberName = (id: string, text?: string | null) => {
             const displayName = typeof text === 'string' ? text.trim() : '';
             if (!displayName || (marks[id] !== 'friend' && marks[id] !== 'foe')) return false;
-            if (savedNames[id] !== displayName) {
-                savedNames[id] = displayName;
+            const previous = savedNames[id];
+            if (typeof previous === 'string' || previous?.name !== displayName) {
+                savedNames[id] = { name: displayName };
                 namesChanged = true;
             }
             return true;
@@ -300,7 +324,7 @@ export class FriendAndFoes extends HHModule {
             const mark = marks[id];
             if (mark === 'friend' || mark === 'foe') {
                 if (name.dataset.jarvisMark !== mark) name.dataset.jarvisMark = mark;
-                if (!rosterNames.has(id)) rememberName(id, name.textContent);
+                if (!rosterNames.has(id)) rememberName(id, readRowName(name));
             } else if (name.dataset.jarvisMark) {
                 delete name.dataset.jarvisMark;
             }

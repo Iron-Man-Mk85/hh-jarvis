@@ -239,6 +239,8 @@ td[data-jarvis-mark] > a {
     gap: .9rem;
     max-height: 50vh;
     overflow-y: auto;
+    scrollbar-gutter: stable;
+    padding-inline-end: .7rem;
     margin-block: .9rem;
 }
 .jarvis-mark-lists ul {
@@ -253,6 +255,9 @@ td[data-jarvis-mark] > a {
     gap: .45em;
     padding: .2em 0;
     overflow-wrap: anywhere;
+}
+.jarvis-mark-lists li button {
+    flex: none;
 }
 .jarvis-mark-actions {
     justify-content: space-between;

@@ -104,10 +104,7 @@ export class ContestStart extends HHModule {
     getTarget(contests: ContestCard[]) {
         if (this.preference) return contests.find(contest => contest.id === this.preference);
 
-        if (this.defaults.kind === 'event') {
-            const event = [...contests].reverse().find(contest => contest.kind === 'event');
-            if (event) return event;
-        }
+        if (this.defaults.kind === 'event') return contests.at(-1);
         return contests.find(contest => contest.kind === 'daily') ??
             contests.find(contest => contest.kind === null) ?? contests[0];
     }

@@ -17,8 +17,8 @@ export function readContestSetting(key: string): unknown {
 }
 
 export function readContestDefaults() {
-    const kind: ContestKind = readContestSetting('ContestKind') === 'event' ? 'event' : 'daily';
-    const rank: ContestRank = readContestSetting('ContestRankStart') === 'mine' ? 'mine' : 'top';
+    const kind: ContestKind = readContestSetting('ContestKind') === 'daily' ? 'daily' : 'event';
+    const rank: ContestRank = readContestSetting('ContestRankStart') === 'top' ? 'top' : 'mine';
     return { kind, rank };
 }
 
@@ -86,7 +86,7 @@ export function installContestSettings() {
         selectContestChoice(ranks, defaults.rank);
 
         const kindLabel = document.createElement('div');
-        kindLabel.innerHTML = settingHelp('Preferred contest', 'Daily opens the first active daily contest. Event opens the last active event contest, or the daily contest if there is no event.');
+        kindLabel.innerHTML = settingHelp('Preferred contest', 'Daily opens the first active daily contest. Event follows the game and opens the bottom active contest.');
         const rankLabel = document.createElement('div');
         rankLabel.innerHTML = settingHelp('Leaderboard start', 'Open at the top or at your rank. A starred contest can have its own position.');
         fieldset.append(kindLabel, kinds, rankLabel, ranks);

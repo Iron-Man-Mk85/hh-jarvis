@@ -85,7 +85,6 @@ export class ContestStart extends HHModule {
     private stopJump: ((finish?: boolean) => void) | null = null;
     private stopSwitchScroll = true;
     private switchScroll: { restore: () => void; stop: () => void } | null = null;
-    private readonly leaderboardPositions = new Map<string, number>();
     private observer: MutationObserver | null = null;
     private listeners: AbortController | null = null;
 
@@ -97,7 +96,7 @@ export class ContestStart extends HHModule {
             label: settingHelp("Contest startup", "Open the preferred contest and rank on load, and switch active contests from the header. A starred contest takes priority on load."),
             subSettings: [{
                 key: 'noSwitchScroll',
-                label: settingHelp('Stop scrolling on contest switches', 'Keep the contest list in place and remember each leaderboard’s position when you switch cards. You can still scroll either pane by hand.'),
+                label: settingHelp('Stop scrolling on contest switches', 'Keep the contest list in place when you switch by clicking a card. The leaderboard opens at your preferred position, and you can still scroll by hand.'),
                 default: true
             }]
         }
@@ -289,9 +288,9 @@ export class ContestStart extends HHModule {
         this.refresh();
     }
 
-    prepareSwitch(list: HTMLElement, right: HTMLElement, id: string | null, keepPosition: boolean) {
+    prepareSwitch(list: HTMLElement, right: HTMLElement, id: string | null, keepListPosition: boolean) {
         this.startupPending = false;
-        if (keepPosition && id && id !== this.getSelectedContestId(list, right)) this.holdSwitchPosition(list, right, id);
+        if (id && id !== this.getSelectedContestId(list, right)) this.positionSwitch(list, right, id, keepListPosition);
         this.showLeaderboard(right, null);
         document.getElementById('jarvis-contest-startup')?.remove();
     }
@@ -342,17 +341,12 @@ export class ContestStart extends HHModule {
         }
     }
 
-    holdSwitchPosition(list: HTMLElement, right: HTMLElement, id: string) {
+    positionSwitch(list: HTMLElement, right: HTMLElement, id: string, keepListPosition: boolean) {
         this.switchScroll?.stop();
-        const selected = this.getSelectedContestId(list, right);
-        if (selected) {
-            const previous = this.getLeaderboardScroller(right, selected);
-            if (previous?.clientHeight) this.leaderboardPositions.set(selected, previous.scrollTop);
-        }
 
         const listTop = list.scrollTop;
-        const boardTop = this.leaderboardPositions.get(id) ?? 0;
-        const releaseList = this.lockScroll(list);
+        const atOwnRank = this.defaults.rank === 'mine';
+        const releaseList = keepListPosition ? this.lockScroll(list) : undefined;
         let board: HTMLElement | null | undefined;
         let releaseBoard: (() => void) | undefined;
         const restore = () => {
@@ -362,8 +356,10 @@ export class ContestStart extends HHModule {
                 board = next;
                 releaseBoard = board ? this.lockScroll(board) : undefined;
             }
-            this.scrollInstantly(list, listTop);
-            if (board?.clientHeight) this.scrollInstantly(board, boardTop);
+            if (keepListPosition) this.scrollInstantly(list, listTop);
+            if (board?.clientHeight && this.getSelectedContestId(list, right) === id) {
+                this.jumpTo(board, atOwnRank ? this.getOwnRow(board) : null, atOwnRank);
+            }
         };
 
         const handlers = new AbortController();
@@ -371,13 +367,13 @@ export class ContestStart extends HHModule {
         const stop = () => {
             clearTimeout(timer);
             handlers.abort();
-            releaseList();
+            releaseList?.();
             releaseBoard?.();
             this.switchScroll = null;
         };
         const timer = setTimeout(stop, 4000);
         const onScroll = (event: Event) => {
-            if (event.target === list || event.target === board) restore();
+            if ((keepListPosition && event.target === list) || event.target === board) restore();
         };
         for (const pane of [list, right]) {
             pane.addEventListener('scroll', onScroll, options);
@@ -569,7 +565,6 @@ export class ContestStart extends HHModule {
         this.listeners?.abort();
         this.stopJump?.();
         this.switchScroll?.stop();
-        this.leaderboardPositions.clear();
         this.startupPending = false;
         this.list?.closest('#contests')?.querySelector(':scope > .jarvis-contest-shortcuts')?.remove();
         this.list?.querySelectorAll('.jarvis-contest-pin, .jarvis-contest-rank-start').forEach(control => control.remove());

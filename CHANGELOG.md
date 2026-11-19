@@ -1,5 +1,9 @@
 # Changelog
 
+- **0.7.5**
+  - Keep the homepage responsive after closing the changelog and choose Silent changelog from the popup.
+  - Stop automatic sidebar scrolling on contest switches by default and use Top or My rank whenever you switch.
+  - Bring the selected card into view when you use a contest shortcut.
 - **0.7.4** See your rank in each active contest beside the close button and switch leaderboards without moving the contest list.
 - **0.7.3**
   - See automatic changelogs only when loading the homepage after an update.

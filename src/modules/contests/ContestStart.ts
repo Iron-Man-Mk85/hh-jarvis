@@ -10,6 +10,7 @@ const CONTEST_SHORT_LABELS: Record<ContestCategory, string> = {
     daily: 'DC', cbc: 'CbC', ccc: 'CCC', lc: 'LC', event: 'Event'
 };
 const CONTEST_TITLE_SELECTOR = '.contest_title, .contest_name, h3, h4, h5';
+const INTERACTIVE_CONTENT = 'a[href], button, input, select, textarea, [contenteditable]:not([contenteditable="false"]), [tabindex]';
 const protectedPanes = new Set<HTMLElement>();
 let restoreScrollIntoView: (() => void) | undefined;
 
@@ -114,6 +115,7 @@ export class ContestStart extends HHModule {
     private observer: MutationObserver | null = null;
     private titleSizes: ResizeObserver | null = null;
     private readonly titleLabels = new Map<HTMLElement, HTMLElement>();
+    private readonly focusablePanes = new Set<HTMLElement>();
     private prunedRankRoster: string | null = null;
     private listeners: AbortController | null = null;
 
@@ -388,6 +390,18 @@ export class ContestStart extends HHModule {
         document.getElementById('jarvis-contest-startup')?.remove();
     }
 
+    focusScrollPane(pane: HTMLElement, target: Element) {
+        const control = target.closest(INTERACTIVE_CONTENT);
+        if (control && control !== pane && pane.contains(control)) return;
+
+        // Chromium scrolls the focused pane on Home, End, and the arrow keys.
+        if (!pane.hasAttribute('tabindex')) {
+            pane.tabIndex = -1;
+            this.focusablePanes.add(pane);
+        }
+        pane.focus({ preventScroll: true });
+    }
+
     lockScroll(scroller: HTMLElement, guardDescendants = false) {
         $(scroller).stop(true, false);
         // The game can start another jQuery tween after load. Block its writes on this pane only.
@@ -588,6 +602,11 @@ export class ContestStart extends HHModule {
     refresh() {
         const list = document.querySelector<HTMLElement>('#contests .left_part .scroll_area');
         const right = document.querySelector<HTMLElement>('#contests .right_part');
+        for (const pane of this.focusablePanes) {
+            if (pane === list || right?.contains(pane)) continue;
+            if (pane.tabIndex === -1) pane.removeAttribute('tabindex');
+            this.focusablePanes.delete(pane);
+        }
         if (this.list !== list || this.right !== right) this.switchScroll?.stop();
         if (this.stopJump && (this.list !== list || this.right !== right || !list?.contains(this.restoringCard))) {
             this.stopJump(false);
@@ -660,9 +679,17 @@ export class ContestStart extends HHModule {
             if (canvas && bar) positionContestShortcuts(canvas, bar);
         }, { signal });
         document.body.addEventListener('click', event => {
-            if (!event.isTrusted || !(event.target instanceof Element) || !this.right || !this.list?.contains(event.target)) return;
-            const header = event.target.closest('.contest_header');
-            if (!header || event.target.closest('.jarvis-contest-pin, .jarvis-contest-rank-start')) return;
+            const { target } = event;
+            if (!event.isTrusted || !(target instanceof Element) || !this.right || !this.list) return;
+            if (!this.list.contains(target)) {
+                const board = target.closest<HTMLElement>('.lead_table_view');
+                if (board && this.right.contains(board)) this.focusScrollPane(board, target);
+                return;
+            }
+
+            const header = target.closest('.contest_header');
+            if (!header || target.closest('.jarvis-contest-pin, .jarvis-contest-rank-start')) return;
+            this.focusScrollPane(this.list, target);
 
             const id = header.closest('.contest[id_contest]')?.getAttribute('id_contest');
             this.prepareSwitch(this.list, this.right, id ?? null);
@@ -684,6 +711,10 @@ export class ContestStart extends HHModule {
         this.stopJump?.();
         this.switchScroll?.stop();
         this.startupPending = false;
+        for (const pane of this.focusablePanes) {
+            if (pane.tabIndex === -1) pane.removeAttribute('tabindex');
+        }
+        this.focusablePanes.clear();
         this.list?.closest('#contests')?.querySelector(':scope > .jarvis-contest-shortcuts')?.remove();
         if (this.list) this.updateCardControls(this.list, []);
         if (this.right) this.showLeaderboard(this.right, null);

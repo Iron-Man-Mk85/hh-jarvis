@@ -126,6 +126,23 @@ button.jarvis-contest-pin {
     font-size: .7em;
     vertical-align: middle;
 }
+#contests .contest_header .jarvis-contest-title {
+    display: flex;
+    align-items: center;
+    gap: .3em;
+    min-inline-size: 0;
+}
+.jarvis-contest-title-label {
+    flex: 1 1 0%;
+    min-inline-size: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+.jarvis-contest-title > :is(.jarvis-contest-pin, .jarvis-contest-rank-start) {
+    flex: none;
+    margin-inline-start: 0;
+}
 .jarvis-contest-settings {
     display: grid;
     gap: .3em;

@@ -112,6 +112,8 @@ export class ContestStart extends HHModule {
     private stopSwitchScroll = true;
     private switchScroll: { restore: () => void; stop: () => void } | null = null;
     private observer: MutationObserver | null = null;
+    private titleSizes: ResizeObserver | null = null;
+    private readonly titleLabels = new Map<HTMLElement, HTMLElement>();
     private listeners: AbortController | null = null;
 
     constructor() {
@@ -197,6 +199,13 @@ export class ContestStart extends HHModule {
         for (const control of list.querySelectorAll('.jarvis-contest-pin, .jarvis-contest-rank-start')) {
             if (!control.parentElement || !hosts.has(control.parentElement)) control.remove();
         }
+        for (const [title, text] of this.titleLabels) {
+            if (hosts.has(title) && text.parentElement === title) continue;
+            this.titleSizes?.unobserve(text);
+            if (text.parentElement === title) text.replaceWith(...text.childNodes);
+            title.classList.remove('jarvis-contest-title');
+            this.titleLabels.delete(title);
+        }
 
         for (const { id, title, header, label } of contests) {
             const host = title || header;
@@ -253,7 +262,29 @@ export class ContestStart extends HHModule {
                 position = choice;
             }
             selectContestChoice(position, readContestRank(id, this.defaults.rank));
+
+            if (!title) continue;
+            let text = this.titleLabels.get(title);
+            if (!text) {
+                text = document.createElement('span');
+                text.className = 'jarvis-contest-title-label';
+                text.append(...Array.from(title.childNodes).filter(node => node !== pin && node !== position));
+                title.prepend(text);
+                title.classList.add('jarvis-contest-title');
+                this.titleLabels.set(title, text);
+                this.titleSizes?.observe(text);
+            }
+            if (text.title !== label) {
+                text.title = label;
+                this.fitTitle(text);
+            }
         }
+    }
+
+    fitTitle(text: HTMLElement) {
+        if (!text.clientWidth) return;
+        text.style.removeProperty('font-size');
+        if (text.scrollWidth > text.clientWidth) text.style.fontSize = '.8em';
     }
 
     getSelectedContestId(list: HTMLElement, right: HTMLElement) {
@@ -575,6 +606,9 @@ export class ContestStart extends HHModule {
         this.defaults = readContestDefaults();
         this.listeners = new AbortController();
         const { signal } = this.listeners;
+        this.titleSizes = new ResizeObserver(entries => {
+            for (const { target } of entries) this.fitTitle(target as HTMLElement);
+        });
         this.observer = new MutationObserver(mutations => {
             const list = document.querySelector('#contests .left_part .scroll_area');
             const right = document.querySelector('#contests .right_part');
@@ -612,12 +646,13 @@ export class ContestStart extends HHModule {
 
     tearDown() {
         this.observer?.disconnect();
+        this.titleSizes?.disconnect();
         this.listeners?.abort();
         this.stopJump?.();
         this.switchScroll?.stop();
         this.startupPending = false;
         this.list?.closest('#contests')?.querySelector(':scope > .jarvis-contest-shortcuts')?.remove();
-        this.list?.querySelectorAll('.jarvis-contest-pin, .jarvis-contest-rank-start').forEach(control => control.remove());
+        if (this.list) this.updateCardControls(this.list, []);
         if (this.right) this.showLeaderboard(this.right, null);
         document.getElementById('jarvis-contest-startup')?.remove();
         this.hasRun = false;

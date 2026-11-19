@@ -88,12 +88,16 @@ export function showChangelogPopup(view: ChangelogView) {
         view.onClose();
         return;
     }
-    const handlers = bindClose(() => dialog.close());
-    dialog.addEventListener('close', () => {
+    const finish = () => {
         handlers.abort();
         dialog.remove();
         view.onClose();
-    }, { once: true });
+    };
+    const handlers = bindClose(() => {
+        dialog.close();
+        finish();
+    });
+    dialog.addEventListener('close', finish, { signal: handlers.signal });
     document.body.appendChild(dialog);
     openDialog();
 }

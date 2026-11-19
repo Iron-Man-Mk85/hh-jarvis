@@ -17,8 +17,16 @@ export function showChangelogPopup(view: ChangelogView) {
     dialog.setAttribute('aria-labelledby', 'jarvis-changelog-title');
     dialog.appendChild(view.content);
 
-    // Let the browser own the modal state and restore page input when it closes.
-    const dismiss = () => dialog.close();
+    const finish = () => {
+        if (!dialog.isConnected) return;
+        dialog.remove();
+        view.onClose();
+    };
+    // Apply the user's choice before a subsequent click or page navigation.
+    const dismiss = () => {
+        dialog.close();
+        finish();
+    };
     view.closeButton.addEventListener('click', dismiss);
     dialog.addEventListener('cancel', event => {
         event.preventDefault();
@@ -30,17 +38,13 @@ export function showChangelogPopup(view: ChangelogView) {
         if (event.clientX < bounds.left || event.clientX > bounds.right ||
             event.clientY < bounds.top || event.clientY > bounds.bottom) dismiss();
     });
-    dialog.addEventListener('close', () => {
-        dialog.remove();
-        view.onClose();
-    }, { once: true });
+    dialog.addEventListener('close', finish, { once: true });
 
     document.body.appendChild(dialog);
     try {
         dialog.showModal();
     } catch (err) {
-        dialog.remove();
-        view.onClose();
+        finish();
         console.warn('Jarvis could not open the changelog:', err);
         return;
     }

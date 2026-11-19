@@ -81,6 +81,7 @@ export class Changelog extends HHModule {
             const card = document.querySelector(settingsCard);
             if (!card || card.querySelector('.jarvis-view-changelog')) return;
 
+            this.syncNoticeSettings();
             const button = document.createElement('button');
             button.type = 'button';
             button.className = 'jarvis-setting-action jarvis-view-changelog';
@@ -159,36 +160,47 @@ export class Changelog extends HHModule {
         this.notice = null;
     }
 
+    private syncNoticeSettings() {
+        const config = window.hhPlusPlusConfig?.config;
+        if (!config) return;
+
+        for (const card of document.querySelectorAll(settingsCard)) {
+            const enabled = config[configKey];
+            const checkbox = card.querySelector<HTMLInputElement>(`input[name="${configKey}"]`);
+            const silent = card.querySelector<HTMLInputElement>(`input[name="${silentKey}"]`);
+            card.classList.toggle('enabled', enabled);
+            if (checkbox) checkbox.checked = enabled;
+            if (silent) {
+                silent.checked = config[silentKey];
+                silent.disabled = !enabled;
+            }
+        }
+    }
+
     private saveNoticeSetting(key: typeof configKey | typeof silentKey, value: boolean) {
         const config = window.hhPlusPlusConfig;
-        if (!config) return false;
+        if (!config) return;
 
         let previous = config.config[key];
         try {
             config.loadConfig();
             previous = config.config[key];
-            config.config[key] = value;
-            config.saveConfig();
+            if (config.$configPane && config.updateConfig) {
+                config.updateConfig(key, value);
+            } else {
+                // HH++ builds its settings pane the first time it is opened.
+                config.config[key] = value;
+                config.saveConfig();
+                if (key === silentKey) this.updateSubSetting('silent', value);
+                else if (!value) this.tearDown();
+            }
         } catch (err) {
             config.config[key] = previous;
             console.warn('Jarvis could not save the update notice preference:', err);
-            return false;
+            return;
         }
 
-        // HH++ creates its settings pane lazily, so the popup can close before the pane exists.
-        const checkbox = document.querySelector<HTMLInputElement>(`${settingsCard} input[name="${key}"]`);
-        if (checkbox) checkbox.checked = value;
-        return true;
-    }
-
-    private disableNotices() {
-        if (!this.saveNoticeSetting(configKey, false)) return;
-
-        const card = document.querySelector(settingsCard);
-        card?.classList.remove('enabled');
-        const silent = card?.querySelector<HTMLInputElement>(`input[name="${silentKey}"]`);
-        if (silent) silent.disabled = true;
-        this.tearDown();
+        this.syncNoticeSettings();
     }
 
     private open(mode: 'automatic' | 'manual', opener: HTMLButtonElement | null = null) {
@@ -259,9 +271,9 @@ export class Changelog extends HHModule {
             },
             onClose: () => {
                 this.pending = null;
-                if (dontShowAgain.checked) this.disableNotices();
-                else if (this.hasRun && useSilent.checked !== this.silent && this.saveNoticeSetting(silentKey, useSilent.checked)) {
-                    this.updateSubSetting('silent', useSilent.checked);
+                if (dontShowAgain.checked) this.saveNoticeSetting(configKey, false);
+                else if (this.hasRun && useSilent.checked !== this.silent) {
+                    this.saveNoticeSetting(silentKey, useSilent.checked);
                 }
                 this.opener?.focus({ preventScroll: true });
                 this.opener = null;

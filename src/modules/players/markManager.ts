@@ -52,8 +52,8 @@ export function openMarkManager(read: () => SavedMark[], remove: (id: string) =>
             for (const { id, name } of matches) {
                 const row = document.createElement('li');
                 const player = document.createElement('span');
-                player.textContent = name ? `${name} · ${id}` : id;
-                if (!name) player.title = 'The name will appear after Jarvis sees this player.';
+                player.textContent = name ? `${name} · ${id}` : `Player #${id}`;
+                if (!name) player.title = 'Name not recorded yet';
                 const button = makeButton('Remove', () => {
                     const index = Array.from(lists.querySelectorAll('button')).indexOf(button);
                     if (remove(id)) {

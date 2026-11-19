@@ -1,5 +1,9 @@
 # Changelog
 
+- **0.7.3**
+  - See automatic changelogs only when loading the homepage after an update.
+  - Enable Silent changelog to get a New button beside HH++ and open the notes when you’re ready.
+  - Keep the contest list and each leaderboard in place when switching contests with Stop scrolling on contest switches.
 - **0.7.2**
   - Open the bottom active contest at your rank by default. Choose CbC, CCC, or LC to prefer that event when available.
   - Turn off automatic update notices with Don’t show again in the changelog popup. View changelog stays available in settings.

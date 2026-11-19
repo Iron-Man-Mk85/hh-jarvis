@@ -1,0 +1,123 @@
+.hh-plus-plus-config-panel .group-panel[rel="JARVIS"] .panel-contents {
+    align-content: start;
+    align-items: start;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    scrollbar-width: thin;
+}
+.hh-plus-plus-config-panel:has(> .group-panel[rel="JARVIS"].shown) {
+    overflow: clip;
+}
+.hh-plus-plus-config-panel .group-panel[rel="JARVIS"] .config-setting.has-subsettings {
+    grid-row-end: auto;
+}
+.hh-plus-plus-config-panel .group-panel[rel="JARVIS"] .jarvis-packed-settings {
+    grid-auto-flow: row dense;
+    grid-auto-rows: 1px;
+    row-gap: 0;
+}
+.hh-plus-plus-config-panel .group-panel[rel="JARVIS"] .jarvis-packed-settings .config-setting {
+    grid-row-end: span var(--jarvis-setting-rows, 1);
+}
+.hh-plus-plus-config-panel .jarvis-version {
+    font-size: .66em;
+    font-weight: normal;
+    opacity: .8;
+}
+.hh-plus-plus-config-panel .group-panel[rel="JARVIS"] .jarvis-mark-color input {
+    width: 30px;
+    height: 20px;
+    flex: none;
+    padding: 0;
+}
+button.jarvis-contest-pin {
+    all: unset;
+    display: inline-block;
+    margin-inline-start: .35em;
+    padding-inline: .2em;
+    color: inherit;
+    font-size: .9em;
+    line-height: 1;
+    cursor: pointer;
+}
+.jarvis-contest-pin::before {
+    content: '☆';
+}
+.jarvis-contest-pin[aria-pressed="true"]::before {
+    content: '★';
+    color: #ffd36b;
+}
+.jarvis-contest-pin:focus-visible {
+    outline: 1px solid currentColor;
+}
+select.jarvis-contest-rank-start {
+    all: unset;
+    display: inline-block;
+    margin-inline-start: .25em;
+    padding-inline: .15em;
+    color: inherit;
+    font: inherit;
+    font-size: .72em;
+    text-decoration: underline dotted;
+    text-underline-offset: 2px;
+    cursor: pointer;
+}
+.jarvis-contest-rank-start option {
+    background: #232936;
+    color: #fff;
+}
+.jarvis-contest-rank-start:focus-visible {
+    outline: 1px solid currentColor;
+}
+.jarvis-mark-menu {
+    position: fixed;
+    z-index: 10000;
+    display: grid;
+    gap: 2px;
+    padding: 4px;
+    border: 1px solid #8994a7;
+    border-radius: 6px;
+    background: #232936;
+    color: #fff;
+    box-shadow: 0 2px 10px #0008;
+    font: 13px/1.35 system-ui, sans-serif;
+}
+.jarvis-mark-menu button {
+    all: unset;
+    padding: 4px 9px;
+    border-radius: 3px;
+    cursor: pointer;
+}
+.jarvis-mark-menu button:hover,
+.jarvis-mark-menu button:focus-visible {
+    background: #414d64;
+}
+#contests .left_part .scroll_area.jarvis-contest-instant,
+#contests .right_part.jarvis-contest-instant .lead_table_view {
+    scroll-behavior: auto !important;
+    overflow-anchor: none !important;
+}
+#contests .jarvis-contest-loading {
+    opacity: 0 !important;
+    transition: none !important;
+    pointer-events: none;
+}
+#contests .right_part .ranking[id_contest].jarvis-contest-other {
+    display: none !important;
+}
+[data-jarvis-mark="friend"] {
+    color: var(--jarvis-friend-color) !important;
+}
+[data-jarvis-mark="foe"] {
+    color: var(--jarvis-foe-color) !important;
+}
+td[data-jarvis-mark] > a {
+    color: inherit !important;
+}
+.jarvis-mark-mode [data-jarvis-player] {
+    cursor: crosshair;
+}
+.jarvis-mark-mode [data-jarvis-player]:hover,
+.jarvis-mark-mode [data-jarvis-player]:focus-visible {
+    outline: 1px solid currentColor;
+}

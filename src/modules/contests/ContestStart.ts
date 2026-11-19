@@ -10,6 +10,31 @@ const CONTEST_SHORT_LABELS: Record<ContestCategory, string> = {
     daily: 'DC', cbc: 'CbC', ccc: 'CCC', lc: 'LC', event: 'Event'
 };
 const CONTEST_TITLE_SELECTOR = '.contest_title, .contest_name, h3, h4, h5';
+const protectedPanes = new Set<HTMLElement>();
+let restoreScrollIntoView: (() => void) | undefined;
+
+function guardScrollIntoView(pane: HTMLElement) {
+    if (!protectedPanes.size) {
+        const previous = Element.prototype.scrollIntoView;
+        const guarded = function (this: Element, options?: boolean | ScrollIntoViewOptions) {
+            // scrollIntoView can move a pane without calling its scroll methods.
+            if (Array.from(protectedPanes).some(scroller => scroller.contains(this))) return;
+            previous.call(this, options);
+        };
+        Element.prototype.scrollIntoView = guarded;
+        restoreScrollIntoView = () => {
+            if (Element.prototype.scrollIntoView === guarded) Element.prototype.scrollIntoView = previous;
+        };
+    }
+    protectedPanes.add(pane);
+
+    return () => {
+        protectedPanes.delete(pane);
+        if (protectedPanes.size) return;
+        restoreScrollIntoView?.();
+        restoreScrollIntoView = undefined;
+    };
+}
 
 function getContestCategory(category: string | undefined): ContestCategory | null {
     switch (category?.trim().toLowerCase().replace(/[- ]+/g, '_')) {
@@ -300,7 +325,7 @@ export class ContestStart extends HHModule {
         document.getElementById('jarvis-contest-startup')?.remove();
     }
 
-    lockScroll(scroller: HTMLElement) {
+    lockScroll(scroller: HTMLElement, guardDescendants = false) {
         $(scroller).stop(true, false);
         // The game can start another jQuery tween after load. Block its writes on this pane only.
         const ignoreScroll = () => {};
@@ -314,9 +339,11 @@ export class ContestStart extends HHModule {
         for (const [key, descriptor] of descriptors) {
             Object.defineProperty(scroller, key, { ...descriptor, configurable: true });
         }
+        const releaseDescendants = guardDescendants ? guardScrollIntoView(scroller) : undefined;
 
         return () => {
             $(scroller).stop(true, false);
+            releaseDescendants?.();
             for (const [key, descriptor] of descriptors) {
                 const current = Object.getOwnPropertyDescriptor(scroller, key);
                 if (current && current.value === descriptor.value && current.set === descriptor.set) Reflect.deleteProperty(scroller, key);
@@ -351,7 +378,9 @@ export class ContestStart extends HHModule {
 
         const listTop = list.scrollTop;
         const atOwnRank = readContestRank(id, this.defaults.rank) === 'mine';
-        const releaseList = this.stopSwitchScroll || shortcutCard ? this.lockScroll(list) : undefined;
+        const releaseList = this.stopSwitchScroll || shortcutCard ? this.lockScroll(list, true) : undefined;
+        let manualList = false;
+        let manualBoard = false;
         let board: HTMLElement | null | undefined;
         let releaseBoard: (() => void) | undefined;
         const restore = () => {
@@ -359,11 +388,14 @@ export class ContestStart extends HHModule {
             if (next !== board) {
                 releaseBoard?.();
                 board = next;
-                releaseBoard = board ? this.lockScroll(board) : undefined;
+                releaseBoard = board ? this.lockScroll(board, true) : undefined;
+                manualBoard = false;
             }
-            if (shortcutCard && list.contains(shortcutCard)) this.jumpTo(list, shortcutCard);
-            else if (releaseList) this.scrollInstantly(list, listTop);
-            if (board?.clientHeight && this.getSelectedContestId(list, right) === id) {
+            if (!manualList && releaseList) {
+                if (shortcutCard && list.contains(shortcutCard)) this.jumpTo(list, shortcutCard);
+                else this.scrollInstantly(list, listTop);
+            }
+            if (!manualBoard && board?.clientHeight && this.getSelectedContestId(list, right) === id) {
                 this.jumpTo(board, atOwnRank ? this.getOwnRow(board) : null, atOwnRank);
             }
         };
@@ -381,12 +413,18 @@ export class ContestStart extends HHModule {
         const onScroll = (event: Event) => {
             if ((releaseList && event.target === list) || event.target === board) restore();
         };
+        // Let user input move its pane without allowing a delayed game animation to take over.
+        const onManualInput = (event: Event) => {
+            if (!event.isTrusted || !(event.target instanceof Node)) return;
+            if (list.contains(event.target)) manualList = true;
+            if (board?.contains(event.target) && this.getSelectedContestId(list, right) === id) manualBoard = true;
+        };
         for (const pane of [list, right]) {
             pane.addEventListener('scroll', onScroll, options);
-            for (const type of ['wheel', 'touchmove', 'pointerdown']) pane.addEventListener(type, stop, options);
+            for (const type of ['wheel', 'touchmove', 'pointerdown']) pane.addEventListener(type, onManualInput, options);
         }
         document.addEventListener('keydown', event => {
-            if (['ArrowUp', 'ArrowDown', 'PageUp', 'PageDown', 'Home', 'End', ' '].includes(event.key)) stop();
+            if (['ArrowUp', 'ArrowDown', 'PageUp', 'PageDown', 'Home', 'End', ' '].includes(event.key)) onManualInput(event);
         }, options);
         this.switchScroll = { restore, stop };
         restore();

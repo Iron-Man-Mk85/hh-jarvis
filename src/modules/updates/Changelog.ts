@@ -269,20 +269,24 @@ export class Changelog extends HHModule {
             closeButton,
             shouldOpen: () => this.pending === 'manual' || (!this.silent && this.hasUnreadUpdate()),
             onOpen: () => {
-                this.viewedThisPage = true;
                 this.removeNotice();
                 if (this.hasRun) footer.prepend(options);
-                try {
-                    if (isNewer(latestVersion, readSeenVersion())) lsSet(seenKey, latestVersion);
-                } catch (err) {
-                    console.warn('Jarvis could not save the viewed changelog version:', err);
-                }
             },
-            onClose: () => {
+            onClose: dismissed => {
                 this.pending = null;
-                if (dontShowAgain.checked) this.saveNoticeSetting(configKey, false);
-                else if (this.hasRun && useSilent.checked !== this.silent) {
-                    this.saveNoticeSetting(silentKey, useSilent.checked);
+                if (dismissed) {
+                    this.viewedThisPage = true;
+                    try {
+                        if (isNewer(latestVersion, readSeenVersion())) lsSet(seenKey, latestVersion);
+                    } catch (err) {
+                        console.warn('Jarvis could not save the viewed changelog version:', err);
+                    }
+                    if (dontShowAgain.checked) this.saveNoticeSetting(configKey, false);
+                    else if (this.hasRun && useSilent.checked !== this.silent) {
+                        this.saveNoticeSetting(silentKey, useSilent.checked);
+                    }
+                } else {
+                    this.showNotice();
                 }
                 this.opener?.focus({ preventScroll: true });
                 this.opener = null;

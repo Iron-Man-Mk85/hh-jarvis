@@ -2,16 +2,74 @@ import { currentPage } from './game';
 import { mountSettingsHelp } from './settingsHelp';
 import css from './settings.css';
 
-const columns = [
-    [
-        { id: 'jarvis-leagues-and-contests', label: 'Leagues and contests', keys: ['friendAndFoes', 'contestStart', 'leagueTop20'] },
-        { id: 'jarvis-navigation-and-passes', label: 'Navigation and passes', keys: ['gameLinks', 'removePassLock'] }
-    ],
-    [
-        { id: 'jarvis-raids-and-exports', label: 'Love Raids and exports', keys: ['loveRaidsAddon', 'loveRaidsParser', 'activityParser'] },
-        { id: 'jarvis-script-updates', label: 'Script updates', keys: ['changelog'] }
-    ]
+const categories = [
+    { id: 'leagues-and-contests', label: 'Leagues and contests', keys: ['friendAndFoes', 'contestStart', 'leagueTop20'] },
+    { id: 'navigation-and-passes', label: 'Navigation and passes', keys: ['gameLinks', 'removePassLock'] },
+    { id: 'raids-and-exports', label: 'Love Raids and exports', keys: ['loveRaidsAddon', 'loveRaidsParser', 'activityParser'] },
+    { id: 'script-updates', label: 'Script updates', keys: ['changelog'] }
 ];
+
+function mountCategories(panel: HTMLElement) {
+    const tabList = document.createElement('div');
+    tabList.className = 'jarvis-settings-categories';
+    tabList.setAttribute('role', 'tablist');
+    tabList.setAttribute('aria-label', 'Jarvis settings categories');
+
+    const tabs = categories.flatMap(({ id, label, keys }) => {
+        const cards = keys.flatMap(key => {
+            const card = panel.querySelector(`:scope > .config-setting[rel="JARVIS_${key}"]`);
+            return card ? [card] : [];
+        });
+        if (!cards.length) return [];
+
+        const tab = document.createElement('button');
+        tab.type = 'button';
+        tab.id = `jarvis-settings-tab-${id}`;
+        tab.textContent = label;
+        tab.setAttribute('role', 'tab');
+
+        const page = document.createElement('div');
+        page.id = `jarvis-settings-page-${id}`;
+        page.className = 'jarvis-settings-page';
+        page.setAttribute('role', 'tabpanel');
+        page.setAttribute('aria-labelledby', tab.id);
+        tab.setAttribute('aria-controls', page.id);
+        page.append(...cards);
+        tabList.append(tab);
+        return [{ tab, page }];
+    });
+    if (!tabs.length) return;
+
+    tabs[0].page.append(...panel.querySelectorAll(':scope > .config-setting'));
+    const select = (index: number) => {
+        tabs.forEach(({ tab, page }, i) => {
+            const selected = i === index;
+            tab.setAttribute('aria-selected', String(selected));
+            tab.tabIndex = selected ? 0 : -1;
+            page.hidden = !selected;
+        });
+    };
+
+    tabs.forEach(({ tab }, index) => {
+        tab.addEventListener('click', () => select(index));
+        tab.addEventListener('keydown', event => {
+            let next: number;
+            switch (event.key) {
+                case 'ArrowLeft': next = (index + tabs.length - 1) % tabs.length; break;
+                case 'ArrowRight': next = (index + 1) % tabs.length; break;
+                case 'Home': next = 0; break;
+                case 'End': next = tabs.length - 1; break;
+                default: return;
+            }
+            event.preventDefault();
+            event.stopPropagation();
+            select(next);
+            tabs[next].tab.focus();
+        });
+    });
+    select(0);
+    panel.append(tabList, ...tabs.map(({ page }) => page));
+}
 
 export function injectStyles() {
     const style = document.createElement('style');
@@ -31,27 +89,7 @@ export function packSettings() {
         const panel = document.querySelector<HTMLElement>(selector);
         if (!panel || panel.classList.contains('jarvis-settings-layout')) return;
         panel.classList.remove('hh-scroll');
-        for (const sections of columns) {
-            const column = document.createElement('div');
-            column.className = 'jarvis-settings-column';
-            for (const { id, label, keys } of sections) {
-                const cards = keys.flatMap(key => {
-                    const card = panel.querySelector(`.config-setting[rel="JARVIS_${key}"]`);
-                    return card ? [card] : [];
-                });
-                if (!cards.length) continue;
-
-                const section = document.createElement('section');
-                section.className = 'jarvis-settings-section';
-                section.setAttribute('aria-labelledby', id);
-                const heading = document.createElement('h5');
-                heading.id = id;
-                heading.textContent = label;
-                section.append(heading, ...cards);
-                column.appendChild(section);
-            }
-            if (column.childElementCount) panel.appendChild(column);
-        }
+        mountCategories(panel);
         panel.classList.add('jarvis-settings-layout');
         mountSettingsHelp(panel, 'jarvis-setting-tooltip');
         window.addEventListener('wheel', event => {
@@ -59,9 +97,11 @@ export function packSettings() {
 
             event.preventDefault();
             event.stopImmediatePropagation();
-            const unit = event.deltaMode === 1 ? 16 : event.deltaMode === 2 ? panel.clientHeight : 1;
-            const scale = panel.getBoundingClientRect().height / panel.offsetHeight || 1;
-            panel.scrollTop += event.deltaY * unit / scale;
+            const page = panel.querySelector<HTMLElement>('.jarvis-settings-page:not([hidden])');
+            if (!page) return;
+            const unit = event.deltaMode === 1 ? 16 : event.deltaMode === 2 ? page.clientHeight : 1;
+            const scale = page.getBoundingClientRect().height / page.offsetHeight || 1;
+            page.scrollTop += event.deltaY * unit / scale;
         }, { capture: true, passive: false });
     });
 }

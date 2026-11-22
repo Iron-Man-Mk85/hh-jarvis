@@ -1,5 +1,6 @@
 # Development notes
 
+- **0.8.5** Put Jarvis settings in compact category tabs, matching Ultron’s layout.
 - **0.8.4** Group Jarvis settings in compact categories and keep the HH++ tabs separate from settings scrolling.
 - **0.8.3** Keep the complete testing history in Dev and summarize only published changes in the public changelog.
 - **0.8.1** Install Dev from `hh-jarvis-dev.user.js`. The smaller build keeps the Dev identity, and the old URL serves the same build during migration. Stable releases use the reusable `release` branch.

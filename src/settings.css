@@ -1,42 +1,61 @@
-.hh-plus-plus-config-panel .group-panel[rel="JARVIS"] .panel-contents {
+.hh-plus-plus-config-panel .group-panel[rel="JARVIS"] .jarvis-settings-layout {
     box-sizing: border-box;
-    align-content: start;
-    align-items: start;
-    overflow-y: auto;
-    overscroll-behavior: contain;
-    scrollbar-width: thin;
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-rows: auto minmax(0, 1fr);
+    gap: .45rem;
 }
 .hh-plus-plus-config-panel:has(> .group-panel[rel="JARVIS"].shown) {
     overflow: clip;
 }
-.hh-plus-plus-config-panel .group-panel[rel="JARVIS"] .jarvis-settings-layout {
-    grid-template-columns: repeat(auto-fit, minmax(min(100%, 14rem), 17rem));
-    justify-content: start;
-    gap: .65rem;
-    padding-block-end: .6rem;
+.jarvis-settings-categories {
+    display: flex;
+    flex-wrap: wrap;
+    gap: .3rem;
 }
-.jarvis-settings-column,
-.jarvis-settings-section {
-    display: grid;
-    min-width: 0;
-    gap: .4rem;
-}
-.jarvis-settings-column {
-    gap: .65rem;
-}
-.jarvis-settings-section > h5 {
-    margin: 0;
+.jarvis-settings-categories button {
+    appearance: none;
+    padding: .28em .65em;
+    border: 1px solid transparent;
+    border-radius: .35em;
+    background: transparent;
     color: inherit;
-    font: 600 .85rem/1.2 system-ui, sans-serif;
+    font: 600 .8rem/1.25 system-ui, sans-serif;
+    cursor: pointer;
 }
-.hh-plus-plus-config-panel .jarvis-settings-section .config-setting {
+.jarvis-settings-categories button:hover {
+    background: color-mix(in srgb, currentColor 12%, transparent);
+}
+.jarvis-settings-categories button[aria-selected="true"] {
+    border-color: var(--config-setting-border, currentColor);
+    background: var(--config-setting-background, #241e30);
+}
+.jarvis-settings-categories button:focus-visible {
+    outline: 1px solid currentColor;
+    outline-offset: -3px;
+}
+.jarvis-settings-page {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(min(100%, 152px), 1fr));
+    align-content: start;
+    align-items: start;
+    gap: 10px;
+    min-height: 0;
+    padding-block-end: .4rem;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    scrollbar-width: thin;
+}
+.jarvis-settings-page[hidden] {
+    display: none;
+}
+.hh-plus-plus-config-panel .group-panel[rel="JARVIS"] .jarvis-settings-page > .config-setting {
     grid-row-end: auto;
 }
-.hh-plus-plus-config-panel .jarvis-settings-section label {
+.hh-plus-plus-config-panel .jarvis-settings-layout label {
     align-items: center;
     gap: .45em;
 }
-.hh-plus-plus-config-panel .jarvis-settings-section input[type="checkbox"] {
+.hh-plus-plus-config-panel .jarvis-settings-layout input[type="checkbox"] {
     flex-shrink: 0;
 }
 .hh-plus-plus-config-panel .tabs h4[rel="JARVIS"] {

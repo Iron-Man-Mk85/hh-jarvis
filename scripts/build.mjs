@@ -80,9 +80,7 @@ const releaseNotes = {
                 const devNotesPath = resolve(dirname(path), 'CHANGELOG-DEV.md');
                 watchFiles.push(devNotesPath);
                 for (const release of await readReleaseNotes(devNotesPath)) {
-                    const publicRelease = byVersion.get(release.version);
-                    if (publicRelease) publicRelease.changes.push(...release.changes);
-                    else byVersion.set(release.version, release);
+                    byVersion.set(release.version, release);
                 }
             }
             const compareVersions = (a, b) => a.localeCompare(b, 'en', { numeric: true });
@@ -90,6 +88,9 @@ const releaseNotes = {
             const latest = releases[0].version;
             if (compareVersions(latest, version) > 0 || (testing && latest !== version)) {
                 throw new Error('Changelog versions must match or precede the package version. Add notes for the current Dev version.');
+            }
+            if (!testing && (install || check) && latest !== version) {
+                throw new Error('Add the public summary for this release to CHANGELOG.md before building the installable stable script.');
             }
             return { contents: JSON.stringify(releases), loader: 'json', watchFiles };
         });

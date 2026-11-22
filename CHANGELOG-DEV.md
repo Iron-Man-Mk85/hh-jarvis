@@ -1,5 +1,44 @@
 # Development notes
 
+- **0.8.3** Keep the complete testing history in Dev and summarize only published changes in the public changelog.
 - **0.8.1** Install Dev from `hh-jarvis-dev.user.js`. The smaller build keeps the Dev identity, and the old URL serves the same build during migration. Stable releases use the reusable `release` branch.
-- **0.6.6** Rename the separately installed testing userscript to Dev.
+- **0.8.0** Middle-click or Ctrl-click the game logo, Path of Valor, or Path of Glory to open the page in a new tab.
+- **0.7.10** Keep Home, End, and the arrow keys working after a contest click while automatic scrolling is blocked.
+- **0.7.9** Save Don’t show again and Silent changelog when closing the update popup, including with HH++ builds that keep settings private.
+- **0.7.8** Clear saved Top and My rank choices once their contests are no longer available.
+- **0.7.7**
+  - Apply Don’t show again when the changelog closes and update the HH++ setting immediately.
+  - Give the silent update icon its own tooltip.
+  - Keep long contest titles in the card header alongside the rank controls.
+  - Identify the Dev build beside its version in settings.
+- **0.7.6**
+  - Choose Top or My rank on any active contest. Jarvis remembers each contest’s choice when switching and applies the same position and scroll rules to finished contests.
+  - Keep game scroll animations from restarting while you scroll by hand during a contest switch.
+  - See a small arc-reactor icon beside HH++ when a silent update notice is available.
+- **0.7.5**
+  - Keep the homepage responsive after closing the changelog and choose Silent changelog from the popup.
+  - Stop automatic sidebar scrolling on contest switches by default and use Top or My rank whenever you switch.
+  - Bring the selected card into view when you use a contest shortcut.
+- **0.7.4** See your rank in each active contest beside the close button and switch leaderboards without moving the contest list.
+- **0.7.3**
+  - See automatic changelogs only when loading the homepage after an update.
+  - Enable Silent changelog to get a New button beside HH++ and open the notes when you’re ready.
+  - Keep the contest list and each leaderboard in place when switching contests with Stop scrolling on contest switches.
+- **0.7.2**
+  - Open the bottom active contest at your rank by default. Choose CbC, CCC, or LC to prefer that event when available.
+  - Turn off automatic update notices with Don’t show again in the changelog popup. View changelog stays available in settings.
+- **0.7.1**
+  - Keep the changelog centered when the game window is resized.
+  - Clean up saved player names, explain unknown names on hover, and give Remove buttons more room.
+- **0.7.0**
+  - See what changed in Jarvis the first time a new version runs.
+  - Open View changelog from HH++ settings at any time, even with automatic notices turned off.
+  - Expand Earlier versions to read past updates.
+- **0.6.7** Make marking one action per player, backfill names for older marks, use the bracket-based promotion target, and simplify the selected contest buttons and version badge.
+- **0.6.6**
+  - Add setting help in HH++, improve mark contrast and management, and add automatic contest defaults.
+  - Rename the separately installed testing userscript to Dev.
 - **0.6.5** Move the userscript source into TypeScript modules and add separate stable and testing builds.
+- **0.6.4** Prevent pinned contest startup scrolling, keep native startup without a pin, and clear finished pins
+- **0.6.3** Stop both contest startup scrolls, isolate the selected leaderboard, and restore pinned contests at Top or My rank
+- **0.6.2** Pin contests on their cards, hide the startup scroll, and use right-click marking with isolated settings scrolling

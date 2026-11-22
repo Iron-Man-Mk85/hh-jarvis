@@ -2,6 +2,17 @@ import { currentPage } from './game';
 import { mountSettingsHelp } from './settingsHelp';
 import css from './settings.css';
 
+const columns = [
+    [
+        { id: 'jarvis-leagues-and-contests', label: 'Leagues and contests', keys: ['friendAndFoes', 'contestStart', 'leagueTop20'] },
+        { id: 'jarvis-navigation-and-passes', label: 'Navigation and passes', keys: ['gameLinks', 'removePassLock'] }
+    ],
+    [
+        { id: 'jarvis-raids-and-exports', label: 'Love Raids and exports', keys: ['loveRaidsAddon', 'loveRaidsParser', 'activityParser'] },
+        { id: 'jarvis-script-updates', label: 'Script updates', keys: ['changelog'] }
+    ]
+];
+
 export function injectStyles() {
     const style = document.createElement('style');
     style.className = 'hh-jarvis-style';
@@ -18,8 +29,30 @@ export function packSettings() {
     const selector = '.hh-plus-plus-config-panel .group-panel[rel="JARVIS"] .panel-contents';
     window.HHPlusPlus.Helpers.doWhenSelectorAvailable(selector, () => {
         const panel = document.querySelector<HTMLElement>(selector);
-        if (!panel) return;
+        if (!panel || panel.classList.contains('jarvis-settings-layout')) return;
         panel.classList.remove('hh-scroll');
+        for (const sections of columns) {
+            const column = document.createElement('div');
+            column.className = 'jarvis-settings-column';
+            for (const { id, label, keys } of sections) {
+                const cards = keys.flatMap(key => {
+                    const card = panel.querySelector(`.config-setting[rel="JARVIS_${key}"]`);
+                    return card ? [card] : [];
+                });
+                if (!cards.length) continue;
+
+                const section = document.createElement('section');
+                section.className = 'jarvis-settings-section';
+                section.setAttribute('aria-labelledby', id);
+                const heading = document.createElement('h5');
+                heading.id = id;
+                heading.textContent = label;
+                section.append(heading, ...cards);
+                column.appendChild(section);
+            }
+            if (column.childElementCount) panel.appendChild(column);
+        }
+        panel.classList.add('jarvis-settings-layout');
         mountSettingsHelp(panel, 'jarvis-setting-tooltip');
         window.addEventListener('wheel', event => {
             if (event.ctrlKey || !(event.target instanceof Node) || !panel.contains(event.target)) return;
@@ -30,22 +63,5 @@ export function packSettings() {
             const scale = panel.getBoundingClientRect().height / panel.offsetHeight || 1;
             panel.scrollTop += event.deltaY * unit / scale;
         }, { capture: true, passive: false });
-
-        const cards = panel.querySelectorAll<HTMLElement>('.config-setting');
-        const pack = () => {
-            if (!panel.offsetWidth) return;
-
-            for (const card of cards) {
-                card.style.setProperty('--jarvis-setting-rows', String(card.offsetHeight + 10));
-            }
-            panel.classList.add('jarvis-packed-settings');
-        };
-        const groupObserver = new MutationObserver(pack);
-        if (panel.parentElement) groupObserver.observe(panel.parentElement, { attributeFilter: ['class'] });
-        if (typeof ResizeObserver !== 'undefined') {
-            const sizeObserver = new ResizeObserver(pack);
-            cards.forEach(card => sizeObserver.observe(card));
-        }
-        pack();
     });
 }

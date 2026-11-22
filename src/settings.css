@@ -1,4 +1,5 @@
 .hh-plus-plus-config-panel .group-panel[rel="JARVIS"] .panel-contents {
+    box-sizing: border-box;
     align-content: start;
     align-items: start;
     overflow-y: auto;
@@ -8,16 +9,35 @@
 .hh-plus-plus-config-panel:has(> .group-panel[rel="JARVIS"].shown) {
     overflow: clip;
 }
-.hh-plus-plus-config-panel .group-panel[rel="JARVIS"] .config-setting.has-subsettings {
+.hh-plus-plus-config-panel .group-panel[rel="JARVIS"] .jarvis-settings-layout {
+    grid-template-columns: repeat(auto-fit, minmax(min(100%, 14rem), 17rem));
+    justify-content: start;
+    gap: .65rem;
+    padding-block-end: .6rem;
+}
+.jarvis-settings-column,
+.jarvis-settings-section {
+    display: grid;
+    min-width: 0;
+    gap: .4rem;
+}
+.jarvis-settings-column {
+    gap: .65rem;
+}
+.jarvis-settings-section > h5 {
+    margin: 0;
+    color: inherit;
+    font: 600 .85rem/1.2 system-ui, sans-serif;
+}
+.hh-plus-plus-config-panel .jarvis-settings-section .config-setting {
     grid-row-end: auto;
 }
-.hh-plus-plus-config-panel .group-panel[rel="JARVIS"] .jarvis-packed-settings {
-    grid-auto-flow: row dense;
-    grid-auto-rows: 1px;
-    row-gap: 0;
+.hh-plus-plus-config-panel .jarvis-settings-section label {
+    align-items: center;
+    gap: .45em;
 }
-.hh-plus-plus-config-panel .group-panel[rel="JARVIS"] .jarvis-packed-settings .config-setting {
-    grid-row-end: span var(--jarvis-setting-rows, 1);
+.hh-plus-plus-config-panel .jarvis-settings-section input[type="checkbox"] {
+    flex-shrink: 0;
 }
 .hh-plus-plus-config-panel .tabs h4[rel="JARVIS"] {
     position: relative;

@@ -1,50 +1,10 @@
 import { currentPage } from '../../game';
-import type { EventReward, EventRewardSource } from '../../game-types';
 import { HHModule, type ModuleSettings } from '../../HHModule';
 import { settingHelp } from '../../settingsHelp';
-
-const supportedTab = /^(event|mythic_event|crazy_cumback_contest)_(\d+)$/;
+import { getEventExportRule } from './eventExportRules';
 
 function sheetCell(value: string) {
     return value.replace(/\s+/g, ' ').trim();
-}
-
-function formatSource(source: EventRewardSource): string {
-    switch (source.name) {
-        case 'event_dm': return 'Daily Missions';
-        case 'pachinko_event':
-        case 'pachinko_epic': return 'Night-Club';
-        case 'crazy_cumback_contest': return 'Crazy Cumback Contest';
-        case 'event_troll':
-        case 'event_champion_girl': {
-            const href = source.anchor_source?.url;
-            if (!href || !URL.canParse(href, location.origin)) return '';
-            const url = new URL(href, location.origin);
-            const villain = source.name === 'event_troll';
-            const id = villain && url.pathname === '/troll-pre-battle.html'
-                ? url.searchParams.get('id_opponent')
-                : !villain ? url.pathname.match(/^\/champions\/(\d+)\/?$/)?.[1] : null;
-            if (!id || !/^\d+$/.test(id)) return '';
-
-            const sentence = document.createElement('template');
-            sentence.innerHTML = source.sentence ?? '';
-            const name = sheetCell(sentence.content.querySelector('i')?.textContent ?? '');
-            return name ? `${villain ? 'Villain' : 'Champion'} #${id} ${name}` : '';
-        }
-        default: return '';
-    }
-}
-
-function currentSource(reward: EventReward, kind: string, id: string) {
-    const isCurrent = (source: EventRewardSource) =>
-        source.group?.name === kind && String(source.group.id) === id;
-    const primary = reward.source;
-    if (primary && isCurrent(primary)) return formatSource(primary);
-
-    const sources = Object.values(reward.source_list ?? {}).flatMap(list => list ?? []).filter(isCurrent);
-    if (!sources.length && kind === 'event' && primary?.name === 'pachinko_epic') return formatSource(primary);
-    const labels = new Set(sources.map(formatSource));
-    return labels.size === 1 ? [...labels][0] : '';
 }
 
 export class EventExport extends HHModule {
@@ -62,7 +22,7 @@ export class EventExport extends HHModule {
             label: settingHelp('Event names export', 'Add a Copy event names button to regular event, Mythic Days, and Crazy Cumback Contest pages. Paste into Sheets for one base character name per row.'),
             subSettings: [{
                 key: 'includeSources',
-                label: settingHelp('Include event sources', 'Add a second column when the current event source can be identified for every reward.'),
+                label: settingHelp('Include event sources', 'Add a second column on supported event types when every reward has an identifiable source.'),
                 default: true
             }]
         } });
@@ -75,10 +35,10 @@ export class EventExport extends HHModule {
     run({ includeSources = true }: ModuleSettings) {
         if (this.hasRun || !this.shouldRun()) return;
         const event = new URLSearchParams(location.search).get('tab') ?? window.event_data?.identifier ?? '';
-        const match = event.match(supportedTab);
+        const rule = getEventExportRule(event);
         const eventPanel = document.querySelector('#events .nc-event-container');
-        if (!match || !eventPanel) return;
-        const [, kind, id] = match;
+        if (!rule || !eventPanel) return;
+        const { id, source } = rule;
         this.hasRun = true;
         this.includeSources = includeSources;
 
@@ -99,7 +59,7 @@ export class EventExport extends HHModule {
                     label.textContent = 'Names unavailable';
                     return;
                 }
-                const sources = this.includeSources ? rewards.map(reward => currentSource(reward, kind, id)) : [];
+                const sources = this.includeSources && source ? rewards.map(reward => source(reward, id)) : [];
                 const completeSources = sources.length === names.length && sources.every(Boolean);
                 const rows = completeSources ? names.map((name, index) => `${name}\t${sources[index]}`) : names;
                 await navigator.clipboard.writeText(rows.join('\n'));

@@ -10,6 +10,7 @@ import { LoveRaidsParser } from './modules/love-raids/LoveRaidsParser';
 import { ActivityParser } from './modules/activities/ActivityParser';
 import { Changelog } from './modules/updates/Changelog';
 import { GameLinks } from './modules/navigation/GameLinks';
+import { MythicPreviewFix } from './modules/events/MythicPreviewFix';
 
 armContestStartupGuard();
 
@@ -47,6 +48,7 @@ function runJarvis() {
         new LoveRaidsParser(),
         new ActivityParser(),
         changelog,
+        new MythicPreviewFix(),
         new GameLinks()
     ]
 

@@ -4,7 +4,7 @@ import css from './settings.css';
 
 const categories = [
     { id: 'leagues-and-contests', label: 'Leagues and contests', keys: ['friendAndFoes', 'contestStart', 'leagueTop20'] },
-    { id: 'navigation-and-passes', label: 'Navigation and passes', keys: ['gameLinks', 'removePassLock'] },
+    { id: 'navigation-and-passes', label: 'Navigation and passes', keys: ['gameLinks', 'removePassLock', 'mythicPreviewFix'] },
     { id: 'raids-and-exports', label: 'Love Raids and exports', keys: ['loveRaidsAddon', 'loveRaidsParser', 'activityParser'] },
     { id: 'script-updates', label: 'Script updates', keys: ['changelog'] }
 ];

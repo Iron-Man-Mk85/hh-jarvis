@@ -41,12 +41,14 @@ function rewardTargets(page: string): Target[] {
             ];
         }
         case '/season.html': {
-            const host = first('#seasons_tab_title');
+            const host = first('#seasons_tab_container .seasons_controls_holder');
             if (!host) return [];
+            const energy = host.querySelector<HTMLElement>('#season_tab_kiss_energy');
+            const anchor = energy?.getClientRects().length ? energy : host.querySelector<HTMLElement>('#seasons_tab_sub_title');
             const portraits = document.querySelectorAll<HTMLElement>('#seasons_tab_container #girls_holder .girl_block');
             const entries = (window.seasons_girls ?? []).flatMap((reward, index) =>
                 reward.preview ? [{ reward, native: portraits[index] }] : []);
-            return [{ host, entries }];
+            return [{ host, entries, anchor, side: 'below' }];
         }
         case '/leagues.html': {
             const host = first('.league_girl .girl-preview');

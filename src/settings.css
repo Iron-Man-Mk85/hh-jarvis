@@ -372,10 +372,6 @@ td[data-jarvis-mark] > a {
     left: 8%;
     top: 28%;
 }
-#seasons_tab_title .jarvis-art-launcher {
-    margin-inline-start: .4rem;
-    vertical-align: middle;
-}
 .league_girl.hidden_girl .jarvis-art-launcher {
     display: none;
 }

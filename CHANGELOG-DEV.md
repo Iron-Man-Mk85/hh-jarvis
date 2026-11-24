@@ -1,5 +1,6 @@
 # Development notes
 
+- **0.11.5** Switch to an unskipped contest when you skip the open one, and prefer unskipped contests on reload. Skipped shortcuts use a dark red fill, and the skip icon beside the star lights up when active.
 - **0.11.4** Mark an active contest as skipped for today with the button beside its star. The top shortcut shows a red ×, and you can still open the contest from either spot.
 - **0.11.3**
   - Open art from the lower-right corner of each Love Raid card, including cards without an info icon. The viewer starts on that character and keeps the other raids in its picker.

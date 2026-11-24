@@ -128,15 +128,12 @@ button:is(.jarvis-contest-pin, .jarvis-contest-skip) {
     content: '★';
     color: #ffd36b;
 }
-button.jarvis-contest-skip {
-    border-radius: .3em;
-}
 .jarvis-contest-skip::before {
     content: '⊘';
 }
-.jarvis-contest-skip[aria-pressed="true"] {
-    background: #a52839;
-    color: #fff;
+.jarvis-contest-skip[aria-pressed="true"]::before {
+    color: #ff9ca9;
+    font-weight: bold;
 }
 :is(.jarvis-contest-pin, .jarvis-contest-skip):focus-visible {
     outline: 1px solid currentColor;
@@ -243,7 +240,6 @@ button.jarvis-contest-skip {
 .jarvis-contest-shortcuts button {
     all: unset;
     box-sizing: border-box;
-    position: relative;
     display: grid;
     place-content: center;
     gap: .15em;
@@ -269,20 +265,16 @@ button.jarvis-contest-skip {
 .jarvis-contest-shortcuts button[aria-pressed="true"] {
     background: color-mix(in srgb, currentColor 27%, transparent);
 }
-.jarvis-contest-shortcuts .jarvis-contest-shortcut-skipped::after {
-    content: '×' / '';
-    position: absolute;
-    inset-block-start: -.45em;
-    inset-inline-end: -.25em;
-    display: grid;
-    place-items: center;
-    inline-size: 1.15em;
-    block-size: 1.15em;
-    border-radius: 50%;
-    background: #a52839;
-    color: #fff;
-    font-weight: bold;
-    pointer-events: none;
+.jarvis-contest-shortcuts button.jarvis-contest-shortcut-skipped {
+    border-color: #f7a1ae;
+    background: #741224;
+    color: #fff5f7;
+}
+.jarvis-contest-shortcuts button.jarvis-contest-shortcut-skipped:hover {
+    background: #911e35;
+}
+.jarvis-contest-shortcuts button.jarvis-contest-shortcut-skipped[aria-pressed="true"] {
+    background: #ae3048;
 }
 .jarvis-contest-shortcuts button:focus-visible {
     outline: 2px solid currentColor;

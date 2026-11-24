@@ -1,5 +1,9 @@
 # Development notes
 
+- **0.10.2**
+  - Scroll to zoom and drag to move any alternate event preview. Use Adjust to enable the same gestures for the original art. Double-click the art to reset.
+  - Fit poses inside the preview, render animated Spine skins at higher resolution, and keep the toolbar above the art and clear of native reward controls.
+  - Find the smaller Copy event names button below the reward details, beside the native carousel controls where present.
 - **0.10.1**
   - Choose either Silent changelog or Silent updates. Turning one on clears the other.
   - Use game-styled controls on the left of the event reward. Preview animated skins, zoom and move any preview or the original, and restore the original without overlapping art.

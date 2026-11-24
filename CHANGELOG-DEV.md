@@ -1,5 +1,6 @@
 # Development notes
 
+- **0.11.10** Use All but scenes to browse originals, poses, and skins together, including animated artwork.
 - **0.11.9**
   - Find the Seasonal camera directly after the last event tab and the viewer’s Close button inside the top-right corner.
   - Center artwork rows that fit in Show all. Rows that need scrolling start on the left, with alignment updating as the window resizes.

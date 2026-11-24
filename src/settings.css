@@ -374,6 +374,14 @@ td[data-jarvis-mark] > a {
     line-height: 1.1;
     text-shadow: 1px 1px #000, -1px -1px #000;
 }
+.jarvis-art-launcher-compact.blue_button_L {
+    width: auto;
+    height: auto;
+    min-inline-size: 1.8rem;
+    min-block-size: 1.55rem;
+    padding: .12rem .25rem;
+    font-size: .9rem;
+}
 .jarvis-art-launcher[data-jarvis-art-anchor] {
     position: absolute;
     z-index: 6;
@@ -400,17 +408,11 @@ td[data-jarvis-mark] > a {
 .league_girl.hidden_girl .jarvis-art-launcher {
     display: none;
 }
-#love-raids .raid-card > .jarvis-art-launcher.blue_button_L {
+#love-raids .raid-card > .jarvis-art-launcher {
     position: absolute;
     z-index: 6;
     inset-inline-end: .4rem;
     inset-block-end: .4rem;
-    width: max-content;
-    min-inline-size: 0;
-    height: auto;
-    min-block-size: 1.4rem;
-    padding: .12rem .45rem;
-    font-size: .7rem;
 }
 #events .nc-event-container .nc-event-reward-container .nc-events-prize-locations-container .jarvis-event-copy-row > button.jarvis-event-copy.blue_button_L {
     flex: none;

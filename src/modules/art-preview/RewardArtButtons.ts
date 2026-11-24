@@ -9,11 +9,12 @@ interface Target {
     side?: 'above' | 'below' | 'right';
     leftAligned?: boolean;
     initialIndex?: number;
+    compact?: boolean;
 }
 
 function target(host: HTMLElement | null, reward: RewardArt | undefined | null, anchor?: HTMLElement | null,
     side?: Target['side'], native?: HTMLElement): Target[] {
-    return host && reward?.preview ? [{ host, anchor, side, entries: [{ reward, native }] }] : [];
+    return host && reward?.preview ? [{ host, anchor, side, entries: [{ reward, native }], compact: true }] : [];
 }
 
 function first(selector: string) {
@@ -44,7 +45,7 @@ function raidTargets(): Target[] {
             entries.push({ reward: { ...raid.girl_data, id_girl: raid.id_girl }, native: card.querySelector<HTMLElement>('.left-girl-container') ?? undefined });
             indices.set(id, index);
         }
-        targets.push({ host: card, entries, initialIndex: index });
+        targets.push({ host: card, entries, initialIndex: index, compact: true });
     }
     return targets;
 }
@@ -146,20 +147,25 @@ export class RewardArtButtons {
         for (const target of targets) {
             const label = target.initialIndex === undefined && target.entries.length > 1 ? 'Preview arts' : 'Preview art';
             const existing = this.launchers.get(target.host);
+            const button = existing?.button ?? document.createElement('button');
+            const caption = target.compact ? '📷' : label;
+            button.classList.toggle('jarvis-art-launcher-compact', Boolean(target.compact));
+            if (button.textContent !== caption) button.textContent = caption;
+            if (button.title !== label) {
+                button.title = label;
+                button.setAttribute('aria-label', label);
+            }
             if (existing) {
                 if (existing.target.anchor !== target.anchor) {
                     existing.layout.disconnect();
                     this.observe(existing.layout, target);
                 }
                 existing.target = target;
-                if (existing.button.textContent !== label) existing.button.textContent = label;
-                this.position(existing.button, target);
+                this.position(button, target);
                 continue;
             }
-            const button = document.createElement('button');
             button.type = 'button';
-            button.className = 'blue_button_L jarvis-art-launcher';
-            button.textContent = label;
+            button.classList.add('blue_button_L', 'jarvis-art-launcher');
             button.setAttribute('aria-haspopup', 'dialog');
             const launcher: Launcher = { button, target, layout: new ResizeObserver(() => this.position(button, launcher.target)) };
             button.addEventListener('click', event => {

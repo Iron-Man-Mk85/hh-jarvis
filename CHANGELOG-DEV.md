@@ -1,5 +1,9 @@
 # Development notes
 
+- **0.10.3**
+  - Find the compact preview controls beside the info icon, with outlined labels and a Reset button.
+  - Keep zoom and position while switching between alternate previews. Turn off Adjust to restore the original framing. Zoom in further and pan across the entire enlarged image.
+  - Render animated Spine skins at higher resolution and keep Copy event names readable in a native-style pill.
 - **0.10.2**
   - Scroll to zoom and drag to move any alternate event preview. Use Adjust to enable the same gestures for the original art. Double-click the art to reset.
   - Fit poses inside the preview, render animated Spine skins at higher resolution, and keep the toolbar above the art and clear of native reward controls.

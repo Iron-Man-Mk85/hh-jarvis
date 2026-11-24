@@ -366,6 +366,13 @@ td[data-jarvis-mark] > a {
 .jarvis-art-launcher[data-jarvis-art-anchor][data-jarvis-art-above] {
     transform: translate(-50%, -100%);
 }
+.jarvis-art-launcher.blue_button_L[data-jarvis-art-beside] {
+    width: max-content;
+    min-inline-size: 0;
+    padding-inline: .35rem;
+    font-size: .7rem;
+    transform: translateY(-50%);
+}
 #events .nc-event-container > .jarvis-art-launcher:not([data-jarvis-art-anchor]) {
     position: absolute;
     z-index: 6;

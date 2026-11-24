@@ -5,7 +5,7 @@ interface Target {
     host: HTMLElement;
     entries: RewardArtEntry[];
     anchor?: HTMLElement | null;
-    side?: 'above' | 'below';
+    side?: 'above' | 'below' | 'right';
     leftAligned?: boolean;
 }
 
@@ -43,12 +43,12 @@ function rewardTargets(page: string): Target[] {
         case '/season.html': {
             const host = first('#seasons_tab_container .seasons_controls_holder');
             if (!host) return [];
-            const energy = host.querySelector<HTMLElement>('#season_tab_kiss_energy');
-            const anchor = energy?.getClientRects().length ? energy : host.querySelector<HTMLElement>('#seasons_tab_sub_title');
+            const combatLink = host.querySelector<HTMLElement>('a[href*="/season-arena.html"]');
+            const anchor = combatLink?.querySelector<HTMLElement>('.blue_button_L') ?? combatLink;
             const portraits = document.querySelectorAll<HTMLElement>('#seasons_tab_container #girls_holder .girl_block');
             const entries = (window.seasons_girls ?? []).flatMap((reward, index) =>
                 reward.preview ? [{ reward, native: portraits[index] }] : []);
-            return [{ host, entries, anchor, side: 'below' }];
+            return [{ host, entries, anchor, side: 'right' }];
         }
         case '/leagues.html': {
             const host = first('.league_girl .girl-preview');
@@ -120,6 +120,7 @@ export class RewardArtButtons {
             this.launchers.delete(host);
         }
         for (const target of targets) {
+            const label = target.entries.length > 1 ? 'Preview arts' : 'Preview art';
             const existing = this.launchers.get(target.host);
             if (existing) {
                 if (existing.target.anchor !== target.anchor) {
@@ -127,13 +128,14 @@ export class RewardArtButtons {
                     this.observe(existing.layout, target);
                 }
                 existing.target = target;
+                if (existing.button.textContent !== label) existing.button.textContent = label;
                 this.position(existing.button, target);
                 continue;
             }
             const button = document.createElement('button');
             button.type = 'button';
             button.className = 'blue_button_L jarvis-art-launcher';
-            button.textContent = 'Preview art';
+            button.textContent = label;
             button.setAttribute('aria-haspopup', 'dialog');
             const launcher: Launcher = { button, target, layout: new ResizeObserver(() => this.position(button, launcher.target)) };
             button.addEventListener('click', event => {
@@ -157,13 +159,17 @@ export class RewardArtButtons {
     private position(button: HTMLButtonElement, { host, anchor, side, leftAligned }: Target) {
         button.toggleAttribute('data-jarvis-art-anchor', Boolean(anchor));
         button.toggleAttribute('data-jarvis-art-above', side === 'above');
+        button.toggleAttribute('data-jarvis-art-beside', side === 'right');
         if (!anchor) return;
         const box = host.getBoundingClientRect();
         const edge = anchor.getBoundingClientRect();
         if (!box.width || !box.height || !edge.width) return;
-        const x = (edge.left + edge.width * (leftAligned ? .33 : .5) - box.left) * host.clientWidth / box.width;
-        const y = ((side === 'above' ? edge.top : edge.bottom) - box.top) * host.clientHeight / box.height;
-        button.style.setProperty('--jarvis-art-launcher-x', `${x}px`);
-        button.style.setProperty('--jarvis-art-launcher-y', `${y + (side === 'above' ? -4 : 4)}px`);
+        const beside = side === 'right';
+        const anchorX = beside ? edge.right : edge.left + edge.width * (leftAligned ? .33 : .5);
+        const anchorY = beside ? edge.top + edge.height / 2 : side === 'above' ? edge.top : edge.bottom;
+        const x = (anchorX - box.left) * host.clientWidth / box.width;
+        const y = (anchorY - box.top) * host.clientHeight / box.height;
+        button.style.setProperty('--jarvis-art-launcher-x', `${x + (beside ? 6 : 0)}px`);
+        button.style.setProperty('--jarvis-art-launcher-y', `${y + (beside ? 0 : side === 'above' ? -4 : 4)}px`);
     }
 }

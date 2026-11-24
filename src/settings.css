@@ -365,22 +365,14 @@ td[data-jarvis-mark] > a {
     align-items: center;
     justify-content: center;
     box-sizing: border-box;
-    min-inline-size: 5.75rem;
-    min-block-size: 1.6rem;
-    padding: .15rem .5rem;
-    border-radius: 999px;
-    white-space: nowrap;
-    font-size: .75rem;
-    line-height: 1.1;
-    text-shadow: 1px 1px #000, -1px -1px #000;
-}
-.jarvis-art-launcher-compact.blue_button_L {
     width: auto;
     height: auto;
     min-inline-size: 1.8rem;
     min-block-size: 1.55rem;
     padding: .12rem .25rem;
+    border-radius: 999px;
     font-size: .9rem;
+    line-height: 1.1;
 }
 .jarvis-art-launcher[data-jarvis-art-anchor] {
     position: absolute;
@@ -392,11 +384,7 @@ td[data-jarvis-mark] > a {
 .jarvis-art-launcher[data-jarvis-art-anchor][data-jarvis-art-above] {
     transform: translate(-50%, -100%);
 }
-.jarvis-art-launcher.blue_button_L[data-jarvis-art-beside] {
-    width: max-content;
-    min-inline-size: 0;
-    padding-inline: .35rem;
-    font-size: .7rem;
+.jarvis-art-launcher[data-jarvis-art-beside] {
     transform: translateY(-50%);
 }
 #events .nc-event-container > .jarvis-art-launcher:not([data-jarvis-art-anchor]) {
@@ -413,12 +401,6 @@ td[data-jarvis-mark] > a {
     z-index: 6;
     inset-inline-end: .4rem;
     inset-block-end: .4rem;
-}
-#home_tab_container .girls-reward-container > .jarvis-art-launcher {
-    position: absolute;
-    inset-block-start: 0;
-    inset-inline-end: .4rem;
-    z-index: 6;
 }
 :is(#home_tab_container, #market_tab_container) > .jarvis-art-launcher {
     align-self: flex-start;

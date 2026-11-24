@@ -33,7 +33,6 @@ export class SeasonalArt {
         const panel = document.getElementById(tab ?? overviewId);
         if (!panel) return null;
         const market = panel.id === marketId;
-        const host = market ? panel : panel.querySelector<HTMLElement>('.girls-reward-container') ?? panel;
         const rewards = market ? this.inventory ?? this.renderedMarketRewards(panel) : window.girls ?? [];
         const seen = new Set<string>();
         const entries = rewards.flatMap((data): RewardArtEntry[] => {
@@ -44,7 +43,7 @@ export class SeasonalArt {
             const loadDetails = market && !hasPreviewArt(reward) ? () => this.loadDetails(reward, id) : undefined;
             return [{ reward, loadDetails }];
         });
-        return { host, entries, prepend: host === panel };
+        return { host: panel, entries, prepend: true };
     }
 
     private renderedMarketRewards(panel: HTMLElement): GameReward[] {

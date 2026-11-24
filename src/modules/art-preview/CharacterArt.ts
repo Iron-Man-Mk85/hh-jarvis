@@ -40,7 +40,7 @@ export class CharacterArt {
             name: panel.querySelector('.girl_infos_area h3, .dialog-box h3')?.textContent?.trim()
         };
         const loadDetails = hasPreviewArt(reward) ? undefined : () => this.loadDetails(id);
-        return { host: native ?? panel, entries: [{ reward, native, loadDetails }], compact: true, galleryOnOpen: true };
+        return { host: native ?? panel, entries: [{ reward, native, loadDetails }], galleryOnOpen: true };
     }
 
     private loadDetails(id: string) {

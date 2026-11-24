@@ -1,5 +1,6 @@
 # Development notes
 
+- **0.10.5** Keep the event preview controls beside the info button and move them up when needed to clear shard progress and reward details.
 - **0.10.4** Zoom toward the pointer and grab the artwork wherever you move it. Keep fitted art within view and pan enlarged art from edge to edge.
 - **0.10.3**
   - Find the compact preview controls beside the info icon, with outlined labels and a Reset button.

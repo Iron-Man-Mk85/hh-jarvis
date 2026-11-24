@@ -191,6 +191,7 @@
 
 .jarvis-art-toolbar h2 > button.blue_button_L {
     position: relative;
+    display: block;
     width: 100%;
     height: 1.8em;
     padding-inline: .2em;
@@ -260,6 +261,10 @@
     text-align: center;
 }
 
+.jarvis-art-dialog-navigation > button {
+    flex: none;
+}
+
 .jarvis-art-dialog [hidden] {
     display: none !important;
 }
@@ -306,6 +311,16 @@
 
     .jarvis-art-dialog > header:has(.jarvis-art-character-picker[hidden]) {
         grid-template-columns: minmax(0, 1fr);
+    }
+
+    .jarvis-art-dialog-navigation {
+        flex-wrap: wrap;
+    }
+
+    .jarvis-art-dialog-navigation [role="status"] {
+        flex-basis: 100%;
+        order: 1;
+        text-align: start;
     }
 }
 

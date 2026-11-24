@@ -1,5 +1,9 @@
 # Development notes
 
+- **0.9.0**
+  - Turn on Silent updates to show the homepage update icon and dismiss it with a click. View changelog still opens the notes from settings.
+  - Copy base character names from regular event, Mythic Days, and Crazy Cumback Contest pages in one click. Include a TSV source column when every reward has a known event source.
+  - Enable Fix Mythic Revival preview to restore the selected skin image on Pornstar Harem when the game leaves it transparent.
 - **0.8.5** Put Jarvis settings in compact category tabs, matching Ultron’s layout.
 - **0.8.4** Group Jarvis settings in compact categories and keep the HH++ tabs separate from settings scrolling.
 - **0.8.3** Keep the complete testing history in Dev and summarize only published changes in the public changelog.

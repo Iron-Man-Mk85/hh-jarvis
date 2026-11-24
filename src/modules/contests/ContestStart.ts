@@ -169,18 +169,25 @@ export class ContestStart extends HHModule {
         });
     }
 
-    getTarget(contests: ContestCard[]) {
-        if (this.preference) return contests.find(contest => contest.id === this.preference);
+    getTarget(contests: ContestCard[], skipped: ReadonlySet<string>) {
+        const unskipped = contests.filter(({ id }) => !skipped.has(id));
+        if (!unskipped.length && contests.length && document.readyState !== 'complete') return;
+
+        const candidates = unskipped.length ? unskipped : contests;
+        if (this.preference) {
+            const pinned = contests.find(contest => contest.id === this.preference);
+            if (!pinned || candidates.includes(pinned)) return pinned;
+        }
 
         if (this.defaults.kind === 'event') {
             if (this.defaults.event !== 'any') {
-                const event = [...contests].reverse().find(contest => contest.category === this.defaults.event);
+                const event = [...candidates].reverse().find(contest => contest.category === this.defaults.event);
                 if (event || document.readyState !== 'complete') return event;
             }
-            return contests.at(-1);
+            return candidates.at(-1);
         }
-        return contests.find(contest => contest.category === 'daily') ??
-            contests.find(contest => contest.category === null) ?? contests[0];
+        return candidates.find(contest => contest.category === 'daily') ??
+            candidates.find(contest => contest.category === null) ?? candidates[0];
     }
 
     clearExpiredPin(list: HTMLElement, contests: ContestCard[], finished: ReadonlySet<string>) {
@@ -281,7 +288,7 @@ export class ContestStart extends HHModule {
                     if (!contestId) return;
                     try {
                         toggleContestSkip(contestId);
-                        this.refresh();
+                        this.refresh(contestId);
                     } catch (err) {
                         console.warn('Jarvis could not save the contest skip:', err);
                     }
@@ -629,7 +636,7 @@ export class ContestStart extends HHModule {
         restore();
     }
 
-    refresh() {
+    refresh(toggledSkipId?: string) {
         const list = document.querySelector<HTMLElement>('#contests .left_part .scroll_area');
         const right = document.querySelector<HTMLElement>('#contests .right_part');
         for (const pane of this.focusablePanes) {
@@ -659,10 +666,20 @@ export class ContestStart extends HHModule {
         const skipped = readContestSkips();
         this.updateCardControls(list, contests, skipped);
 
+        if (toggledSkipId && skipped.has(toggledSkipId) && this.getSelectedContestId(list, right) === toggledSkipId) {
+            const preferred = this.getTarget(contests, skipped);
+            const next = preferred && !skipped.has(preferred.id) ? preferred :
+                contests.find(({ id }) => !skipped.has(id));
+            if (next) {
+                this.openShortcut(next.id);
+                return;
+            }
+        }
+
         if (this.reposition) {
             this.reposition();
         } else if (this.startupPending) {
-            let target = this.getTarget(contests);
+            let target = this.getTarget(contests, skipped);
             if (!contests.length && !this.preference && document.readyState === 'complete') {
                 const selected = this.getSelectedContestId(list, right);
                 target = cards.find(card => card.id === selected) ?? cards.at(-1);

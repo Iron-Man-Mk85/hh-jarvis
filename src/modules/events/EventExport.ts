@@ -49,6 +49,8 @@ function currentSource(reward: EventReward, kind: string, id: string) {
 
 export class EventExport extends HHModule {
     private button: HTMLButtonElement | null = null;
+    private row: HTMLElement | null = null;
+    private observer: MutationObserver | null = null;
     private feedbackTimer: number | undefined;
     private includeSources = true;
 
@@ -112,8 +114,29 @@ export class EventExport extends HHModule {
                 }
             }
         });
-        eventPanel.appendChild(button);
         this.button = button;
+        const mount = () => {
+            const source = eventPanel.querySelector('.nc-event-reward-container.selected .nc-events-prize-locations-container');
+            if (!source || this.row?.parentElement === source) return;
+
+            this.removeRow();
+            const row = document.createElement('div');
+            row.className = 'jarvis-event-copy-row';
+            const carousel = source.querySelector(':scope > .controls-button-container');
+            if (carousel) {
+                carousel.before(row);
+                row.append(carousel);
+            } else {
+                const details = source.querySelector(':scope > :is(.prize-locations-infos-container, .shards-info-container)');
+                if (details) details.after(row);
+                else source.prepend(row);
+            }
+            row.append(button);
+            this.row = row;
+        };
+        this.observer = new MutationObserver(mount);
+        this.observer.observe(eventPanel, { childList: true, subtree: true, attributes: true, attributeFilter: ['class'] });
+        mount();
     }
 
     updateSubSetting(key: string, value: boolean) {
@@ -121,9 +144,19 @@ export class EventExport extends HHModule {
     }
 
     tearDown() {
+        this.observer?.disconnect();
+        this.observer = null;
         clearTimeout(this.feedbackTimer);
         this.button?.remove();
+        this.removeRow();
         this.button = null;
         this.hasRun = false;
+    }
+
+    private removeRow() {
+        const nativeControls = this.row?.querySelector(':scope > .controls-button-container');
+        if (nativeControls) this.row?.replaceWith(nativeControls);
+        else this.row?.remove();
+        this.row = null;
     }
 }

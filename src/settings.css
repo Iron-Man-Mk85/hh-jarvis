@@ -329,20 +329,19 @@ td[data-jarvis-mark] > a {
     cursor: default;
     opacity: .5;
 }
-#events .jarvis-event-copy {
-    position: absolute;
-    z-index: 4;
-    inset-block-start: 4%;
-    inset-inline-start: 7.8%;
-    width: auto;
-    min-width: 8em;
-    padding-inline: .65em;
+#events .jarvis-event-copy-row {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: .4rem;
+    width: 100%;
 }
-#events .jarvis-art-controls {
-    --jarvis-art-controls-start: 7.8%;
-    --jarvis-art-controls-top: 20%;
-    --jarvis-art-controls-end: auto;
-    --jarvis-art-controls-width: 25%;
+#events .jarvis-event-copy {
+    flex: none;
+    width: 7.5rem;
+    height: 2.35rem;
+    padding: .15rem .3rem;
+    font-size: .8rem;
 }
 .jarvis-mark-setting-actions,
 .jarvis-mark-actions {

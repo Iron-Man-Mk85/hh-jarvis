@@ -1,5 +1,9 @@
 # Development notes
 
+- **0.11.3**
+  - Open art from the lower-right corner of each Love Raid card, including cards without an info icon. The viewer starts on that character and keeps the other raids in its picker.
+  - Copy new raids as soon as the page controls are ready. Jarvis uses the raid data and only consults the HH++ dictionary for missing fields.
+  - Copy names alone from Crazy Cumback Contest. Regular and Mythic events can still include a complete source column.
 - **0.11.2** Open the Season art viewer beside Find Opponents. Launchers say Preview arts when they open more than one character.
 - **0.11.1** View reward art at the full browser window size and switch characters using the game's rarity-framed reward tiles. Find Season's Preview art button below the Kiss counter.
 - **0.11.0**

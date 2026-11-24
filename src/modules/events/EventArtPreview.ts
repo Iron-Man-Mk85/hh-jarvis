@@ -56,14 +56,15 @@ export class EventArtPreview extends HHModule {
                 this.slide = null;
             }
             const info = eventPanel?.querySelector<HTMLElement>('.nc-event-reward-container.selected .girl-information') ?? null;
+            const rewardPanel = info?.closest<HTMLElement>('.nc-events-prize-locations-container') ?? null;
+            this.viewer?.dockBefore(info, rewardPanel);
             if (info !== this.info && this.viewer && eventPanel) {
                 this.info = info;
                 this.layout?.disconnect();
-                this.viewer.dockBefore(info);
                 if (info) {
-                    this.layout = new ResizeObserver(() => this.viewer?.dockBefore(info));
+                    this.layout = new ResizeObserver(() => this.viewer?.dockBefore(info, rewardPanel));
                     this.layout.observe(info);
-                    if (info.parentElement) this.layout.observe(info.parentElement);
+                    if (rewardPanel) this.layout.observe(rewardPanel);
                     this.layout.observe(eventPanel);
                 }
             }

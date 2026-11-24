@@ -88,7 +88,7 @@ export class ArtPreview {
         this.gestures.refresh();
     }
 
-    dockBefore(anchor: HTMLElement | null) {
+    dockBefore(anchor: HTMLElement | null, clearAbove: HTMLElement | null) {
         const bounds = this.controlHost.getBoundingClientRect();
         const target = anchor?.getBoundingClientRect();
         const visible = Boolean(target?.width && target.height && bounds.width && bounds.height);
@@ -96,9 +96,15 @@ export class ArtPreview {
         if (!visible || !target) return;
 
         const x = (target.left - bounds.left) * this.controlHost.clientWidth / bounds.width - 8;
-        const y = (target.top + target.height / 2 - bounds.top) * this.controlHost.clientHeight / bounds.height;
+        const centerY = target.top + target.height / 2;
+        const scaleY = this.controlHost.clientHeight / bounds.height;
+        const y = (centerY - bounds.top) * scaleY;
         this.controls.style.setProperty('--jarvis-art-anchor-x', `${x}px`);
         this.controls.style.setProperty('--jarvis-art-anchor-y', `${y}px`);
+        const boundary = clearAbove?.getBoundingClientRect();
+        if (boundary?.height) {
+            this.controls.style.setProperty('--jarvis-art-dock-clearance', `${(boundary.top - centerY) * scaleY - 8}px`);
+        } else this.controls.style.removeProperty('--jarvis-art-dock-clearance');
     }
 
     setCharacter(art: ArtGroups | null, portrait: HTMLElement | null) {

@@ -136,5 +136,6 @@
     left: var(--jarvis-art-anchor-x);
     top: var(--jarvis-art-anchor-y);
     right: auto;
-    transform: translate(-100%, -50%);
+    /* Prefer the icon's center, with room for the full toolbar above the reward panel. */
+    transform: translate(-100%, min(-50%, calc(var(--jarvis-art-dock-clearance, 100%) - 100%)));
 }

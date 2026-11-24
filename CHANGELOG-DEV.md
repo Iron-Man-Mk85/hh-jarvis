@@ -1,5 +1,9 @@
 # Development notes
 
+- **0.11.0**
+  - Open a compact reward art viewer from events, Path of Valor, Path of Glory, Penta Drill and its roster, Season, and Leagues. Browse originals, poses, skins, and available scenes.
+  - Keep the inline event controls as an option. The reward panel anchors them when there is no info button.
+  - Keep the current artwork visible while another pose, skin, or scene loads, and add breathing room above the event copy pill when it is on its own.
 - **0.10.5** Keep the event preview controls beside the info button and move them up when needed to clear shard progress and reward details.
 - **0.10.4** Zoom toward the pointer and grab the artwork wherever you move it. Keep fitted art within view and pan enlarged art from edge to edge.
 - **0.10.3**

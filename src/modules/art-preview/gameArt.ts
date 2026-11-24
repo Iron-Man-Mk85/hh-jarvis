@@ -27,6 +27,55 @@ export interface RewardArt {
     animated_grades?: { grade: number; format?: string; asset?: string; filename?: string; path?: string }[];
 }
 
+export interface GameReward extends RewardArt, GameArt {
+    ava?: string;
+    girl?: Omit<GameReward, 'girl'>;
+    images?: { ava?: string[]; ico?: string[] };
+}
+
+export interface RewardResponse {
+    success?: boolean;
+    girl?: GameReward;
+    girls_list?: GameReward[];
+    inventory?: { shards?: GameReward[]; girls?: GameReward[] }[];
+}
+
+export function normalizeReward(data: GameReward): RewardArt {
+    const girl = { ...data, ...data.girl };
+    const preview = girl.preview ?? {};
+    return {
+        id_girl: girl.id_girl,
+        name: girl.name,
+        rarity: girl.rarity,
+        avatar: data.avatar ?? data.ava ?? girl.avatar ?? girl.ava,
+        ico: data.ico ?? girl.ico ?? girl.images?.ico?.[0],
+        default_avatar: girl.default_avatar,
+        animated_grades: girl.animated_grades,
+        preview: {
+            poses: preview.poses ?? girl.poses ?? girl.images?.ava,
+            scenes: preview.scenes ?? girl.scenes,
+            grade_skins_data: preview.grade_skins_data ?? girl.grade_skins_data
+        }
+    };
+}
+
+export function hasPreviewArt(reward: RewardArt) {
+    return Object.values(getArtGroups(reward.preview ?? {})).some(group => group.length);
+}
+
+export async function requestRewardArt(id: string) {
+    if (!/^\d+$/.test(id)) return undefined;
+    try {
+        const game = window.shared?.general?.hh_ajax ? window.shared.general : window;
+        const response = await game.hh_ajax?.({ action: 'get_girl', id_girl: id }).promise();
+        if (!response?.success || !response.girl) return undefined;
+        const reward = normalizeReward(response.girl);
+        return String(reward.id_girl) === id ? reward : undefined;
+    } catch {
+        return undefined;
+    }
+}
+
 function assetUrl(path: string | null | undefined) {
     if (!path || !URL.canParse(path, location.href)) return undefined;
     const url = new URL(path, location.href);
@@ -35,7 +84,7 @@ function assetUrl(path: string | null | undefined) {
 }
 
 export function rewardThumbnail(reward: RewardArt) {
-    return assetUrl(reward.ico) ?? assetUrl(reward.avatar) ?? assetUrl(reward.preview?.poses?.[0]);
+    return assetUrl(reward.ico);
 }
 
 function image(path: string | null, label: string): ArtItem[] {

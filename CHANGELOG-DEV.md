@@ -1,5 +1,22 @@
 # Development notes
 
+- **0.11.10** Use All but scenes to browse originals, poses, and skins together, including animated artwork.
+- **0.11.9**
+  - Find the Seasonal camera directly after the last event tab and the viewer’s Close button inside the top-right corner.
+  - Center artwork rows that fit in Show all. Rows that need scrolling start on the left, with alignment updating as the window resizes.
+  - Keep the view mode, art tab, current picture number when available, and zoom while switching characters.
+- **0.11.8**
+  - In Show all, see the full artwork with wider gaps, and keep animated originals and skins playing.
+  - Load artwork and thumbnails as they come into view. Reuse the game’s asset URLs so the browser can serve cached files.
+  - Use gold tabs, round navigation, and the outlined name from the game’s Poses & Scenes style. Find the Seasonal camera at the far right of the event tab row, including events without a Market tab.
+- **0.11.7**
+  - Open artwork with a camera icon on every supported page. The Seasonal Event overview and market put it in the same place.
+  - Browse all artwork in one full-height row. Scroll sideways with the wheel and click a picture to open it with zoom controls.
+  - See a larger character name and game-styled controls, with Close in the upper-right corner and arrows that stay in place as the counter changes.
+- **0.11.6**
+  - Open art with a small camera button on reward cards. The viewer puts the name and controls at the top, and the character portraits scroll sideways with the mouse wheel.
+  - View all available pictures for a character together, or look through them one at a time with the arrow controls. Click a shortened name to read it in full.
+  - Open one shared viewer from the Seasonal Event overview or market. On character pages, the camera opens that character’s gallery directly.
 - **0.11.5** Switch to an unskipped contest when you skip the open one, and prefer unskipped contests on reload. Skipped shortcuts use a dark red fill, and the skip icon beside the star lights up when active.
 - **0.11.4** Mark an active contest as skipped for today with the button beside its star. The top shortcut shows a red ×, and you can still open the contest from either spot.
 - **0.11.3**

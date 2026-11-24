@@ -1,5 +1,7 @@
 import type { RewardArt } from './gameArt';
 import { RewardArtDialog, type RewardArtEntry } from './RewardArtDialog';
+import { SeasonalArt } from './SeasonalArt';
+import { CharacterArt } from './CharacterArt';
 import { getLoveRaids } from '../love-raids/gameData';
 
 interface Target {
@@ -9,6 +11,8 @@ interface Target {
     side?: 'above' | 'below' | 'right';
     leftAligned?: boolean;
     initialIndex?: number;
+    prepend?: boolean;
+    galleryOnOpen?: boolean;
 }
 
 function target(host: HTMLElement | null, reward: RewardArt | undefined | null, anchor?: HTMLElement | null,
@@ -108,14 +112,21 @@ export class RewardArtButtons {
     private observer: MutationObserver;
     private frame = 0;
     private dialog: RewardArtDialog;
+    private seasonal: SeasonalArt | undefined;
+    private character: CharacterArt | undefined;
 
     constructor(private page: string, scenes: boolean) {
         this.dialog = new RewardArtDialog(scenes);
-        this.observer = new MutationObserver(() => {
+        const schedule = () => {
             if (this.frame) return;
             this.frame = requestAnimationFrame(() => { this.frame = 0; this.sync(); });
+        };
+        this.seasonal = page === '/seasonal.html' ? new SeasonalArt(schedule) : undefined;
+        this.character = page.startsWith('/characters/') ? new CharacterArt(schedule) : undefined;
+        this.observer = new MutationObserver(records => {
+            if (records.some(({ target }) => !(target instanceof Element && target.closest('.jarvis-art-dialog')))) schedule();
         });
-        this.observer.observe(document.body, { childList: true, subtree: true, attributes: true, attributeFilter: ['class', 'girl-id', 'id-girl'] });
+        this.observer.observe(document.body, { childList: true, subtree: true, attributes: true, attributeFilter: ['class', 'girl', 'girl-id', 'id-girl'] });
         this.sync();
     }
 
@@ -124,6 +135,8 @@ export class RewardArtButtons {
     }
 
     destroy() {
+        this.seasonal?.destroy();
+        this.character?.destroy();
         this.observer.disconnect();
         cancelAnimationFrame(this.frame);
         this.dialog.close();
@@ -135,16 +148,17 @@ export class RewardArtButtons {
     }
 
     private sync() {
-        const targets = rewardTargets(this.page).filter(target => target.entries.length);
-        const active = new Set(targets.map(target => target.host));
+        const pageTarget = this.seasonal?.getTarget() ?? this.character?.getTarget();
+        const targets: Target[] = pageTarget ? [pageTarget] : rewardTargets(this.page);
+        const populated = targets.filter(target => target.entries.length);
+        const active = new Set(populated.map(target => target.host));
         for (const [host, { button, layout }] of this.launchers) {
             if (active.has(host) && button.parentElement === host) continue;
             layout.disconnect();
             button.remove();
             this.launchers.delete(host);
         }
-        for (const target of targets) {
-            const label = target.initialIndex === undefined && target.entries.length > 1 ? 'Preview arts' : 'Preview art';
+        for (const target of populated) {
             const existing = this.launchers.get(target.host);
             if (existing) {
                 if (existing.target.anchor !== target.anchor) {
@@ -152,21 +166,22 @@ export class RewardArtButtons {
                     this.observe(existing.layout, target);
                 }
                 existing.target = target;
-                if (existing.button.textContent !== label) existing.button.textContent = label;
                 this.position(existing.button, target);
                 continue;
             }
             const button = document.createElement('button');
             button.type = 'button';
             button.className = 'blue_button_L jarvis-art-launcher';
-            button.textContent = label;
+            button.textContent = '📷';
+            button.setAttribute('aria-label', 'Open artwork');
             button.setAttribute('aria-haspopup', 'dialog');
             const launcher: Launcher = { button, target, layout: new ResizeObserver(() => this.position(button, launcher.target)) };
             button.addEventListener('click', event => {
                 event.stopPropagation();
-                this.dialog.show(launcher.target.entries, button, launcher.target.initialIndex);
+                this.dialog.show(launcher.target.entries, button, launcher.target.initialIndex, launcher.target.galleryOnOpen);
             });
-            target.host.append(button);
+            if (target.prepend) target.host.prepend(button);
+            else target.host.append(button);
             this.launchers.set(target.host, launcher);
             this.observe(launcher.layout, target);
             this.position(button, target);

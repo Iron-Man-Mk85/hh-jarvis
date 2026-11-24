@@ -1,5 +1,9 @@
 # Development notes
 
+- **0.10.1**
+  - Choose either Silent changelog or Silent updates. Turning one on clears the other.
+  - Use game-styled controls on the left of the event reward. Preview animated skins, zoom and move any preview or the original, and restore the original without overlapping art.
+  - Find Copy event names in the event reward area with the game’s button styling.
 - **0.10.0** Browse poses, released skins, and optional still scene previews directly beside the selected event reward. Use Original to return to the game image.
 - **0.9.0**
   - Turn on Silent updates to show the homepage update icon and dismiss it with a click. View changelog still opens the notes from settings.

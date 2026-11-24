@@ -1,4 +1,77 @@
 # Development notes
 
-- **0.6.6** Rename the separately installed testing userscript to Dev.
+- **0.11.5** Switch to an unskipped contest when you skip the open one, and prefer unskipped contests on reload. Skipped shortcuts use a dark red fill, and the skip icon beside the star lights up when active.
+- **0.11.4** Mark an active contest as skipped for today with the button beside its star. The top shortcut shows a red ×, and you can still open the contest from either spot.
+- **0.11.3**
+  - Open art from the lower-right corner of each Love Raid card, including cards without an info icon. The viewer starts on that character and keeps the other raids in its picker.
+  - Copy new raids as soon as the page controls are ready. Jarvis uses the raid data and only consults the HH++ dictionary for missing fields.
+  - Copy names alone from Crazy Cumback Contest. Regular and Mythic events can still include a complete source column.
+- **0.11.2** Open the Season art viewer beside Find Opponents. Launchers say Preview arts when they open more than one character.
+- **0.11.1** View reward art at the full browser window size and switch characters using the game's rarity-framed reward tiles. Find Season's Preview art button below the Kiss counter.
+- **0.11.0**
+  - Open a compact reward art viewer from events, Path of Valor, Path of Glory, Penta Drill and its roster, Season, and Leagues. Browse originals, poses, skins, and available scenes.
+  - Keep the inline event controls as an option. The reward panel anchors them when there is no info button.
+  - Keep the current artwork visible while another pose, skin, or scene loads, and add breathing room above the event copy pill when it is on its own.
+- **0.10.5** Keep the event preview controls beside the info button and move them up when needed to clear shard progress and reward details.
+- **0.10.4** Zoom toward the pointer and grab the artwork wherever you move it. Keep fitted art within view and pan enlarged art from edge to edge.
+- **0.10.3**
+  - Find the compact preview controls beside the info icon, with outlined labels and a Reset button.
+  - Keep zoom and position while switching between alternate previews. Turn off Adjust to restore the original framing. Zoom in further and pan across the entire enlarged image.
+  - Render animated Spine skins at higher resolution and keep Copy event names readable in a native-style pill.
+- **0.10.2**
+  - Scroll to zoom and drag to move any alternate event preview. Use Adjust to enable the same gestures for the original art. Double-click the art to reset.
+  - Fit poses inside the preview, render animated Spine skins at higher resolution, and keep the toolbar above the art and clear of native reward controls.
+  - Find the smaller Copy event names button below the reward details, beside the native carousel controls where present.
+- **0.10.1**
+  - Choose either Silent changelog or Silent updates. Turning one on clears the other.
+  - Use game-styled controls on the left of the event reward. Preview animated skins, zoom and move any preview or the original, and restore the original without overlapping art.
+  - Find Copy event names in the event reward area with the game’s button styling.
+- **0.10.0** Browse poses, released skins, and optional still scene previews directly beside the selected event reward. Use Original to return to the game image.
+- **0.9.0**
+  - Turn on Silent updates to show the homepage update icon and dismiss it with a click. View changelog still opens the notes from settings.
+  - Copy base character names from regular event, Mythic Days, and Crazy Cumback Contest pages in one click. Include a TSV source column when every reward has a known event source.
+  - Enable Fix Mythic Revival preview to restore the selected skin image on Pornstar Harem when the game leaves it transparent.
+- **0.8.5** Put Jarvis settings in compact category tabs, matching Ultron’s layout.
+- **0.8.4** Group Jarvis settings in compact categories and keep the HH++ tabs separate from settings scrolling.
+- **0.8.3** Keep the complete testing history in Dev and summarize only published changes in the public changelog.
+- **0.8.1** Install Dev from `hh-jarvis-dev.user.js`. The smaller build keeps the Dev identity, and the old URL serves the same build during migration. Stable releases use the reusable `release` branch.
+- **0.8.0** Middle-click or Ctrl-click the game logo, Path of Valor, or Path of Glory to open the page in a new tab.
+- **0.7.10** Keep Home, End, and the arrow keys working after a contest click while automatic scrolling is blocked.
+- **0.7.9** Save Don’t show again and Silent changelog when closing the update popup, including with HH++ builds that keep settings private.
+- **0.7.8** Clear saved Top and My rank choices once their contests are no longer available.
+- **0.7.7**
+  - Apply Don’t show again when the changelog closes and update the HH++ setting immediately.
+  - Give the silent update icon its own tooltip.
+  - Keep long contest titles in the card header alongside the rank controls.
+  - Identify the Dev build beside its version in settings.
+- **0.7.6**
+  - Choose Top or My rank on any active contest. Jarvis remembers each contest’s choice when switching and applies the same position and scroll rules to finished contests.
+  - Keep game scroll animations from restarting while you scroll by hand during a contest switch.
+  - See a small arc-reactor icon beside HH++ when a silent update notice is available.
+- **0.7.5**
+  - Keep the homepage responsive after closing the changelog and choose Silent changelog from the popup.
+  - Stop automatic sidebar scrolling on contest switches by default and use Top or My rank whenever you switch.
+  - Bring the selected card into view when you use a contest shortcut.
+- **0.7.4** See your rank in each active contest beside the close button and switch leaderboards without moving the contest list.
+- **0.7.3**
+  - See automatic changelogs only when loading the homepage after an update.
+  - Enable Silent changelog to get a New button beside HH++ and open the notes when you’re ready.
+  - Keep the contest list and each leaderboard in place when switching contests with Stop scrolling on contest switches.
+- **0.7.2**
+  - Open the bottom active contest at your rank by default. Choose CbC, CCC, or LC to prefer that event when available.
+  - Turn off automatic update notices with Don’t show again in the changelog popup. View changelog stays available in settings.
+- **0.7.1**
+  - Keep the changelog centered when the game window is resized.
+  - Clean up saved player names, explain unknown names on hover, and give Remove buttons more room.
+- **0.7.0**
+  - See what changed in Jarvis the first time a new version runs.
+  - Open View changelog from HH++ settings at any time, even with automatic notices turned off.
+  - Expand Earlier versions to read past updates.
+- **0.6.7** Make marking one action per player, backfill names for older marks, use the bracket-based promotion target, and simplify the selected contest buttons and version badge.
+- **0.6.6**
+  - Add setting help in HH++, improve mark contrast and management, and add automatic contest defaults.
+  - Rename the separately installed testing userscript to Dev.
 - **0.6.5** Move the userscript source into TypeScript modules and add separate stable and testing builds.
+- **0.6.4** Prevent pinned contest startup scrolling, keep native startup without a pin, and clear finished pins
+- **0.6.3** Stop both contest startup scrolls, isolate the selected leaderboard, and restore pinned contests at Top or My rank
+- **0.6.2** Pin contests on their cards, hide the startup scroll, and use right-click marking with isolated settings scrolling

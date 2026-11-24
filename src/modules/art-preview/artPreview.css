@@ -1,0 +1,254 @@
+.jarvis-art-preview {
+    position: absolute;
+    inset: 0;
+    z-index: var(--jarvis-art-layer-z, 2);
+    pointer-events: none;
+    overflow: hidden;
+}
+
+.jarvis-art-image {
+    position: absolute;
+    inset: var(--jarvis-art-image-inset, 12% 25% 3%);
+    width: var(--jarvis-art-image-width, 50%);
+    height: var(--jarvis-art-image-height, 85%);
+    visibility: hidden;
+    translate: var(--jarvis-art-shift, none);
+    scale: var(--jarvis-art-scale, none);
+}
+
+.jarvis-art-ready {
+    visibility: visible;
+}
+
+.jarvis-art-image > :is(img, video) {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+}
+
+.jarvis-art-image > canvas.animated-girl-display {
+    position: absolute !important;
+    inset: 50% auto auto 50% !important;
+    width: var(--jarvis-art-canvas-width) !important;
+    height: var(--jarvis-art-canvas-height) !important;
+    margin: 0 !important;
+    transform: translate(-50%, -50%) scale(var(--jarvis-art-canvas-scale)) !important;
+}
+
+.jarvis-art-gestures {
+    position: absolute;
+    z-index: 1;
+    pointer-events: auto;
+    touch-action: none;
+    cursor: grab;
+}
+
+.jarvis-art-gestures[hidden] {
+    display: none !important;
+}
+
+.jarvis-art-gestures.jarvis-art-dragging {
+    cursor: grabbing;
+}
+
+.jarvis-art-scene {
+    inset: var(--jarvis-art-scene-inset, 25% 27% 16%);
+    width: var(--jarvis-art-scene-width, 46%);
+    height: var(--jarvis-art-scene-height, 59%);
+}
+
+.jarvis-art-native[data-jarvis-art-framed] :is(img, video, canvas) {
+    translate: var(--jarvis-art-shift);
+    scale: var(--jarvis-art-scale);
+    transform-origin: 50% 60%;
+}
+
+.jarvis-art-original-hidden :is(img, video, canvas, .animated-girl-display) {
+    visibility: hidden !important;
+}
+
+.jarvis-art-controls {
+    position: absolute;
+    z-index: 4;
+    inset-block-start: var(--jarvis-art-controls-top, 20%);
+    inset-inline-end: var(--jarvis-art-controls-end, 4%);
+    inset-inline-start: var(--jarvis-art-controls-start, auto);
+    box-sizing: border-box;
+    width: max-content;
+    max-width: var(--jarvis-art-controls-width, 20%);
+    color: white;
+    font-size: .8em;
+    pointer-events: auto;
+}
+
+.jarvis-art-controls .blue_button_L {
+    width: auto;
+    height: auto;
+    min-width: 1.75rem;
+    min-height: 1.4rem;
+    padding: .1rem .35rem;
+    font-size: inherit;
+    line-height: 1.1;
+    text-shadow: var(--jarvis-event-text-outline, 0 1px 2px #000);
+}
+
+.jarvis-art-controls [hidden],
+.jarvis-art-controls[hidden] {
+    display: none !important;
+}
+
+.jarvis-art-groups,
+.jarvis-art-navigation {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-wrap: wrap;
+    gap: .3em;
+}
+
+.jarvis-art-navigation {
+    margin-top: .35em;
+    flex-wrap: nowrap;
+}
+
+.jarvis-art-navigation [role="status"] {
+    flex: 1;
+    text-align: center;
+    overflow-wrap: anywhere;
+    text-shadow: var(--jarvis-event-text-outline, 0 1px 2px #000);
+}
+
+.jarvis-art-controls .blue_button_L[aria-pressed="true"] {
+    filter: brightness(1.45) saturate(1.25);
+}
+
+#events .jarvis-art-controls {
+    --jarvis-art-controls-start: 8%;
+    --jarvis-art-controls-top: 28%;
+    --jarvis-art-controls-end: auto;
+    --jarvis-art-controls-width: 10.5rem;
+    font-size: .7rem;
+}
+
+.jarvis-art-controls[data-jarvis-art-docked] {
+    left: var(--jarvis-art-anchor-x);
+    top: var(--jarvis-art-anchor-y);
+    right: auto;
+    /* Prefer the icon's center, with room for the full toolbar above the reward panel. */
+    transform: translate(-100%, min(-50%, calc(var(--jarvis-art-dock-clearance, 100%) - 100%)));
+}
+
+.jarvis-art-dialog {
+    box-sizing: border-box;
+    position: fixed;
+    inset: 0;
+    width: 100vw;
+    height: 100dvh;
+    max-width: none;
+    max-height: none;
+    margin: 0;
+    padding: .75rem;
+    color: white;
+    border: 0;
+    border-radius: 0;
+    background-color: #251e2b;
+    overflow: hidden;
+}
+
+.jarvis-art-dialog[open], .jarvis-art-dialog-body {
+    display: flex;
+    flex-direction: column;
+    gap: .5rem;
+}
+
+.jarvis-art-dialog::backdrop {
+    background: #000b;
+}
+
+.jarvis-art-dialog > header {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: .5rem;
+}
+
+.jarvis-art-dialog > header h2 {
+    flex: 1;
+    margin: 0;
+    font-size: 1.2rem;
+}
+
+.jarvis-art-dialog > header > button {
+    max-width: 100%;
+    padding: .25rem .6rem;
+}
+
+.jarvis-art-character-picker {
+    display: flex;
+    gap: .5rem;
+    min-width: 0;
+    max-width: 100%;
+    padding: .25rem;
+    overflow-x: auto;
+}
+
+.jarvis-art-character-picker .jarvis-art-character {
+    flex: none;
+    width: 3.5rem;
+    height: 3.5rem;
+    margin: 0;
+    padding: 0;
+    overflow: hidden;
+    overflow-wrap: anywhere;
+    font-size: .65rem;
+    cursor: pointer;
+}
+
+.jarvis-art-character-picker .jarvis-art-character img {
+    display: block;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+.jarvis-art-character-picker .jarvis-art-character[aria-pressed="true"] {
+    outline: 2px solid #fff;
+    outline-offset: 1px;
+}
+
+@media (max-width: 36rem) {
+    .jarvis-art-character-picker {
+        flex-basis: 100%;
+        order: 1;
+    }
+}
+
+.jarvis-art-dialog-body, .jarvis-art-dialog-stage {
+    flex: 1;
+    min-height: 0;
+    position: relative;
+}
+
+.jarvis-art-dialog-stage {
+    background: #0004;
+}
+
+.jarvis-art-dialog .jarvis-art-image {
+    inset: 2% 3%;
+    width: 94%;
+    height: 96%;
+}
+
+.jarvis-art-dialog .jarvis-art-controls {
+    position: relative;
+    inset: auto;
+    width: 100%;
+    max-width: none;
+}
+
+.jarvis-art-dialog .jarvis-art-navigation {
+    width: min(18rem, 100%);
+    margin-inline: auto;
+}

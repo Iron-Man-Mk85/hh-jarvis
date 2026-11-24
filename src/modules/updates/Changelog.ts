@@ -94,6 +94,10 @@ export class Changelog extends HHModule {
         window.HHPlusPlus.Helpers.doWhenSelectorAvailable(settingsCard, () => {
             const card = document.querySelector(settingsCard);
             if (!card || card.querySelector('.jarvis-view-changelog')) return;
+            const saved = readHHPlusPlusSettings();
+            if (saved[silentKey] === true && saved[silentUpdatesKey] === true) {
+                this.saveNoticeSettings({ [silentKey]: false });
+            }
 
             const button = document.createElement('button');
             button.type = 'button';
@@ -107,8 +111,9 @@ export class Changelog extends HHModule {
     run({ silent = false, silentUpdates = false }: ModuleSettings) {
         if (this.hasRun || !this.shouldRun()) return;
         this.hasRun = true;
-        this.silent = silent;
+        this.silent = silent && !silentUpdates;
         this.silentUpdates = silentUpdates;
+        if (silent && silentUpdates) this.saveNoticeSettings({ [silentKey]: false });
         // HH++ can run the module again when the user turns notices on in the settings pane.
         const allowAutomatic = !this.settingsInstalled;
 
@@ -131,9 +136,17 @@ export class Changelog extends HHModule {
     }
 
     updateSubSetting(key: string, value: boolean) {
-        if (key === 'silent') this.silent = value;
-        else if (key === 'silentUpdates') this.silentUpdates = value;
-        else return;
+        if (key === 'silent') {
+            this.setSilentMode(value, !value && this.silentUpdates);
+        } else if (key === 'silentUpdates') {
+            this.setSilentMode(!value && this.silent, value);
+        }
+    }
+
+    private setSilentMode(silent: boolean, silentUpdates: boolean) {
+        this.silent = silent;
+        this.silentUpdates = silentUpdates;
+        this.saveNoticeSettings({ [silentKey]: silent, [silentUpdatesKey]: silentUpdates });
         this.removeNotice();
         this.showNotice();
     }
@@ -221,17 +234,16 @@ export class Changelog extends HHModule {
         }
     }
 
-    private saveNoticeSetting(key: typeof configKey | typeof silentKey, value: boolean) {
+    private saveNoticeSettings(changes: Record<string, boolean>) {
         const config = window.hhPlusPlusConfig;
         if (!config) return;
 
         try {
             // The live HH++ build keeps its in-memory settings private.
-            const saved = { ...readHHPlusPlusSettings(), [key]: value };
+            const saved = { ...readHHPlusPlusSettings(), ...changes };
             lsSet('Config', saved, hhPlusPlusStorage);
             config.loadConfig();
-            if (key === silentKey) this.updateSubSetting('silent', value);
-            else if (!value) this.tearDown();
+            if (changes[configKey] === false) this.tearDown();
             this.syncNoticeSettings(saved);
         } catch (err) {
             console.warn('Jarvis could not save the update notice preference:', err);
@@ -281,8 +293,17 @@ export class Changelog extends HHModule {
         useSilent.checked = this.silent;
         silentOption.title = 'Show an update icon beside HH++ for future updates.';
         silentOption.append(useSilent, 'Silent changelog');
-        dontShowAgain.addEventListener('change', () => useSilent.disabled = dontShowAgain.checked);
-        options.append(optOut, silentOption);
+        const silentUpdatesOption = document.createElement('label');
+        const useSilentUpdates = document.createElement('input');
+        useSilentUpdates.type = 'checkbox';
+        useSilentUpdates.checked = this.silentUpdates;
+        silentUpdatesOption.append(useSilentUpdates, 'Silent updates');
+        useSilent.addEventListener('change', () => { if (useSilent.checked) useSilentUpdates.checked = false; });
+        useSilentUpdates.addEventListener('change', () => { if (useSilentUpdates.checked) useSilent.checked = false; });
+        dontShowAgain.addEventListener('change', () => {
+            useSilent.disabled = useSilentUpdates.disabled = dontShowAgain.checked;
+        });
+        options.append(optOut, silentOption, silentUpdatesOption);
         const closeButton = document.createElement('button');
         closeButton.type = 'button';
         closeButton.className = 'jarvis-setting-action';
@@ -302,9 +323,9 @@ export class Changelog extends HHModule {
                 this.pending = null;
                 if (dismissed) {
                     this.markUpdateSeen();
-                    if (dontShowAgain.checked) this.saveNoticeSetting(configKey, false);
-                    else if (this.hasRun && useSilent.checked !== this.silent) {
-                        this.saveNoticeSetting(silentKey, useSilent.checked);
+                    if (dontShowAgain.checked) this.saveNoticeSettings({ [configKey]: false });
+                    else if (this.hasRun && (useSilent.checked !== this.silent || useSilentUpdates.checked !== this.silentUpdates)) {
+                        this.setSilentMode(useSilent.checked, useSilentUpdates.checked);
                     }
                 } else {
                     this.showNotice();

@@ -1,85 +1,376 @@
-import { ArtPreview } from './ArtPreview';
-import { getArtGroups, getOriginalArt, rewardThumbnail, type RewardArt } from './gameArt';
+import { ArtGestures } from './ArtGestures';
+import { mountArt } from './artMedia';
+import { getArtGroups, getOriginalArt, rewardThumbnail, type ArtItem, type ArtKind, type RewardArt } from './gameArt';
+import css from './artPreview.css';
 
 const rarities = new Set(['common', 'rare', 'epic', 'legendary', 'mythic']);
+const labels = { all: 'All art', withoutScenes: 'All but scenes', original: 'Original', poses: 'Poses', skins: 'Skins', scenes: 'Scenes' } as const;
+type Filter = keyof typeof labels;
+type Artwork = ArtItem & { kind: 'original' | ArtKind };
 
 export interface RewardArtEntry {
     reward: RewardArt;
     native?: HTMLElement;
+    loadDetails?: () => Promise<RewardArt | undefined>;
+}
+
+function control(label: string, action: () => void) {
+    const button = document.createElement('button');
+    button.type = 'button';
+    button.textContent = label;
+    button.addEventListener('click', action);
+    return button;
+}
+
+function scrollSideways(strip: HTMLElement) {
+    strip.addEventListener('wheel', event => {
+        if (event.ctrlKey || Math.abs(event.deltaX) >= Math.abs(event.deltaY) || strip.scrollWidth <= strip.clientWidth) return;
+        event.preventDefault();
+        const unit = event.deltaMode === 1 ? 16 : event.deltaMode === 2 ? strip.clientWidth : 1;
+        strip.scrollLeft += event.deltaY * unit;
+    }, { passive: false });
+}
+
+function observeStrip(strip: HTMLElement, onVisibility: (node: Element, visible: boolean) => void) {
+    return new IntersectionObserver(entries => {
+        const bounds = strip.getBoundingClientRect();
+        for (const { target, intersectionRatio } of entries) {
+            const tile = target.getBoundingClientRect();
+            onVisibility(target, intersectionRatio > 0 && tile.left < bounds.right && tile.right > bounds.left);
+        }
+    }, { root: strip, threshold: [0, .001] });
+}
+
+function artworkFor({ reward, native }: RewardArtEntry): Artwork[] {
+    const groups = getArtGroups(reward.preview ?? {});
+    const original = getOriginalArt(reward, native ?? null);
+    const artwork: Artwork[] = [];
+    if (original.url || original.animation) artwork.push({ ...original, label: 'Original', kind: 'original' });
+    for (const kind of Object.keys(groups) as ArtKind[]) {
+        artwork.push(...groups[kind].map(item => ({ ...item, kind })));
+    }
+    return artwork;
 }
 
 export class RewardArtDialog {
-    private session: { dialog: HTMLDialogElement; viewer: ArtPreview; opener: HTMLElement } | null = null;
+    private session: { close: () => void; refresh: () => void } | null = null;
 
-    show(entries: RewardArtEntry[], opener: HTMLElement, initialIndex = 0) {
+    show(entries: RewardArtEntry[], opener: HTMLElement, initialIndex = 0, galleryOnOpen = false) {
         if (!entries.length) return;
         this.close();
+        const style = document.createElement('style');
+        style.textContent = css;
+        document.head.append(style);
+
         const dialog = document.createElement('dialog');
         dialog.className = 'jarvis-art-dialog container-special-bg';
         dialog.setAttribute('aria-labelledby', 'jarvis-art-dialog-title');
-        const header = document.createElement('header');
+        const header = document.createElement('div');
+        header.className = 'jarvis-art-dialog-header';
+        const toolbar = document.createElement('div');
+        toolbar.className = 'jarvis-art-toolbar';
         const title = document.createElement('h2');
         title.id = 'jarvis-art-dialog-title';
-        const close = document.createElement('button');
-        close.type = 'button';
-        close.className = 'blue_button_L';
-        close.textContent = 'Close';
-        close.addEventListener('click', () => this.close());
-        header.append(title);
+        const name = control('', () => name.setAttribute('aria-expanded', String(name.getAttribute('aria-expanded') === 'false')));
+        name.className = 'jarvis-art-name';
+        const fullName = document.createElement('span');
+        name.replaceChildren(fullName);
+        const close = control('×', () => this.close());
+        close.className = 'red_button_L jarvis-art-close';
+        close.setAttribute('aria-label', 'Close art preview');
+        close.title = 'Close art preview';
+        title.append(name);
 
-        const choices: HTMLButtonElement[] = [];
-        if (entries.length > 1) {
-            const picker = document.createElement('div');
-            picker.className = 'jarvis-art-character-picker hh-scroll';
-            picker.setAttribute('role', 'group');
-            picker.setAttribute('aria-label', 'Reward character');
-            entries.forEach(({ reward }, index) => {
-                const choice = document.createElement('button');
-                const name = reward.name || `Reward ${index + 1}`;
-                const rarity = reward.rarity || 'common';
-                choice.type = 'button';
-                choice.className = `slot slot_girl_shards size_small jarvis-art-character ${rarities.has(rarity) ? rarity : 'common'}`;
-                choice.setAttribute('aria-label', name);
-                choice.title = name;
-                const thumbnail = rewardThumbnail(reward);
-                if (thumbnail) {
+        const filters = document.createElement('div');
+        filters.className = 'jarvis-art-filters';
+        filters.setAttribute('role', 'group');
+        filters.setAttribute('aria-label', 'Artwork type');
+        const filterButtons = new Map((Object.keys(labels) as Filter[]).map(filter => {
+            const button = control(labels[filter], () => {
+                if (preferredFilter === filter) return;
+                preferredFilter = filter;
+                preferredIndex = 0;
+                gestures.reset();
+                render();
+            });
+            button.className = 'jarvis-art-tab';
+            filters.append(button);
+            return [filter, button];
+        }));
+
+        const navigation = document.createElement('div');
+        navigation.className = 'jarvis-art-dialog-navigation';
+        const view = control('Show all', () => {
+            galleryMode = !galleryMode;
+            gestures.reset();
+            render();
+        });
+        view.className = 'jarvis-art-mode';
+        const previous = control('‹', () => step(-1));
+        previous.setAttribute('aria-label', 'Previous preview');
+        const next = control('›', () => step(1));
+        next.setAttribute('aria-label', 'Next preview');
+        const reset = control('↺', () => gestures.reset());
+        reset.title = 'Reset zoom and position';
+        reset.setAttribute('aria-label', reset.title);
+        const status = document.createElement('span');
+        status.setAttribute('role', 'status');
+        const paging = document.createElement('div');
+        paging.className = 'jarvis-art-paging';
+        for (const button of [previous, next, reset]) button.className = 'jarvis-art-page-button';
+        paging.append(previous, next, reset);
+        navigation.append(view, paging, status);
+        toolbar.append(title, filters, navigation);
+        header.append(toolbar);
+
+        const picker = document.createElement('div');
+        picker.className = 'jarvis-art-character-picker hh-scroll';
+        picker.setAttribute('role', 'group');
+        picker.setAttribute('aria-label', 'Characters');
+        const thumbnails = new Map<Element, () => void>();
+        const pickerObserver = observeStrip(picker, (choice, visible) => {
+            if (!visible) return;
+            pickerObserver.unobserve(choice);
+            thumbnails.get(choice)?.();
+            thumbnails.delete(choice);
+        });
+        const choices = entries.length > 1 ? entries.map(({ reward }, entryIndex) => {
+            const label = reward.name || `Character ${entryIndex + 1}`;
+            const choice = control(label, () => selectCharacter(entryIndex));
+            const rarity = reward.rarity || 'common';
+            choice.className = `slot slot_girl_shards size_small jarvis-art-character ${rarities.has(rarity) ? rarity : 'common'}`;
+            choice.setAttribute('aria-label', label);
+            choice.title = label;
+            const thumbnail = rewardThumbnail(reward);
+            if (thumbnail) {
+                thumbnails.set(choice, () => {
                     const icon = document.createElement('img');
                     icon.alt = '';
-                    icon.addEventListener('error', () => { choice.textContent = name; }, { once: true });
+                    icon.addEventListener('error', () => { choice.textContent = label; }, { once: true });
+                    choice.replaceChildren(icon);
                     icon.src = thumbnail;
-                    choice.append(icon);
-                } else choice.textContent = name;
-                choice.addEventListener('click', () => render(index));
-                choices.push(choice);
-                picker.append(choice);
-            });
-            header.append(picker);
-        }
-        header.append(close);
+                });
+                pickerObserver.observe(choice);
+            }
+            picker.append(choice);
+            return choice;
+        }) : [];
+        picker.hidden = !choices.length;
+        scrollSideways(picker);
+        header.append(picker, close);
 
-        const viewerArea = document.createElement('div');
-        viewerArea.className = 'jarvis-art-dialog-body';
         const stage = document.createElement('div');
         stage.className = 'jarvis-art-dialog-stage';
-        viewerArea.append(stage);
-        dialog.append(header, viewerArea);
+        const layer = document.createElement('div');
+        layer.className = 'jarvis-art-preview';
+        const gallery = document.createElement('div');
+        gallery.className = 'jarvis-art-gallery hh-scroll';
+        gallery.setAttribute('role', 'group');
+        gallery.setAttribute('aria-label', 'Artwork gallery');
+        scrollSideways(gallery);
+        stage.append(layer, gallery);
+        dialog.append(header, stage);
         document.body.append(dialog);
-        const viewer = new ArtPreview(stage, this.scenesEnabled, viewerArea);
-        this.session = { dialog, viewer, opener };
-        dialog.addEventListener('keydown', event => { if (event.key === 'Escape') event.stopPropagation(); });
-        dialog.addEventListener('cancel', event => { event.preventDefault(); this.close(); });
-        dialog.addEventListener('close', () => { if (this.session?.dialog === dialog) this.close(); });
+
         let selected = -1;
-        const render = (index: number) => {
-            if (selected === index) return;
-            selected = index;
-            choices.forEach((choice, index) => choice.setAttribute('aria-pressed', String(index === selected)));
-            const { reward, native } = entries[index];
-            title.textContent = reward.name || 'Reward art';
-            viewer.setCharacter(getArtGroups(reward.preview ?? {}), null, getOriginalArt(reward, native ?? null));
+        let index = 0;
+        let preferredIndex = 0;
+        let preferredFilter: Filter = 'all';
+        let galleryMode = galleryOnOpen;
+        let artwork: Artwork[] = [];
+        let visible: Artwork[] = [];
+        let displayed: { media: HTMLElement; load: AbortController } | undefined;
+        let pending: typeof displayed;
+        let stopGallery: (() => void) | undefined;
+
+        const gestures = new ArtGestures(layer, stage, () => displayed?.media.querySelector('img, canvas, video') ?? null,
+            (zoom, x, y) => {
+                layer.style.setProperty('--jarvis-art-shift', `${x}px ${y}px`);
+                layer.style.setProperty('--jarvis-art-scale', String(zoom));
+            });
+        const clearPending = () => {
+            pending?.load.abort();
+            pending?.media.remove();
+            pending = undefined;
         };
+        const clearDisplayed = () => {
+            displayed?.load.abort();
+            displayed?.media.remove();
+            displayed = undefined;
+            gestures.refresh();
+        };
+        const showItem = () => {
+            clearPending();
+            const item = visible[index];
+            if (!item) {
+                clearDisplayed();
+                status.textContent = 'No artwork available';
+                return;
+            }
+            const caption = `${item.label} · ${index + 1}/${visible.length}`;
+            status.textContent = 'Loading…';
+            const media = document.createElement('div');
+            media.className = 'jarvis-art-image';
+            media.setAttribute('aria-hidden', 'true');
+            layer.append(media);
+            const load = new AbortController();
+            pending = { media, load };
+            mountArt(media, item, load.signal, () => {
+                if (load.signal.aborted || pending?.media !== media) return;
+                clearDisplayed();
+                displayed = pending;
+                pending = undefined;
+                media.classList.add('jarvis-art-ready');
+                media.removeAttribute('aria-hidden');
+                status.textContent = caption;
+                gestures.fitViewport();
+            }, () => {
+                if (load.signal.aborted) return;
+                clearPending();
+                status.textContent = 'Preview unavailable';
+            });
+        };
+        const showGallery = () => {
+            clearPending();
+            clearDisplayed();
+            const load = new AbortController();
+            const tiles = new Map<HTMLElement, { item: Artwork; media: HTMLElement; started: boolean; visible: boolean }>();
+            const observer = observeStrip(gallery, (element, shown) => {
+                if (load.signal.aborted) return;
+                const tile = element as HTMLElement;
+                const state = tiles.get(tile);
+                if (!state) return;
+                state.visible = shown;
+                const { media, item } = state;
+                if (state.started) {
+                    const video = media.querySelector('video');
+                    if (!video || !media.classList.contains('jarvis-art-ready')) return;
+                    if (shown) void video.play().catch(() => {});
+                    else video.pause();
+                    return;
+                }
+                if (!shown) return;
+                state.started = true;
+                mountArt(media, item, load.signal, () => {
+                    const photo = media.querySelector('img');
+                    const video = media.querySelector('video');
+                    const width = photo?.naturalWidth ?? video?.videoWidth;
+                    const height = photo?.naturalHeight ?? video?.videoHeight;
+                    if (width && height) tile.style.setProperty('--jarvis-art-ratio', String(width / height));
+                    media.classList.add('jarvis-art-ready');
+                    if (video) {
+                        if (!state.visible) video.pause();
+                    } else observer.unobserve(tile);
+                }, () => {
+                    observer.unobserve(tile);
+                    media.textContent = 'Preview unavailable';
+                });
+            });
+            stopGallery = () => {
+                observer.disconnect();
+                load.abort();
+            };
+            visible.forEach((item, itemIndex) => {
+                const tile = control('', () => {
+                    preferredIndex = itemIndex;
+                    galleryMode = false;
+                    render();
+                    view.focus();
+                });
+                tile.className = 'jarvis-art-tile';
+                tile.title = item.label;
+                tile.setAttribute('aria-label', `Open ${item.label}`);
+                if (item.animation?.format === 'spine') tile.style.setProperty('--jarvis-art-ratio', String(5 / 12));
+                const media = document.createElement('span');
+                media.className = 'jarvis-art-tile-media';
+                tile.append(media);
+                gallery.append(tile);
+                tiles.set(tile, { item, media, started: false, visible: false });
+                observer.observe(tile);
+            });
+            gallery.scrollLeft = 0;
+            status.textContent = visible.length ? `${visible.length} ${visible.length === 1 ? 'image' : 'images'}` : 'No artwork available';
+        };
+        const step = (delta: number) => {
+            if (galleryMode || visible.length < 2) return;
+            index = (index + delta + visible.length) % visible.length;
+            preferredIndex = index;
+            showItem();
+        };
+        const render = (current?: Artwork) => {
+            const available = artwork.filter(item => item.kind !== 'scenes' || this.scenesEnabled);
+            const kinds = new Set(available.map(item => item.kind));
+            const category = preferredFilter === 'all' || preferredFilter === 'withoutScenes' || kinds.has(preferredFilter) ? preferredFilter : 'all';
+            for (const [filter, button] of filterButtons) {
+                if (filter === 'all') button.hidden = kinds.size < 2;
+                else if (filter === 'withoutScenes') button.hidden = category !== filter && (kinds.size < 2 || !kinds.has('scenes'));
+                else button.hidden = !kinds.has(filter);
+                button.setAttribute('aria-pressed', String(filter === category || (category === 'all' && kinds.size === 1 && !button.hidden)));
+            }
+            const combined = category === 'all' || category === 'withoutScenes';
+            visible = available.filter(item => {
+                if (!combined) return item.kind === category;
+                if (category === 'withoutScenes' && item.kind === 'scenes') return false;
+                return item.kind !== 'original' || item.animation || !available.some(pose => pose.kind === 'poses' && pose.url === item.url);
+            });
+            const matchingIndex = current ? visible.findIndex(item => item.kind === current.kind && item.url === current.url) : -1;
+            index = matchingIndex >= 0 ? matchingIndex : Math.min(preferredIndex, Math.max(0, visible.length - 1));
+            view.textContent = galleryMode ? 'One at a time' : 'Show all';
+            paging.hidden = layer.hidden = galleryMode;
+            previous.disabled = next.disabled = visible.length < 2;
+            gallery.hidden = !galleryMode;
+            gestures.setEnabled(!galleryMode);
+            stopGallery?.();
+            stopGallery = undefined;
+            gallery.replaceChildren();
+            if (galleryMode) showGallery();
+            else showItem();
+        };
+        const selectCharacter = (entryIndex: number) => {
+            if (selected === entryIndex) return;
+            selected = entryIndex;
+            choices.forEach((choice, choiceIndex) => choice.setAttribute('aria-pressed', String(choiceIndex === selected)));
+            fullName.textContent = entries[selected].reward.name || 'Reward art';
+            name.setAttribute('aria-expanded', 'false');
+            artwork = artworkFor(entries[selected]);
+            clearDisplayed();
+            gestures.setEnabled(false);
+            render();
+            const entry = entries[selected];
+            void entry.loadDetails?.().then(reward => {
+                if (!reward || this.session?.refresh !== render || selected !== entryIndex) return;
+                const current = index === preferredIndex ? visible[index] : undefined;
+                fullName.textContent = reward.name || fullName.textContent;
+                artwork = artworkFor({ ...entry, reward });
+                render(current);
+            });
+        };
+
+        this.session = {
+            refresh: render,
+            close: () => {
+                clearPending();
+                clearDisplayed();
+                pickerObserver.disconnect();
+                stopGallery?.();
+                gestures.destroy();
+                dialog.close();
+                dialog.remove();
+                style.remove();
+                if (opener.isConnected) opener.focus({ preventScroll: true });
+            }
+        };
+        dialog.addEventListener('keydown', event => {
+            if (event.key === 'Escape') event.stopPropagation();
+            if (galleryMode || !['ArrowLeft', 'ArrowRight'].includes(event.key) || event.defaultPrevented) return;
+            event.preventDefault();
+            event.stopPropagation();
+            step(event.key === 'ArrowLeft' ? -1 : 1);
+        });
+        dialog.addEventListener('cancel', event => { event.preventDefault(); this.close(); });
+        dialog.addEventListener('close', () => { if (this.session?.refresh === render) this.close(); });
         dialog.showModal();
-        render(initialIndex);
+        selectCharacter(initialIndex);
         close.focus({ preventScroll: true });
     }
 
@@ -87,16 +378,12 @@ export class RewardArtDialog {
 
     setScenesEnabled(enabled: boolean) {
         this.scenesEnabled = enabled;
-        this.session?.viewer.setScenesEnabled(enabled);
+        this.session?.refresh();
     }
 
     close() {
-        if (!this.session) return;
-        const { dialog, viewer, opener } = this.session;
+        const session = this.session;
         this.session = null;
-        viewer.destroy();
-        dialog.close();
-        dialog.remove();
-        if (opener.isConnected) opener.focus({ preventScroll: true });
+        session?.close();
     }
 }

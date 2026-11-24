@@ -365,14 +365,14 @@ td[data-jarvis-mark] > a {
     align-items: center;
     justify-content: center;
     box-sizing: border-box;
-    min-inline-size: 5.75rem;
-    min-block-size: 1.6rem;
-    padding: .15rem .5rem;
+    width: auto;
+    height: auto;
+    min-inline-size: 1.8rem;
+    min-block-size: 1.55rem;
+    padding: .12rem .25rem;
     border-radius: 999px;
-    white-space: nowrap;
-    font-size: .75rem;
+    font-size: .9rem;
     line-height: 1.1;
-    text-shadow: 1px 1px #000, -1px -1px #000;
 }
 .jarvis-art-launcher[data-jarvis-art-anchor] {
     position: absolute;
@@ -384,11 +384,7 @@ td[data-jarvis-mark] > a {
 .jarvis-art-launcher[data-jarvis-art-anchor][data-jarvis-art-above] {
     transform: translate(-50%, -100%);
 }
-.jarvis-art-launcher.blue_button_L[data-jarvis-art-beside] {
-    width: max-content;
-    min-inline-size: 0;
-    padding-inline: .35rem;
-    font-size: .7rem;
+.jarvis-art-launcher[data-jarvis-art-beside] {
     transform: translateY(-50%);
 }
 #events .nc-event-container > .jarvis-art-launcher:not([data-jarvis-art-anchor]) {
@@ -400,17 +396,31 @@ td[data-jarvis-mark] > a {
 .league_girl.hidden_girl .jarvis-art-launcher {
     display: none;
 }
-#love-raids .raid-card > .jarvis-art-launcher.blue_button_L {
+#love-raids .raid-card > .jarvis-art-launcher {
     position: absolute;
     z-index: 6;
     inset-inline-end: .4rem;
     inset-block-end: .4rem;
-    width: max-content;
-    min-inline-size: 0;
-    height: auto;
-    min-block-size: 1.4rem;
-    padding: .12rem .45rem;
-    font-size: .7rem;
+}
+:is(#home_tab_container, #market_tab_container) > .jarvis-art-launcher {
+    align-self: flex-start;
+    margin: .35rem;
+}
+:is(#mega-event-tabs, .tabs-switcher:has(> #home_tab)) > .jarvis-art-launcher {
+    position: relative;
+    z-index: 1;
+    flex: none;
+    align-self: center;
+    margin-inline: .5rem 0;
+}
+#harem_right :is(.avatar-box, .middle_part.missing_girl) > .jarvis-art-launcher {
+    position: absolute;
+    inset-block-start: .35rem;
+    inset-inline-start: .35rem;
+    z-index: 6;
+}
+#harem_right .middle_part.missing_girl:has(> .jarvis-art-launcher) {
+    position: relative;
 }
 #events .nc-event-container .nc-event-reward-container .nc-events-prize-locations-container .jarvis-event-copy-row > button.jarvis-event-copy.blue_button_L {
     flex: none;

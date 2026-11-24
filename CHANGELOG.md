@@ -1,5 +1,9 @@
 # Changelog
 
+- **0.11.10**
+  - Open the art viewer with a camera icon. Seasonal Event Overview and Market each have one button for the characters shown there. The camera on a character page opens that character’s gallery.
+  - Browse a gallery that fits the artwork to the window, with animated originals and skins alongside still poses. Use All but scenes to leave out the wider scene images, or click an image to zoom in and browse one at a time.
+  - Switch characters without losing your view settings. The viewer uses Poses & Scenes styling, keeps the navigation arrows in place, and loads gallery art as it comes into view.
 - **0.11.5**
   - Open a full-screen reward art viewer from events, Path of Valor, Path of Glory, Penta Drill and its roster, Season, Leagues, and Love Raids. Switch between characters and browse available originals, poses, skins, and scenes. Zoom and pan, or enable inline previews on supported events.
   - Copy reward names from regular events, Mythic Days, and Crazy Cumback Contest. Regular and Mythic events can include a source column for Sheets. Love Raids copying is available as soon as the page controls are ready.

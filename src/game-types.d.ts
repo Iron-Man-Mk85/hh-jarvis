@@ -35,7 +35,7 @@ export interface LoveRaid {
     status?: string;
     raid_module_type?: string;
     raid_module_pk?: GameId;
-    girl_data?: { name?: string; grade_skins?: unknown[] };
+    girl_data?: RewardArt & { nb_grades?: number | string; grade_skins?: unknown[] };
 }
 
 export interface ContestData {

@@ -11,7 +11,7 @@ export interface RewardArtEntry {
 export class RewardArtDialog {
     private session: { dialog: HTMLDialogElement; viewer: ArtPreview; opener: HTMLElement } | null = null;
 
-    show(entries: RewardArtEntry[], opener: HTMLElement) {
+    show(entries: RewardArtEntry[], opener: HTMLElement, initialIndex = 0) {
         if (!entries.length) return;
         this.close();
         const dialog = document.createElement('dialog');
@@ -79,7 +79,7 @@ export class RewardArtDialog {
             viewer.setCharacter(getArtGroups(reward.preview ?? {}), null, getOriginalArt(reward, native ?? null));
         };
         dialog.showModal();
-        render(0);
+        render(initialIndex);
         close.focus({ preventScroll: true });
     }
 

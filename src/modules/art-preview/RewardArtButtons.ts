@@ -1,5 +1,6 @@
 import type { RewardArt } from './gameArt';
 import { RewardArtDialog, type RewardArtEntry } from './RewardArtDialog';
+import { getLoveRaids } from '../love-raids/gameData';
 
 interface Target {
     host: HTMLElement;
@@ -7,6 +8,7 @@ interface Target {
     anchor?: HTMLElement | null;
     side?: 'above' | 'below' | 'right';
     leftAligned?: boolean;
+    initialIndex?: number;
 }
 
 function target(host: HTMLElement | null, reward: RewardArt | undefined | null, anchor?: HTMLElement | null,
@@ -27,8 +29,30 @@ function cards(selector: string, rewards: RewardArt[], side: Target['side']): Ta
     });
 }
 
+function raidTargets(): Target[] {
+    const raidsById = new Map(getLoveRaids().map(raid => [String(raid.id_raid), raid]));
+    const entries: RewardArtEntry[] = [];
+    const indices = new Map<string, number>();
+    const targets: Target[] = [];
+    for (const card of document.querySelectorAll<HTMLElement>('#love-raids .raid-card[id_raid]')) {
+        const raid = raidsById.get(card.getAttribute('id_raid') ?? '');
+        if (!raid?.girl_data) continue;
+        const id = String(raid.id_girl);
+        let index = indices.get(id);
+        if (index === undefined) {
+            index = entries.length;
+            entries.push({ reward: { ...raid.girl_data, id_girl: raid.id_girl }, native: card.querySelector<HTMLElement>('.left-girl-container') ?? undefined });
+            indices.set(id, index);
+        }
+        targets.push({ host: card, entries, initialIndex: index });
+    }
+    return targets;
+}
+
 function rewardTargets(page: string): Target[] {
     switch (page) {
+        case '/love-raids.html':
+            return raidTargets();
         case '/path-of-valor.html':
         case '/path-of-glory.html':
             return cards('.potions-paths-second-row .girl-preview[girl-id]', window.path_girls ?? [], 'below');
@@ -120,7 +144,7 @@ export class RewardArtButtons {
             this.launchers.delete(host);
         }
         for (const target of targets) {
-            const label = target.entries.length > 1 ? 'Preview arts' : 'Preview art';
+            const label = target.initialIndex === undefined && target.entries.length > 1 ? 'Preview arts' : 'Preview art';
             const existing = this.launchers.get(target.host);
             if (existing) {
                 if (existing.target.anchor !== target.anchor) {
@@ -140,7 +164,7 @@ export class RewardArtButtons {
             const launcher: Launcher = { button, target, layout: new ResizeObserver(() => this.position(button, launcher.target)) };
             button.addEventListener('click', event => {
                 event.stopPropagation();
-                this.dialog.show(launcher.target.entries, button);
+                this.dialog.show(launcher.target.entries, button, launcher.target.initialIndex);
             });
             target.host.append(button);
             this.launchers.set(target.host, launcher);

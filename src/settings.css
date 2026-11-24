@@ -411,7 +411,7 @@ td[data-jarvis-mark] > a {
     z-index: 1;
     flex: none;
     align-self: center;
-    margin-inline: auto .5rem;
+    margin-inline: .5rem 0;
 }
 #harem_right :is(.avatar-box, .middle_part.missing_girl) > .jarvis-art-launcher {
     position: absolute;

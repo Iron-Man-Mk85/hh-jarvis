@@ -11,6 +11,7 @@ type Artwork = ArtItem & { kind: 'original' | ArtKind };
 export interface RewardArtEntry {
     reward: RewardArt;
     native?: HTMLElement;
+    loadDetails?: () => Promise<RewardArt | undefined>;
 }
 
 function control(label: string, action: () => void) {
@@ -220,7 +221,7 @@ export class RewardArtDialog {
             index = (index + delta + visible.length) % visible.length;
             showItem();
         };
-        const render = () => {
+        const render = (current?: Artwork) => {
             const available = artwork.filter(item => item.kind !== 'scenes' || this.scenesEnabled);
             const kinds = new Set(available.map(item => item.kind));
             if (category !== 'all' && !kinds.has(category)) category = 'all';
@@ -230,6 +231,7 @@ export class RewardArtDialog {
             }
             visible = category === 'all' ? available.filter(item => item.kind !== 'original' || item.animation ||
                 !available.some(pose => pose.kind === 'poses' && pose.url === item.url)) : available.filter(item => item.kind === category);
+            if (current) index = Math.max(0, visible.findIndex(item => item.kind === current.kind && item.url === current.url));
             index = Math.min(index, Math.max(0, visible.length - 1));
             view.textContent = galleryMode ? 'One at a time' : 'Show all';
             previous.hidden = next.hidden = reset.hidden = layer.hidden = galleryMode;
@@ -253,6 +255,13 @@ export class RewardArtDialog {
             clearDisplayed();
             gestures.reset();
             render();
+            const entry = entries[selected];
+            void entry.loadDetails?.().then(reward => {
+                if (!reward || this.session?.refresh !== render || selected !== entryIndex) return;
+                const current = visible[index];
+                artwork = artworkFor({ ...entry, reward });
+                render(current);
+            });
         };
 
         this.session = {

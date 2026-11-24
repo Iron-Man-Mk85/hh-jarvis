@@ -1,5 +1,5 @@
 import type { HHModule } from './HHModule';
-import type { RewardArt } from './modules/art-preview/gameArt';
+import type { GameReward, RewardArt, RewardResponse } from './modules/art-preview/gameArt';
 import type { GirlAnimationRenderer } from './modules/art-preview/spinePreview';
 
 type GameId = number | string;
@@ -57,10 +57,14 @@ interface LeagueOpponent {
     player_league_points?: number | string;
 }
 
+interface GameAjax {
+    hh_ajax?(params: { action: 'get_girl'; id_girl: string }): { promise(): Promise<RewardResponse> };
+}
+
 declare global {
     const love_raids: LoveRaid[] | undefined;
 
-    interface Window {
+    interface Window extends GameAjax {
         $?: JQueryStatic;
         hhPlusPlusConfig?: {
             registerGroup(group: { key: string; name: string }): void;
@@ -84,12 +88,14 @@ declare global {
         path_girls?: RewardArt[];
         seasons_girls?: RewardArt[];
         leagues_girl?: RewardArt | null;
+        girls?: GameReward[];
         penta_drill_data?: {
             girl_data?: RewardArt;
             pass_reminder?: { penta_drill_pass?: { season_girls?: RewardArt[] }[] };
         };
         Hero?: HeroData;
         shared?: {
+            general?: GameAjax;
             Hero?: HeroData;
             girl_animation?: GirlAnimationRenderer;
         };

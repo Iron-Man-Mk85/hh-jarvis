@@ -414,6 +414,16 @@ td[data-jarvis-mark] > a {
     inset-inline-end: .4rem;
     inset-block-end: .4rem;
 }
+#home_tab_container .girls-reward-container > .jarvis-art-launcher {
+    position: absolute;
+    inset-block-start: 0;
+    inset-inline-end: .4rem;
+    z-index: 6;
+}
+:is(#home_tab_container, #market_tab_container) > .jarvis-art-launcher {
+    align-self: flex-start;
+    margin: .35rem;
+}
 #events .nc-event-container .nc-event-reward-container .nc-events-prize-locations-container .jarvis-event-copy-row > button.jarvis-event-copy.blue_button_L {
     flex: none;
     display: inline-flex;

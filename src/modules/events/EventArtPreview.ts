@@ -6,7 +6,7 @@ import { RewardArtButtons } from '../art-preview/RewardArtButtons';
 import { getArtGroups } from '../art-preview/gameArt';
 import type { EventReward } from '../../game-types';
 
-const rewardPages = new Set(['/event.html', '/path-of-valor.html', '/path-of-glory.html', '/penta-drill.html', '/season.html', '/leagues.html', '/love-raids.html']);
+const rewardPages = new Set(['/event.html', '/path-of-valor.html', '/path-of-glory.html', '/penta-drill.html', '/season.html', '/seasonal.html', '/leagues.html', '/love-raids.html']);
 
 export class EventArtPreview extends HHModule {
     private observer: MutationObserver | null = null;
@@ -24,7 +24,7 @@ export class EventArtPreview extends HHModule {
         super({ name: baseKey, configSchema: {
             baseKey,
             default: false,
-            label: settingHelp('Reward art preview', 'Open a viewer for reward art on events, Love Raids, Path of Valor, Path of Glory, Penta Drill, Season, and Leagues.'),
+            label: settingHelp('Reward art preview', 'Open a viewer for reward art on events, Love Raids, Path of Valor, Path of Glory, Penta Drill, Season, Seasonal Events, and Leagues.'),
             subSettings: [{
                 key: 'scenes',
                 label: settingHelp('Show scene previews', 'Also browse the still scene previews that the game provides.'),

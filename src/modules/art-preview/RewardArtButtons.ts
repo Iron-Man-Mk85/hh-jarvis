@@ -1,5 +1,6 @@
 import type { RewardArt } from './gameArt';
 import { RewardArtDialog, type RewardArtEntry } from './RewardArtDialog';
+import { SeasonalArt } from './SeasonalArt';
 import { getLoveRaids } from '../love-raids/gameData';
 
 interface Target {
@@ -10,6 +11,7 @@ interface Target {
     leftAligned?: boolean;
     initialIndex?: number;
     compact?: boolean;
+    prepend?: boolean;
 }
 
 function target(host: HTMLElement | null, reward: RewardArt | undefined | null, anchor?: HTMLElement | null,
@@ -109,12 +111,17 @@ export class RewardArtButtons {
     private observer: MutationObserver;
     private frame = 0;
     private dialog: RewardArtDialog;
+    private seasonal: SeasonalArt | undefined;
 
     constructor(private page: string, scenes: boolean) {
         this.dialog = new RewardArtDialog(scenes);
-        this.observer = new MutationObserver(() => {
+        const schedule = () => {
             if (this.frame) return;
             this.frame = requestAnimationFrame(() => { this.frame = 0; this.sync(); });
+        };
+        this.seasonal = page === '/seasonal.html' ? new SeasonalArt(schedule) : undefined;
+        this.observer = new MutationObserver(records => {
+            if (records.some(({ target }) => !(target instanceof Element && target.closest('.jarvis-art-dialog')))) schedule();
         });
         this.observer.observe(document.body, { childList: true, subtree: true, attributes: true, attributeFilter: ['class', 'girl-id', 'id-girl'] });
         this.sync();
@@ -125,6 +132,7 @@ export class RewardArtButtons {
     }
 
     destroy() {
+        this.seasonal?.destroy();
         this.observer.disconnect();
         cancelAnimationFrame(this.frame);
         this.dialog.close();
@@ -136,15 +144,17 @@ export class RewardArtButtons {
     }
 
     private sync() {
-        const targets = rewardTargets(this.page).filter(target => target.entries.length);
-        const active = new Set(targets.map(target => target.host));
+        const seasonal = this.seasonal?.getTarget();
+        const targets: Target[] = seasonal ? [seasonal] : rewardTargets(this.page);
+        const populated = targets.filter(target => target.entries.length);
+        const active = new Set(populated.map(target => target.host));
         for (const [host, { button, layout }] of this.launchers) {
             if (active.has(host) && button.parentElement === host) continue;
             layout.disconnect();
             button.remove();
             this.launchers.delete(host);
         }
-        for (const target of targets) {
+        for (const target of populated) {
             const label = target.initialIndex === undefined && target.entries.length > 1 ? 'Preview arts' : 'Preview art';
             const existing = this.launchers.get(target.host);
             const button = existing?.button ?? document.createElement('button');
@@ -172,7 +182,8 @@ export class RewardArtButtons {
                 event.stopPropagation();
                 this.dialog.show(launcher.target.entries, button, launcher.target.initialIndex);
             });
-            target.host.append(button);
+            if (target.prepend) target.host.prepend(button);
+            else target.host.append(button);
             this.launchers.set(target.host, launcher);
             this.observe(launcher.layout, target);
             this.position(button, target);

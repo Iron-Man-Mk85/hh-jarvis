@@ -17,7 +17,6 @@ export interface RewardArtEntry {
 function control(label: string, action: () => void) {
     const button = document.createElement('button');
     button.type = 'button';
-    button.className = 'blue_button_L';
     button.textContent = label;
     button.addEventListener('click', action);
     return button;
@@ -93,6 +92,7 @@ export class RewardArtDialog {
                 gestures.reset();
                 render();
             });
+            button.className = 'jarvis-art-tab';
             filters.append(button);
             return [filter, button];
         }));
@@ -104,6 +104,7 @@ export class RewardArtDialog {
             gestures.reset();
             render();
         });
+        view.className = 'jarvis-art-mode';
         const previous = control('‹', () => step(-1));
         previous.setAttribute('aria-label', 'Previous preview');
         const next = control('›', () => step(1));
@@ -115,6 +116,7 @@ export class RewardArtDialog {
         status.setAttribute('role', 'status');
         const paging = document.createElement('div');
         paging.className = 'jarvis-art-paging';
+        for (const button of [previous, next, reset]) button.className = 'jarvis-art-page-button';
         paging.append(previous, next, reset);
         navigation.append(view, paging, status);
         toolbar.append(title, filters, navigation);
@@ -300,10 +302,7 @@ export class RewardArtDialog {
             if (category !== 'all' && !kinds.has(category)) category = 'all';
             for (const [filter, button] of filterButtons) {
                 button.hidden = filter === 'all' ? kinds.size < 2 : !kinds.has(filter);
-                const active = filter === category || (category === 'all' && kinds.size === 1);
-                button.setAttribute('aria-pressed', String(active));
-                button.classList.toggle('blue_button_L', !active);
-                button.classList.toggle('orange_button_L', active);
+                button.setAttribute('aria-pressed', String(filter === category || (category === 'all' && kinds.size === 1)));
             }
             visible = category === 'all' ? available.filter(item => item.kind !== 'original' || item.animation ||
                 !available.some(pose => pose.kind === 'poses' && pose.url === item.url)) : available.filter(item => item.kind === category);

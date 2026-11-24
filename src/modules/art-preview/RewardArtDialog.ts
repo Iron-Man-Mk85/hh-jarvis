@@ -23,6 +23,15 @@ function control(label: string, action: () => void) {
     return button;
 }
 
+function scrollSideways(strip: HTMLElement) {
+    strip.addEventListener('wheel', event => {
+        if (event.ctrlKey || Math.abs(event.deltaX) >= Math.abs(event.deltaY) || strip.scrollWidth <= strip.clientWidth) return;
+        event.preventDefault();
+        const unit = event.deltaMode === 1 ? 16 : event.deltaMode === 2 ? strip.clientWidth : 1;
+        strip.scrollLeft += event.deltaY * unit;
+    }, { passive: false });
+}
+
 function artworkFor({ reward, native }: RewardArtEntry): Artwork[] {
     const groups = getArtGroups(reward.preview ?? {});
     const original = getOriginalArt(reward, native ?? null);
@@ -125,11 +134,7 @@ export class RewardArtDialog {
             return choice;
         }) : [];
         picker.hidden = !choices.length;
-        picker.addEventListener('wheel', event => {
-            if (event.ctrlKey || Math.abs(event.deltaX) >= Math.abs(event.deltaY) || picker.scrollWidth <= picker.clientWidth) return;
-            event.preventDefault();
-            picker.scrollLeft += event.deltaY * (event.deltaMode === 1 ? 16 : event.deltaMode === 2 ? picker.clientWidth : 1);
-        }, { passive: false });
+        scrollSideways(picker);
         header.append(picker, close);
 
         const stage = document.createElement('div');
@@ -138,6 +143,9 @@ export class RewardArtDialog {
         layer.className = 'jarvis-art-preview';
         const gallery = document.createElement('div');
         gallery.className = 'jarvis-art-gallery hh-scroll';
+        gallery.setAttribute('role', 'group');
+        gallery.setAttribute('aria-label', 'Artwork gallery');
+        scrollSideways(gallery);
         stage.append(layer, gallery);
         dialog.append(header, stage);
         document.body.append(dialog);
@@ -205,20 +213,24 @@ export class RewardArtDialog {
             const load = new AbortController();
             galleryLoad = load;
             visible.forEach((item, itemIndex) => {
-                const tile = control(item.label, () => {
+                const tile = control('', () => {
                     index = itemIndex;
                     galleryMode = false;
                     render();
                     view.focus();
                 });
                 tile.className = 'jarvis-art-tile';
+                tile.title = item.label;
+                tile.setAttribute('aria-label', `Open ${item.label}`);
                 const media = document.createElement('span');
                 media.className = 'jarvis-art-tile-media';
-                tile.prepend(media);
+                tile.append(media);
                 gallery.append(tile);
-                mountArt(media, item, load.signal, () => {}, () => { media.textContent = 'Preview unavailable'; }, true);
+                mountArt(media, item, load.signal, () => { media.classList.add('jarvis-art-ready'); }, () => {
+                    media.textContent = 'Preview unavailable';
+                }, true);
             });
-            gallery.scrollTop = 0;
+            gallery.scrollLeft = 0;
             status.textContent = visible.length ? `${visible.length} ${visible.length === 1 ? 'image' : 'images'}` : 'No artwork available';
         };
         const step = (delta: number) => {

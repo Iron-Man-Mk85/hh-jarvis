@@ -406,6 +406,13 @@ td[data-jarvis-mark] > a {
     align-self: flex-start;
     margin: .35rem;
 }
+:is(#mega-event-tabs, .tabs-switcher:has(> #home_tab)) > .jarvis-art-launcher {
+    position: relative;
+    z-index: 1;
+    flex: none;
+    align-self: center;
+    margin-inline: auto .5rem;
+}
 #harem_right :is(.avatar-box, .middle_part.missing_girl) > .jarvis-art-launcher {
     position: absolute;
     inset-block-start: .35rem;

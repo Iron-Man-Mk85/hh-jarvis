@@ -43,7 +43,8 @@ export class SeasonalArt {
             const loadDetails = market && !hasPreviewArt(reward) ? () => this.loadDetails(reward, id) : undefined;
             return [{ reward, loadDetails }];
         });
-        return { host: panel, entries, prepend: true };
+        const tabs = document.querySelector<HTMLElement>('#mega-event-tabs, .tabs-switcher:has(> #home_tab)');
+        return { host: tabs ?? panel, entries, prepend: !tabs };
     }
 
     private renderedMarketRewards(panel: HTMLElement): GameReward[] {

@@ -1,5 +1,9 @@
 # Development notes
 
+- **0.11.8**
+  - In Show all, see the full artwork with wider gaps, and keep animated originals and skins playing.
+  - Load artwork and thumbnails as they come into view. Reuse the game’s asset URLs so the browser can serve cached files.
+  - Use gold tabs, round navigation, and the outlined name from the game’s Poses & Scenes style. Find the Seasonal camera at the far right of the event tab row, including events without a Market tab.
 - **0.11.7**
   - Open artwork with a camera icon on every supported page. The Seasonal Event overview and market put it in the same place.
   - Browse all artwork in one full-height row. Scroll sideways with the wheel and click a picture to open it with zoom controls.

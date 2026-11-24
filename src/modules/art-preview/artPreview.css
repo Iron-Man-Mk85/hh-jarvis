@@ -1,0 +1,69 @@
+.jarvis-art-preview {
+    position: absolute;
+    inset: 0;
+    z-index: var(--jarvis-art-layer-z, 2);
+    pointer-events: none;
+}
+
+.jarvis-art-image {
+    position: absolute;
+    inset: var(--jarvis-art-image-inset, 12% 25% 3%);
+    width: var(--jarvis-art-image-width, 50%);
+    height: var(--jarvis-art-image-height, 85%);
+    object-fit: contain;
+}
+
+.jarvis-art-scene {
+    inset: var(--jarvis-art-scene-inset, 25% 27% 16%);
+    width: var(--jarvis-art-scene-width, 46%);
+    height: var(--jarvis-art-scene-height, 59%);
+}
+
+.jarvis-art-original-hidden {
+    visibility: hidden !important;
+}
+
+.jarvis-art-controls {
+    position: absolute;
+    inset-block-start: var(--jarvis-art-controls-top, 20%);
+    inset-inline-end: var(--jarvis-art-controls-end, 4%);
+    box-sizing: border-box;
+    width: max-content;
+    max-width: var(--jarvis-art-controls-width, 20%);
+    padding: .4em;
+    border-radius: .5em;
+    background: rgba(22, 20, 27, .92);
+    color: white;
+    font-size: .8em;
+    pointer-events: auto;
+}
+
+.jarvis-art-controls [hidden],
+.jarvis-art-controls[hidden] {
+    display: none !important;
+}
+
+.jarvis-art-groups,
+.jarvis-art-navigation {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-wrap: wrap;
+    gap: .3em;
+}
+
+.jarvis-art-navigation {
+    margin-top: .35em;
+    flex-wrap: nowrap;
+}
+
+.jarvis-art-navigation [role="status"] {
+    flex: 1;
+    text-align: center;
+    overflow-wrap: anywhere;
+}
+
+.jarvis-art-controls button[aria-pressed="true"] {
+    background: #fff;
+    color: #201a27;
+}

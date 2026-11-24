@@ -1,4 +1,5 @@
 import type { HHModule } from './HHModule';
+import type { GameArt } from './modules/art-preview/gameArt';
 
 type GameId = number | string;
 
@@ -17,7 +18,9 @@ export interface EventRewardSource {
 }
 
 export interface EventReward {
+    id_girl?: GameId;
     name?: string;
+    preview?: GameArt;
     source?: EventRewardSource;
     source_list?: Record<string, EventRewardSource[] | undefined>;
 }

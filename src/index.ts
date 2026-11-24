@@ -12,6 +12,7 @@ import { Changelog } from './modules/updates/Changelog';
 import { GameLinks } from './modules/navigation/GameLinks';
 import { MythicPreviewFix } from './modules/events/MythicPreviewFix';
 import { EventExport } from './modules/events/EventExport';
+import { EventArtPreview } from './modules/events/EventArtPreview';
 
 armContestStartupGuard();
 
@@ -49,6 +50,7 @@ function runJarvis() {
         new LoveRaidsParser(),
         new ActivityParser(),
         new EventExport(),
+        new EventArtPreview(),
         changelog,
         new MythicPreviewFix(),
         new GameLinks()

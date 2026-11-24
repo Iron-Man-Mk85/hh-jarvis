@@ -19,6 +19,8 @@ export type ArtGroups = Record<ArtKind, ArtItem[]>;
 export interface RewardArt {
     id_girl?: string | number;
     name?: string;
+    ico?: string;
+    rarity?: string;
     preview?: GameArt;
     avatar?: string;
     default_avatar?: string;
@@ -30,6 +32,10 @@ function assetUrl(path: string | null | undefined) {
     const url = new URL(path, location.href);
     const usable = url.protocol === 'https:' || (url.protocol === 'http:' && url.origin === location.origin);
     return usable ? url.href : undefined;
+}
+
+export function rewardThumbnail(reward: RewardArt) {
+    return assetUrl(reward.ico) ?? assetUrl(reward.avatar) ?? assetUrl(reward.preview?.poses?.[0]);
 }
 
 function image(path: string | null, label: string): ArtItem[] {

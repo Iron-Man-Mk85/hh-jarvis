@@ -1,5 +1,7 @@
 import { ArtPreview } from './ArtPreview';
-import { getArtGroups, getOriginalArt, type RewardArt } from './gameArt';
+import { getArtGroups, getOriginalArt, rewardThumbnail, type RewardArt } from './gameArt';
+
+const rarities = new Set(['common', 'rare', 'epic', 'legendary', 'mythic']);
 
 export interface RewardArtEntry {
     reward: RewardArt;
@@ -25,14 +27,31 @@ export class RewardArtDialog {
         close.addEventListener('click', () => this.close());
         header.append(title);
 
-        const picker = document.createElement('select');
+        const choices: HTMLButtonElement[] = [];
         if (entries.length > 1) {
+            const picker = document.createElement('div');
+            picker.className = 'jarvis-art-character-picker hh-scroll';
+            picker.setAttribute('role', 'group');
             picker.setAttribute('aria-label', 'Reward character');
             entries.forEach(({ reward }, index) => {
-                const option = document.createElement('option');
-                option.value = String(index);
-                option.textContent = reward.name || `Reward ${index + 1}`;
-                picker.append(option);
+                const choice = document.createElement('button');
+                const name = reward.name || `Reward ${index + 1}`;
+                const rarity = reward.rarity || 'common';
+                choice.type = 'button';
+                choice.className = `slot slot_girl_shards size_small jarvis-art-character ${rarities.has(rarity) ? rarity : 'common'}`;
+                choice.setAttribute('aria-label', name);
+                choice.title = name;
+                const thumbnail = rewardThumbnail(reward);
+                if (thumbnail) {
+                    const icon = document.createElement('img');
+                    icon.alt = '';
+                    icon.addEventListener('error', () => { choice.textContent = name; }, { once: true });
+                    icon.src = thumbnail;
+                    choice.append(icon);
+                } else choice.textContent = name;
+                choice.addEventListener('click', () => render(index));
+                choices.push(choice);
+                picker.append(choice);
             });
             header.append(picker);
         }
@@ -50,12 +69,15 @@ export class RewardArtDialog {
         dialog.addEventListener('keydown', event => { if (event.key === 'Escape') event.stopPropagation(); });
         dialog.addEventListener('cancel', event => { event.preventDefault(); this.close(); });
         dialog.addEventListener('close', () => { if (this.session?.dialog === dialog) this.close(); });
+        let selected = -1;
         const render = (index: number) => {
+            if (selected === index) return;
+            selected = index;
+            choices.forEach((choice, index) => choice.setAttribute('aria-pressed', String(index === selected)));
             const { reward, native } = entries[index];
             title.textContent = reward.name || 'Reward art';
             viewer.setCharacter(getArtGroups(reward.preview ?? {}), null, getOriginalArt(reward, native ?? null));
         };
-        picker.addEventListener('change', () => render(Number(picker.value)));
         dialog.showModal();
         render(0);
         close.focus({ preventScroll: true });

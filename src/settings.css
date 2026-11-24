@@ -1,23 +1,62 @@
-.hh-plus-plus-config-panel .group-panel[rel="JARVIS"] .panel-contents {
-    align-content: start;
-    align-items: start;
-    overflow-y: auto;
-    overscroll-behavior: contain;
-    scrollbar-width: thin;
+.hh-plus-plus-config-panel .group-panel[rel="JARVIS"] .jarvis-settings-layout {
+    box-sizing: border-box;
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-rows: auto minmax(0, 1fr);
+    gap: .45rem;
 }
 .hh-plus-plus-config-panel:has(> .group-panel[rel="JARVIS"].shown) {
     overflow: clip;
 }
-.hh-plus-plus-config-panel .group-panel[rel="JARVIS"] .config-setting.has-subsettings {
+.jarvis-settings-categories {
+    display: flex;
+    flex-wrap: wrap;
+    gap: .3rem;
+}
+.jarvis-settings-categories button {
+    appearance: none;
+    padding: .28em .65em;
+    border: 1px solid transparent;
+    border-radius: .35em;
+    background: transparent;
+    color: inherit;
+    font: 600 .8rem/1.25 system-ui, sans-serif;
+    cursor: pointer;
+}
+.jarvis-settings-categories button:hover {
+    background: color-mix(in srgb, currentColor 12%, transparent);
+}
+.jarvis-settings-categories button[aria-selected="true"] {
+    border-color: var(--config-setting-border, currentColor);
+    background: var(--config-setting-background, #241e30);
+}
+.jarvis-settings-categories button:focus-visible {
+    outline: 1px solid currentColor;
+    outline-offset: -3px;
+}
+.jarvis-settings-page {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(min(100%, 152px), 1fr));
+    align-content: start;
+    align-items: start;
+    gap: 10px;
+    min-height: 0;
+    padding-block-end: .4rem;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    scrollbar-width: thin;
+}
+.jarvis-settings-page[hidden] {
+    display: none;
+}
+.hh-plus-plus-config-panel .group-panel[rel="JARVIS"] .jarvis-settings-page > .config-setting {
     grid-row-end: auto;
 }
-.hh-plus-plus-config-panel .group-panel[rel="JARVIS"] .jarvis-packed-settings {
-    grid-auto-flow: row dense;
-    grid-auto-rows: 1px;
-    row-gap: 0;
+.hh-plus-plus-config-panel .jarvis-settings-layout label {
+    align-items: center;
+    gap: .45em;
 }
-.hh-plus-plus-config-panel .group-panel[rel="JARVIS"] .jarvis-packed-settings .config-setting {
-    grid-row-end: span var(--jarvis-setting-rows, 1);
+.hh-plus-plus-config-panel .jarvis-settings-layout input[type="checkbox"] {
+    flex-shrink: 0;
 }
 .hh-plus-plus-config-panel .tabs h4[rel="JARVIS"] {
     position: relative;
@@ -72,7 +111,7 @@
     flex: none;
     padding: 0;
 }
-button.jarvis-contest-pin {
+button:is(.jarvis-contest-pin, .jarvis-contest-skip) {
     all: unset;
     display: inline-block;
     margin-inline-start: .35em;
@@ -89,7 +128,14 @@ button.jarvis-contest-pin {
     content: '★';
     color: #ffd36b;
 }
-.jarvis-contest-pin:focus-visible {
+.jarvis-contest-skip::before {
+    content: '⊘';
+}
+.jarvis-contest-skip[aria-pressed="true"]::before {
+    color: #ff9ca9;
+    font-weight: bold;
+}
+:is(.jarvis-contest-pin, .jarvis-contest-skip):focus-visible {
     outline: 1px solid currentColor;
 }
 .jarvis-contest-choice {
@@ -139,13 +185,13 @@ button.jarvis-contest-pin {
     text-overflow: ellipsis;
     white-space: nowrap;
 }
-.jarvis-contest-title > :is(.jarvis-contest-pin, .jarvis-contest-rank-start) {
+.jarvis-contest-title > :is(.jarvis-contest-pin, .jarvis-contest-skip, .jarvis-contest-rank-start) {
     flex: none;
     margin-inline-start: 0;
 }
 #contests .contest_header .jarvis-contest-title-stacked {
     display: grid;
-    grid-template-columns: auto minmax(0, 1fr);
+    grid-template-columns: auto auto minmax(0, 1fr);
     row-gap: .12em;
 }
 .jarvis-contest-title-stacked .jarvis-contest-title-label {
@@ -219,6 +265,17 @@ button.jarvis-contest-pin {
 .jarvis-contest-shortcuts button[aria-pressed="true"] {
     background: color-mix(in srgb, currentColor 27%, transparent);
 }
+.jarvis-contest-shortcuts button.jarvis-contest-shortcut-skipped {
+    border-color: #f7a1ae;
+    background: #741224;
+    color: #fff5f7;
+}
+.jarvis-contest-shortcuts button.jarvis-contest-shortcut-skipped:hover {
+    background: #911e35;
+}
+.jarvis-contest-shortcuts button.jarvis-contest-shortcut-skipped[aria-pressed="true"] {
+    background: #ae3048;
+}
 .jarvis-contest-shortcuts button:focus-visible {
     outline: 2px solid currentColor;
     outline-offset: 2px;
@@ -289,6 +346,87 @@ td[data-jarvis-mark] > a {
 .jarvis-setting-action:disabled {
     cursor: default;
     opacity: .5;
+}
+#events {
+    --jarvis-event-text-outline: 1px 1px #000, -1px 1px #000, -1px -1px #000, 1px -1px #000;
+}
+#events .jarvis-event-copy-row {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: .4rem;
+    width: 100%;
+}
+#events .jarvis-event-copy-row:not(:has(.controls-button-container)) {
+    margin-block: .3rem 0;
+}
+.jarvis-art-launcher.blue_button_L {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    box-sizing: border-box;
+    min-inline-size: 5.75rem;
+    min-block-size: 1.6rem;
+    padding: .15rem .5rem;
+    border-radius: 999px;
+    white-space: nowrap;
+    font-size: .75rem;
+    line-height: 1.1;
+    text-shadow: 1px 1px #000, -1px -1px #000;
+}
+.jarvis-art-launcher[data-jarvis-art-anchor] {
+    position: absolute;
+    z-index: 6;
+    left: var(--jarvis-art-launcher-x);
+    top: var(--jarvis-art-launcher-y);
+    transform: translateX(-50%);
+}
+.jarvis-art-launcher[data-jarvis-art-anchor][data-jarvis-art-above] {
+    transform: translate(-50%, -100%);
+}
+.jarvis-art-launcher.blue_button_L[data-jarvis-art-beside] {
+    width: max-content;
+    min-inline-size: 0;
+    padding-inline: .35rem;
+    font-size: .7rem;
+    transform: translateY(-50%);
+}
+#events .nc-event-container > .jarvis-art-launcher:not([data-jarvis-art-anchor]) {
+    position: absolute;
+    z-index: 6;
+    left: 8%;
+    top: 28%;
+}
+.league_girl.hidden_girl .jarvis-art-launcher {
+    display: none;
+}
+#love-raids .raid-card > .jarvis-art-launcher.blue_button_L {
+    position: absolute;
+    z-index: 6;
+    inset-inline-end: .4rem;
+    inset-block-end: .4rem;
+    width: max-content;
+    min-inline-size: 0;
+    height: auto;
+    min-block-size: 1.4rem;
+    padding: .12rem .45rem;
+    font-size: .7rem;
+}
+#events .nc-event-container .nc-event-reward-container .nc-events-prize-locations-container .jarvis-event-copy-row > button.jarvis-event-copy.blue_button_L {
+    flex: none;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    box-sizing: border-box;
+    width: max-content !important;
+    min-width: 7.5rem !important;
+    height: 2rem !important;
+    padding: .1rem .6rem !important;
+    border-radius: 999px !important;
+    font-size: .8rem;
+    line-height: 1.1;
+    white-space: nowrap;
+    text-shadow: var(--jarvis-event-text-outline);
 }
 .jarvis-mark-setting-actions,
 .jarvis-mark-actions {

@@ -2,7 +2,7 @@ name: Check userscript
 
 on:
   push:
-    branches: [main, testing]
+    branches: [main, release, testing]
   pull_request:
     branches: [main, testing]
 
@@ -23,10 +23,11 @@ jobs:
         env:
           TARGET_BRANCH: ${{ github.base_ref || github.ref_name }}
         run: |
-          if [ "$TARGET_BRANCH" = main ]; then
+          if [ "$TARGET_BRANCH" = main ] || [ "$TARGET_BRANCH" = release ]; then
             npm run check -- stable
+            node --check hh-jarvis.user.js
           else
             npm run check
+            node --check hh-jarvis-dev.user.js
           fi
-          node --check "$(node -p "require('./package.json').name").user.js"
       - run: npm run build

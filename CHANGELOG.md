@@ -1,43 +1,25 @@
 # Changelog
 
+- **0.11.5**
+  - Open a full-screen reward art viewer from events, Path of Valor, Path of Glory, Penta Drill and its roster, Season, Leagues, and Love Raids. Switch between characters and browse available originals, poses, skins, and scenes. Zoom and pan, or enable inline previews on supported events.
+  - Copy reward names from regular events, Mythic Days, and Crazy Cumback Contest. Regular and Mythic events can include a source column for Sheets. Love Raids copying is available as soon as the page controls are ready.
+  - Restore the missing Mythic Revival preview on Pornstar Harem.
+  - Skip a contest for the day using the icon beside its star. Jarvis opens another unskipped contest when available and prefers unskipped contests on reload. Skipped shortcuts turn dark red and stay clickable.
+  - Find Jarvis settings in compact category tabs. Use the dismissible Silent updates icon beside HH++ and reopen the release notes from settings.
 - **0.8.2** Show the changelog after the shop or other homepage popups close, and keep the update unread until you dismiss the notes.
-- **0.8.0** Middle-click or Ctrl-click the game logo, Path of Valor, or Path of Glory to open the page in a new tab.
-- **0.7.10** Keep Home, End, and the arrow keys working after a contest click while automatic scrolling is blocked.
-- **0.7.9** Save Don’t show again and Silent changelog when closing the update popup, including with HH++ builds that keep settings private.
-- **0.7.8** Clear saved Top and My rank choices once their contests are no longer available.
-- **0.7.7**
-  - Apply Don’t show again when the changelog closes and update the HH++ setting immediately.
-  - Give the silent update icon its own tooltip.
-  - Keep long contest titles in the card header alongside the rank controls.
-  - Identify the Dev build beside its version in settings.
+- **0.8.0**
+  - Middle-click or Ctrl-click the game logo, Path of Valor, or Path of Glory to open a new tab.
+  - Use Home, End, and the arrow keys after choosing a contest. Long contest titles fit alongside the rank controls.
+  - Save your update notice preferences from the changelog and see its icon’s tooltip separately from HH++.
 - **0.7.6**
-  - Choose Top or My rank on any active contest. Jarvis remembers each contest’s choice when switching and applies the same position and scroll rules to finished contests.
-  - Keep game scroll animations from restarting while you scroll by hand during a contest switch.
-  - See a small arc-reactor icon beside HH++ when a silent update notice is available.
-- **0.7.5**
-  - Keep the homepage responsive after closing the changelog and choose Silent changelog from the popup.
-  - Stop automatic sidebar scrolling on contest switches by default and use Top or My rank whenever you switch.
-  - Bring the selected card into view when you use a contest shortcut.
-- **0.7.4** See your rank in each active contest beside the close button and switch leaderboards without moving the contest list.
-- **0.7.3**
-  - See automatic changelogs only when loading the homepage after an update.
-  - Enable Silent changelog to get a New button beside HH++ and open the notes when you’re ready.
-  - Keep the contest list and each leaderboard in place when switching contests with Stop scrolling on contest switches.
-- **0.7.2**
-  - Open the bottom active contest at your rank by default. Choose CbC, CCC, or LC to prefer that event when available.
-  - Turn off automatic update notices with Don’t show again in the changelog popup. View changelog stays available in settings.
+  - Open the bottom active contest at your rank by default, or prefer a daily contest or a specific event type. Set Top or My rank for individual contests.
+  - Switch contests using shortcuts that show your current rank. Automatic scroll animations are suppressed by default, including on finished contests.
+  - Get update notes on the homepage. Choose a silent icon beside HH++ or turn off automatic notices from the changelog.
 - **0.7.1**
-  - Keep the changelog centered when the game window is resized.
-  - Clean up saved player names, explain unknown names on hover, and give Remove buttons more room.
-- **0.7.0**
-  - See what changed in Jarvis the first time a new version runs.
-  - Open View changelog from HH++ settings at any time, even with automatic notices turned off.
-  - Expand Earlier versions to read past updates.
-- **0.6.7** Make marking one action per player, backfill names for older marks, use the bracket-based promotion target, and simplify the selected contest buttons and version badge.
-- **0.6.6** Add setting help in HH++, improve mark contrast and management, and add automatic contest defaults.
-- **0.6.4** Prevent pinned contest startup scrolling, keep native startup without a pin, and clear finished pins
-- **0.6.3** Stop both contest startup scrolls, isolate the selected leaderboard, and restore pinned contests at Top or My rank
-- **0.6.2** Pin contests on their cards, hide the startup scroll, and use right-click marking with isolated settings scrolling
+  - Read current and earlier update notes in a centered changelog. Open it again from HH++ settings.
+  - Right-click a player to mark them. Manage saved names and IDs, choose colors, and reset them to the defaults.
+  - Set a default contest and leaderboard position. In lower leagues, see a promotion target based on bracket size.
+- **0.6.3** Pin a contest and reopen its leaderboard at Top or My rank without the startup scroll. Right-click to mark players, and scroll settings separately from the HH++ tabs.
 - **0.6.1** Read native Manga RPG contest titles and recognize active cards when contest data is unavailable
 - **0.6.0** Add a contest start preference, continuous marking, and compact settings with a version label
 - **0.5.0** Add league and contest player marking with custom colors, compact settings, and limit Top 20 to promotable leagues

@@ -3,13 +3,14 @@ import { HHModule } from '../../HHModule';
 import { currentPage } from '../../game';
 import type { GirlData, LoveRaid } from '../../game-types';
 import { lsGet, lsSet, lsRm } from '../../storage';
-import { getGirlDictionary } from './gameData';
+import { getGirlDictionary, getLoveRaids } from './gameData';
 
 type RaidCopyButton = HTMLDivElement & { _boundCopyKeyHandler?: (event: KeyboardEvent) => void };
 
 export class LoveRaidsParser extends HHModule {
     private girlDict: ReadonlyMap<string, GirlData> | null = null;
-    private _boundInsertButton?: () => void;
+    private button: RaidCopyButton | null = null;
+    private observer: MutationObserver | null = null;
 
     /*
     * Raid ID, Announcement Type, Background ID, Event Name, Start Datetime,
@@ -66,7 +67,9 @@ export class LoveRaidsParser extends HHModule {
         const duration = `${durationHours} hours`;
 
         const girl = this.girlDict?.get(String(event.id_girl)) || {};
-        const { name = 'Unknown', rarity = 'N/A', grade = 0 } = girl;
+        const name = event.girl_data?.name || girl.name || 'Unknown';
+        const rarity = event.girl_data?.rarity || girl.rarity || 'N/A';
+        const grade = event.girl_data?.nb_grades ?? girl.grade ?? 0;
 
         return [
             event.id_raid,
@@ -122,14 +125,9 @@ export class LoveRaidsParser extends HHModule {
         }
 
         // Load raids
-        const localLoveRaids = (typeof love_raids !== 'undefined' && Array.isArray(love_raids)) ? love_raids : [];
+        const localLoveRaids = getLoveRaids();
         if (!localLoveRaids.length) {
             alert('⚠️ No love_raids found on this page.');
-            return;
-        }
-
-        if (!this.girlDict) {
-            alert('⚠️ The HH++ girl dictionary could not be loaded. Reload the page and try again.');
             return;
         }
 
@@ -151,6 +149,15 @@ export class LoveRaidsParser extends HHModule {
         if (!filteredData.length) {
             alert(`ℹ️ No new events found with ID greater than ${lastSavedIdNumber}`);
             return;
+        }
+
+        if (!this.girlDict && filteredData.some(({ girl_data }) => !girl_data?.name || !girl_data.rarity || girl_data.nb_grades == null)) {
+            this.girlDict = await getGirlDictionary();
+            if (!this.hasRun) return;
+            if (!this.girlDict) {
+                alert('⚠️ Some raid details are missing and the HH++ girl dictionary could not be loaded. The last saved ID was kept.');
+                return;
+            }
         }
 
         const formattedData = filteredData.map(this.formatEventRow.bind(this)).join("\n");
@@ -222,21 +229,31 @@ export class LoveRaidsParser extends HHModule {
     }
 
     insertButton() {
-        const notificationButton = document.querySelector('.button-notification-action.notif_button_s');
-        if (notificationButton && !document.querySelector('.reminder-copy')) {
-            const copyButton = this.createCopyButton();
-            notificationButton.parentNode?.insertBefore(copyButton, notificationButton);
-        }
+        const notificationButton = document.querySelector('#love-raids .button-notification-action.notif_button_s');
+        if (!notificationButton || this.button?.isConnected) return;
+        this.button ??= this.createCopyButton();
+        notificationButton.before(this.button);
     }
 
-    async run() {
+    run() {
         if (this.hasRun || !this.shouldRun()) {return}
 
-        this.hasRun = true
-        this.girlDict = await getGirlDictionary();
+        this.hasRun = true;
+        this.observer = new MutationObserver(() => this.insertButton());
+        this.observer.observe(document.querySelector('#love-raids') ?? document.body, { childList: true, subtree: true });
+        this.insertButton();
+    }
 
-        this._boundInsertButton = this.insertButton.bind(this);
-        if (document.readyState === 'complete') this.insertButton();
-        else window.addEventListener('load', this._boundInsertButton, { once: true });
+    tearDown() {
+        this.observer?.disconnect();
+        this.observer = null;
+        const handler = this.button?._boundCopyKeyHandler;
+        if (handler) {
+            window.removeEventListener('keydown', handler);
+            window.removeEventListener('keyup', handler);
+        }
+        this.button?.remove();
+        this.button = null;
+        this.hasRun = false;
     }
 }

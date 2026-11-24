@@ -3,6 +3,7 @@ interface ContestShortcut {
     category: string;
     name: string;
     rank: string;
+    skipped: boolean;
 }
 
 export function positionContestShortcuts(canvas: HTMLElement, bar: HTMLElement) {
@@ -46,7 +47,7 @@ export function renderContestShortcuts(
 
     const buttons = new Map(Array.from(bar.querySelectorAll('button'), button => [button.dataset.contestId, button]));
     const categories = contests.map(contest => contest.category);
-    for (const [index, { id, category, name, rank }] of contests.entries()) {
+    for (const [index, { id, category, name, rank, skipped }] of contests.entries()) {
         let button = buttons.get(id);
         if (!button) {
             button = document.createElement('button');
@@ -59,7 +60,8 @@ export function renderContestShortcuts(
         const [label, placement] = Array.from(button.children);
         if (label.textContent !== type) label.textContent = type;
         if (placement.textContent !== (rank || '–')) placement.textContent = rank || '–';
-        const description = `${type} · ${name} · ${rank ? `Rank ${rank}` : 'Rank unavailable'}`;
+        button.classList.toggle('jarvis-contest-shortcut-skipped', skipped);
+        const description = `${type} · ${name} · ${rank ? `Rank ${rank}` : 'Rank unavailable'}${skipped ? ' · Skipped for today' : ''}`;
         if (button.title !== description) {
             button.title = description;
             button.setAttribute('aria-label', description);

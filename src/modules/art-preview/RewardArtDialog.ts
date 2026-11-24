@@ -269,7 +269,7 @@ export class RewardArtDialog {
                 observer.disconnect();
                 load.abort();
             };
-            const buttons = visible.map((item, itemIndex) => {
+            visible.forEach((item, itemIndex) => {
                 const tile = control('', () => {
                     index = itemIndex;
                     galleryMode = false;
@@ -285,11 +285,9 @@ export class RewardArtDialog {
                 tile.append(media);
                 gallery.append(tile);
                 tiles.set(tile, { item, media, started: false, visible: false });
-                return tile;
+                observer.observe(tile);
             });
             gallery.scrollLeft = 0;
-            if (index > 0 && buttons[index]) gallery.scrollLeft = buttons[index].offsetLeft - buttons[0].offsetLeft;
-            for (const button of buttons) observer.observe(button);
             status.textContent = visible.length ? `${visible.length} ${visible.length === 1 ? 'image' : 'images'}` : 'No artwork available';
         };
         const step = (delta: number) => {

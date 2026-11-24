@@ -406,6 +406,7 @@
     inset: 0;
     container-type: size;
     display: flex;
+    justify-content: safe center;
     gap: clamp(1rem, 2.5vw, 2.5rem);
     padding-inline: clamp(.75rem, 2vw, 2rem);
     overflow: auto hidden;

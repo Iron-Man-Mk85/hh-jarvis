@@ -53,9 +53,11 @@ export class RewardArtDialog {
         const title = document.createElement('h2');
         title.id = 'jarvis-art-dialog-title';
         const name = control('', () => name.setAttribute('aria-expanded', String(name.getAttribute('aria-expanded') === 'false')));
+        name.className = 'jarvis-art-name';
         const fullName = document.createElement('span');
         name.replaceChildren(fullName);
         const close = control('×', () => this.close());
+        close.className = 'red_button_L jarvis-art-close';
         close.setAttribute('aria-label', 'Close art preview');
         close.title = 'Close art preview';
         title.append(name);
@@ -92,8 +94,11 @@ export class RewardArtDialog {
         reset.setAttribute('aria-label', reset.title);
         const status = document.createElement('span');
         status.setAttribute('role', 'status');
-        navigation.append(view, previous, status, next, reset);
-        toolbar.append(title, close, filters, navigation);
+        const paging = document.createElement('div');
+        paging.className = 'jarvis-art-paging';
+        paging.append(previous, next, reset);
+        navigation.append(view, paging, status);
+        toolbar.append(title, filters, navigation);
         header.append(toolbar);
 
         const picker = document.createElement('div');
@@ -125,7 +130,7 @@ export class RewardArtDialog {
             event.preventDefault();
             picker.scrollLeft += event.deltaY * (event.deltaMode === 1 ? 16 : event.deltaMode === 2 ? picker.clientWidth : 1);
         }, { passive: false });
-        header.append(picker);
+        header.append(picker, close);
 
         const stage = document.createElement('div');
         stage.className = 'jarvis-art-dialog-stage';
@@ -227,14 +232,17 @@ export class RewardArtDialog {
             if (category !== 'all' && !kinds.has(category)) category = 'all';
             for (const [filter, button] of filterButtons) {
                 button.hidden = filter === 'all' ? kinds.size < 2 : !kinds.has(filter);
-                button.setAttribute('aria-pressed', String(filter === category || (category === 'all' && kinds.size === 1)));
+                const active = filter === category || (category === 'all' && kinds.size === 1);
+                button.setAttribute('aria-pressed', String(active));
+                button.classList.toggle('blue_button_L', !active);
+                button.classList.toggle('orange_button_L', active);
             }
             visible = category === 'all' ? available.filter(item => item.kind !== 'original' || item.animation ||
                 !available.some(pose => pose.kind === 'poses' && pose.url === item.url)) : available.filter(item => item.kind === category);
             if (current) index = Math.max(0, visible.findIndex(item => item.kind === current.kind && item.url === current.url));
             index = Math.min(index, Math.max(0, visible.length - 1));
             view.textContent = galleryMode ? 'One at a time' : 'Show all';
-            previous.hidden = next.hidden = reset.hidden = layer.hidden = galleryMode;
+            paging.hidden = layer.hidden = galleryMode;
             previous.disabled = next.disabled = visible.length < 2;
             gallery.hidden = !galleryMode;
             gestures.setEnabled(!galleryMode);

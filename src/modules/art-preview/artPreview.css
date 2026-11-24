@@ -168,6 +168,8 @@
 }
 
 .jarvis-art-dialog > header {
+    --jarvis-art-button-size: clamp(2rem, 4vw, 2.6rem);
+    position: relative;
     display: grid;
     grid-template-columns: repeat(2, minmax(0, 1fr));
     align-items: center;
@@ -176,43 +178,46 @@
 
 .jarvis-art-toolbar {
     display: grid;
-    grid-template-columns: minmax(0, 1fr) auto;
-    align-items: center;
-    gap: .25rem .4rem;
+    grid-template-columns: minmax(0, 1fr);
+    gap: .4rem;
     min-width: 0;
-    font-size: clamp(.75rem, 1.5vw, 1rem);
+    font: clamp(.75rem, 1.55vw, 1.1rem)/1.2 "Carter One", "Alegreya Sans", sans-serif;
 }
 
 .jarvis-art-toolbar h2 {
     min-width: 0;
     margin: 0;
-    font-size: clamp(.95rem, 2.2vw, 1.5rem);
+    font: clamp(1.05rem, 2.2vw, 1.85rem)/1.25 "Carter One", "Alegreya Sans", sans-serif;
 }
 
-.jarvis-art-toolbar h2 > button.blue_button_L {
+.jarvis-art-name {
     position: relative;
     display: block;
-    width: 100%;
-    height: 1.8em;
-    padding-inline: .2em;
+    box-sizing: border-box;
+    inline-size: 100%;
+    block-size: 1.5em;
+    margin: 0;
+    padding: 0 .15em;
     border: 0;
-    background: none;
-    box-shadow: none;
+    background: transparent;
+    color: #ffb827;
+    font: inherit;
+    letter-spacing: .22px;
     text-align: start;
-    text-overflow: ellipsis;
-    font-weight: inherit;
+    text-shadow: 1px 1px #382113, -1px -1px #382113, 0 2px 3px #000;
+    cursor: pointer;
 }
 
-.jarvis-art-toolbar h2 > button span {
+.jarvis-art-name span {
     display: block;
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
 }
 
-.jarvis-art-toolbar h2 > button[aria-expanded="true"] span {
+.jarvis-art-name[aria-expanded="true"] span {
     position: absolute;
-    z-index: 1;
+    z-index: 2;
     inset: 0 0 auto;
     padding: .25em .45em;
     border-radius: .35em;
@@ -222,47 +227,69 @@
     white-space: normal;
 }
 
-.jarvis-art-toolbar button.blue_button_L {
+.jarvis-art-toolbar button:is(.blue_button_L, .orange_button_L),
+.jarvis-art-dialog button.jarvis-art-close {
     box-sizing: border-box;
     width: auto;
     height: auto;
-    min-width: 1.75em;
-    min-height: 1.8em;
+    min-inline-size: var(--jarvis-art-button-size);
+    min-block-size: var(--jarvis-art-button-size);
     margin: 0;
-    padding: .22em .55em;
-    font-size: inherit;
-    line-height: 1.2;
+    padding: .3em .7em;
+    font: inherit;
     white-space: nowrap;
     text-shadow: 0 2px 2px #000d;
 }
 
-.jarvis-art-toolbar button[aria-pressed="true"] {
-    background: linear-gradient(#b77930, #79491e);
+.jarvis-art-dialog button.jarvis-art-close {
+    position: absolute;
+    inset-block-start: 0;
+    inset-inline-end: 0;
+    z-index: 2;
+    inline-size: var(--jarvis-art-button-size);
+    padding: 0;
+    font: 1.35rem/1 "Carter One", "Alegreya Sans", sans-serif;
+}
+
+.jarvis-art-filters,
+.jarvis-art-dialog-navigation,
+.jarvis-art-paging {
+    display: flex;
+    align-items: center;
+    gap: .3rem;
 }
 
 .jarvis-art-filters,
 .jarvis-art-dialog-navigation {
-    grid-column: 1 / -1;
-    display: flex;
-    align-items: center;
-    gap: .25em;
-}
-
-.jarvis-art-filters {
-    min-height: 1.8em;
     flex-wrap: wrap;
 }
 
+.jarvis-art-filters {
+    min-block-size: var(--jarvis-art-button-size);
+}
+
 .jarvis-art-dialog-navigation [role="status"] {
+    flex: 1 1 8em;
     min-width: 0;
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
-    text-align: center;
 }
 
-.jarvis-art-dialog-navigation > button {
+.jarvis-art-dialog-navigation > :is(button, .jarvis-art-paging),
+.jarvis-art-paging button {
     flex: none;
+}
+
+.jarvis-art-paging button.blue_button_L {
+    inline-size: var(--jarvis-art-button-size);
+    padding-inline: 0;
+    font-size: 1.35em;
+}
+
+.jarvis-art-dialog button:focus-visible {
+    outline: 2px solid #ffd66a;
+    outline-offset: -2px;
 }
 
 .jarvis-art-dialog [hidden] {
@@ -275,6 +302,7 @@
     min-width: 0;
     max-width: 100%;
     padding: .25rem;
+    margin-inline-end: calc(var(--jarvis-art-button-size) + .35rem);
     overflow: auto hidden;
     overscroll-behavior-inline: contain;
 }
@@ -311,16 +339,19 @@
 
     .jarvis-art-dialog > header:has(.jarvis-art-character-picker[hidden]) {
         grid-template-columns: minmax(0, 1fr);
+        padding-inline-end: calc(var(--jarvis-art-button-size) + .35rem);
     }
 
-    .jarvis-art-dialog-navigation {
-        flex-wrap: wrap;
+    .jarvis-art-dialog > header {
+        --jarvis-art-button-size: clamp(1.75rem, 7vw, 2rem);
+    }
+
+    .jarvis-art-toolbar button:is(.blue_button_L, .orange_button_L) {
+        padding-inline: .4em;
     }
 
     .jarvis-art-dialog-navigation [role="status"] {
         flex-basis: 100%;
-        order: 1;
-        text-align: start;
     }
 }
 

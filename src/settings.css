@@ -111,7 +111,7 @@
     flex: none;
     padding: 0;
 }
-button.jarvis-contest-pin {
+button:is(.jarvis-contest-pin, .jarvis-contest-skip) {
     all: unset;
     display: inline-block;
     margin-inline-start: .35em;
@@ -128,7 +128,17 @@ button.jarvis-contest-pin {
     content: '★';
     color: #ffd36b;
 }
-.jarvis-contest-pin:focus-visible {
+button.jarvis-contest-skip {
+    border-radius: .3em;
+}
+.jarvis-contest-skip::before {
+    content: '⊘';
+}
+.jarvis-contest-skip[aria-pressed="true"] {
+    background: #a52839;
+    color: #fff;
+}
+:is(.jarvis-contest-pin, .jarvis-contest-skip):focus-visible {
     outline: 1px solid currentColor;
 }
 .jarvis-contest-choice {
@@ -178,13 +188,13 @@ button.jarvis-contest-pin {
     text-overflow: ellipsis;
     white-space: nowrap;
 }
-.jarvis-contest-title > :is(.jarvis-contest-pin, .jarvis-contest-rank-start) {
+.jarvis-contest-title > :is(.jarvis-contest-pin, .jarvis-contest-skip, .jarvis-contest-rank-start) {
     flex: none;
     margin-inline-start: 0;
 }
 #contests .contest_header .jarvis-contest-title-stacked {
     display: grid;
-    grid-template-columns: auto minmax(0, 1fr);
+    grid-template-columns: auto auto minmax(0, 1fr);
     row-gap: .12em;
 }
 .jarvis-contest-title-stacked .jarvis-contest-title-label {
@@ -233,6 +243,7 @@ button.jarvis-contest-pin {
 .jarvis-contest-shortcuts button {
     all: unset;
     box-sizing: border-box;
+    position: relative;
     display: grid;
     place-content: center;
     gap: .15em;
@@ -257,6 +268,21 @@ button.jarvis-contest-pin {
 }
 .jarvis-contest-shortcuts button[aria-pressed="true"] {
     background: color-mix(in srgb, currentColor 27%, transparent);
+}
+.jarvis-contest-shortcuts .jarvis-contest-shortcut-skipped::after {
+    content: '×' / '';
+    position: absolute;
+    inset-block-start: -.45em;
+    inset-inline-end: -.25em;
+    display: grid;
+    place-items: center;
+    inline-size: 1.15em;
+    block-size: 1.15em;
+    border-radius: 50%;
+    background: #a52839;
+    color: #fff;
+    font-weight: bold;
+    pointer-events: none;
 }
 .jarvis-contest-shortcuts button:focus-visible {
     outline: 2px solid currentColor;

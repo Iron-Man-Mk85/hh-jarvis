@@ -1,5 +1,6 @@
 # Development notes
 
+- **0.11.4** Mark an active contest as skipped for today with the button beside its star. The top shortcut shows a red ×, and you can still open the contest from either spot.
 - **0.11.3**
   - Open art from the lower-right corner of each Love Raid card, including cards without an info icon. The viewer starts on that character and keeps the other raids in its picker.
   - Copy new raids as soon as the page controls are ready. Jarvis uses the raid data and only consults the HH++ dictionary for missing fields.

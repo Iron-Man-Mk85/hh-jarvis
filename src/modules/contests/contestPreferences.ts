@@ -19,6 +19,28 @@ export function readContestSetting(key: string): unknown {
     }
 }
 
+export const CONTEST_SKIPS_KEY = 'ContestSkips';
+
+function contestSkipDay() {
+    const now = new Date();
+    return `${now.getFullYear()}-${now.getMonth() + 1}-${now.getDate()}`;
+}
+
+export function readContestSkips(day = contestSkipDay()): Set<string> {
+    const saved = readContestSetting(CONTEST_SKIPS_KEY);
+    if (!saved || typeof saved !== 'object' || !('day' in saved) || saved.day !== day ||
+        !('ids' in saved) || !Array.isArray(saved.ids)) return new Set();
+    return new Set(saved.ids.filter(id => typeof id === 'string'));
+}
+
+export function toggleContestSkip(id: string) {
+    const day = contestSkipDay();
+    const ids = readContestSkips(day);
+    if (!ids.delete(id)) ids.add(id);
+    if (ids.size) lsSet(CONTEST_SKIPS_KEY, { day, ids: [...ids] });
+    else lsRm(CONTEST_SKIPS_KEY);
+}
+
 export function readContestDefaults() {
     const kind: ContestKind = readContestSetting('ContestKind') === 'daily' ? 'daily' : 'event';
     const savedEvent = readContestSetting('ContestEvent');

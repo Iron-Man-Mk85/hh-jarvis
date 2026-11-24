@@ -1,8 +1,10 @@
 import { settingHelp } from '../../settingsHelp';
 import { HHModule, type ModuleSettings } from '../../HHModule';
 import { $, currentPage } from '../../game';
-import { lsGet, lsSet, lsRm } from '../../storage';
-import { makeRankChoice, pruneContestRanks, readContestDefaults, readContestRank, readContestSetting, saveContestRank, selectContestChoice, type ContestEvent, type ContestKind } from './contestPreferences';
+import { LS_CONFIG_NAME, lsGet, lsSet, lsRm } from '../../storage';
+import { CONTEST_SKIPS_KEY, makeRankChoice, pruneContestRanks, readContestDefaults, readContestRank,
+    readContestSetting, readContestSkips, saveContestRank, selectContestChoice, toggleContestSkip,
+    type ContestEvent, type ContestKind } from './contestPreferences';
 import { positionContestShortcuts, renderContestShortcuts } from './contestShortcuts';
 
 type ContestCategory = ContestKind | ContestEvent;
@@ -10,6 +12,7 @@ const CONTEST_SHORT_LABELS: Record<ContestCategory, string> = {
     daily: 'DC', cbc: 'CbC', ccc: 'CCC', lc: 'LC', event: 'Event'
 };
 const CONTEST_TITLE_SELECTOR = '.contest_title, .contest_name, h3, h4, h5';
+const CONTEST_CONTROL_SELECTOR = '.jarvis-contest-pin, .jarvis-contest-skip, .jarvis-contest-rank-start';
 const INTERACTIVE_CONTENT = 'a[href], button, input, select, textarea, [contenteditable]:not([contenteditable="false"]), [tabindex]';
 const protectedPanes = new Set<HTMLElement>();
 let restoreScrollIntoView: (() => void) | undefined;
@@ -118,6 +121,7 @@ export class ContestStart extends HHModule {
     private readonly focusablePanes = new Set<HTMLElement>();
     private prunedRankRoster: string | null = null;
     private listeners: AbortController | null = null;
+    private skipResetTimer: number | undefined;
 
     constructor() {
         const baseKey = 'contestStart'
@@ -153,7 +157,7 @@ export class ContestStart extends HHModule {
 
             const title = header.querySelector<HTMLElement>(CONTEST_TITLE_SELECTOR);
             const name = title && Array.from(title.childNodes)
-                .filter(node => !(node instanceof Element) || !node.matches('.jarvis-contest-pin, .jarvis-contest-rank-start'))
+                .filter(node => !(node instanceof Element) || !node.matches(CONTEST_CONTROL_SELECTOR))
                 .map(node => node.textContent).join('').trim();
             const category = getContestCategory(contest?.category_type);
             return [{
@@ -220,9 +224,9 @@ export class ContestStart extends HHModule {
         }
     }
 
-    updateCardControls(list: HTMLElement, contests: ContestCard[]) {
+    updateCardControls(list: HTMLElement, contests: ContestCard[], skipped: ReadonlySet<string>) {
         const hosts = new Set(contests.map(({ title, header }) => title || header));
-        for (const control of list.querySelectorAll('.jarvis-contest-pin, .jarvis-contest-rank-start')) {
+        for (const control of list.querySelectorAll(CONTEST_CONTROL_SELECTOR)) {
             if (!control.parentElement || !hosts.has(control.parentElement)) control.remove();
         }
         for (const [title, text] of this.titleLabels) {
@@ -265,6 +269,31 @@ export class ContestStart extends HHModule {
             pin.setAttribute('aria-label', pinned ? `Unpin ${label}` : `Pin ${label} to open on reload`);
             pin.title = pinned ? 'Pinned. Click to unpin this contest.' : 'Open this contest when the page reloads';
 
+            let skip = host.querySelector<HTMLButtonElement>(':scope > .jarvis-contest-skip');
+            if (!skip) {
+                const button = document.createElement('button');
+                button.type = 'button';
+                button.className = 'jarvis-contest-skip';
+                button.addEventListener('click', event => {
+                    event.preventDefault();
+                    event.stopPropagation();
+                    const contestId = button.closest('.contest[id_contest]')?.getAttribute('id_contest');
+                    if (!contestId) return;
+                    try {
+                        toggleContestSkip(contestId);
+                        this.refresh();
+                    } catch (err) {
+                        console.warn('Jarvis could not save the contest skip:', err);
+                    }
+                });
+                pin.after(button);
+                skip = button;
+            }
+            const isSkipped = skipped.has(id);
+            skip.setAttribute('aria-pressed', String(isSkipped));
+            skip.setAttribute('aria-label', `Skip ${label} for today`);
+            skip.title = isSkipped ? 'Skipped for today. Click to clear the mark.' : 'Mark this contest as skipped for today';
+
             let position = host.querySelector<HTMLElement>(':scope > .jarvis-contest-rank-start');
             if (!position) {
                 const choice = makeRankChoice('Contest leaderboard start', rank => {
@@ -284,7 +313,7 @@ export class ContestStart extends HHModule {
                 });
                 choice.classList.add('jarvis-contest-rank-start');
                 choice.title = 'Leaderboard position for this contest';
-                pin.after(choice);
+                skip.after(choice);
                 position = choice;
             }
             selectContestChoice(position, readContestRank(id, this.defaults.rank));
@@ -294,7 +323,7 @@ export class ContestStart extends HHModule {
             if (!text) {
                 text = document.createElement('span');
                 text.className = 'jarvis-contest-title-label';
-                text.append(...Array.from(title.childNodes).filter(node => node !== pin && node !== position));
+                text.append(...Array.from(title.childNodes).filter(node => node !== pin && node !== skip && node !== position));
                 title.prepend(text);
                 title.classList.add('jarvis-contest-title');
                 this.titleLabels.set(title, text);
@@ -355,7 +384,7 @@ export class ContestStart extends HHModule {
             .find(panel => panel.getAttribute('id_contest') === id)?.querySelector<HTMLElement>('.lead_table_view');
     }
 
-    updateShortcuts(list: HTMLElement, right: HTMLElement, contests: ContestCard[]) {
+    updateShortcuts(list: HTMLElement, right: HTMLElement, contests: ContestCard[], skipped: ReadonlySet<string>) {
         const canvas = list.closest<HTMLElement>('#contests');
         if (!canvas) return;
 
@@ -363,7 +392,8 @@ export class ContestStart extends HHModule {
             const board = this.getLeaderboardScroller(right, id);
             const rank = header.querySelector('.personal_rewards .rank')?.textContent?.trim() ||
                 (board && this.getOwnRow(board)?.querySelector('td')?.textContent?.trim()) || '';
-            return { id, name: label, category: category ? CONTEST_SHORT_LABELS[category] : 'Contest', rank };
+            return { id, name: label, category: category ? CONTEST_SHORT_LABELS[category] : 'Contest', rank,
+                skipped: skipped.has(id) };
         });
         renderContestShortcuts(canvas, shortcuts, this.getSelectedContestId(list, right), id => this.openShortcut(id));
     }
@@ -626,7 +656,8 @@ export class ContestStart extends HHModule {
         const contests = cards.filter(card => !card.ended);
         this.pruneUnavailableRanks(list, finished);
         this.clearExpiredPin(list, contests, finished);
-        this.updateCardControls(list, contests);
+        const skipped = readContestSkips();
+        this.updateCardControls(list, contests, skipped);
 
         if (this.reposition) {
             this.reposition();
@@ -644,7 +675,17 @@ export class ContestStart extends HHModule {
             this.showLeaderboard(right, this.getSelectedContestId(list, right));
             this.switchScroll?.restore();
         }
-        this.updateShortcuts(list, right, contests);
+        this.updateShortcuts(list, right, contests, skipped);
+    }
+
+    scheduleSkipReset() {
+        window.clearTimeout(this.skipResetTimer);
+        const midnight = new Date();
+        midnight.setHours(24, 0, 0, 0);
+        this.skipResetTimer = window.setTimeout(() => {
+            this.refresh();
+            this.scheduleSkipReset();
+        }, midnight.getTime() - Date.now());
     }
 
     run({ noSwitchScroll = true }: ModuleSettings) {
@@ -658,6 +699,15 @@ export class ContestStart extends HHModule {
         this.prunedRankRoster = null;
         this.listeners = new AbortController();
         const { signal } = this.listeners;
+        this.scheduleSkipReset();
+        window.addEventListener('storage', event => {
+            if (event.key === null || event.key === `${LS_CONFIG_NAME}${CONTEST_SKIPS_KEY}`) this.refresh();
+        }, { signal });
+        document.addEventListener('visibilitychange', () => {
+            if (document.hidden) return;
+            this.scheduleSkipReset();
+            this.refresh();
+        }, { signal });
         this.titleSizes = new ResizeObserver(entries => {
             for (const { target } of entries) this.fitTitle(target as HTMLElement);
         });
@@ -688,7 +738,7 @@ export class ContestStart extends HHModule {
             }
 
             const header = target.closest('.contest_header');
-            if (!header || target.closest('.jarvis-contest-pin, .jarvis-contest-rank-start')) return;
+            if (!header || target.closest(CONTEST_CONTROL_SELECTOR)) return;
             this.focusScrollPane(this.list, target);
 
             const id = header.closest('.contest[id_contest]')?.getAttribute('id_contest');
@@ -708,6 +758,7 @@ export class ContestStart extends HHModule {
         this.observer?.disconnect();
         this.titleSizes?.disconnect();
         this.listeners?.abort();
+        window.clearTimeout(this.skipResetTimer);
         this.stopJump?.();
         this.switchScroll?.stop();
         this.startupPending = false;
@@ -716,7 +767,7 @@ export class ContestStart extends HHModule {
         }
         this.focusablePanes.clear();
         this.list?.closest('#contests')?.querySelector(':scope > .jarvis-contest-shortcuts')?.remove();
-        if (this.list) this.updateCardControls(this.list, []);
+        if (this.list) this.updateCardControls(this.list, [], new Set());
         if (this.right) this.showLeaderboard(this.right, null);
         document.getElementById('jarvis-contest-startup')?.remove();
         this.hasRun = false;

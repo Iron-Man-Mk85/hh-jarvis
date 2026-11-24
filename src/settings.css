@@ -342,6 +342,43 @@ td[data-jarvis-mark] > a {
 #events .jarvis-event-copy-row:not(:has(.controls-button-container)) {
     margin-block: .3rem 0;
 }
+.jarvis-art-launcher.blue_button_L {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    box-sizing: border-box;
+    min-inline-size: 5.75rem;
+    min-block-size: 1.6rem;
+    padding: .15rem .5rem;
+    border-radius: 999px;
+    white-space: nowrap;
+    font-size: .75rem;
+    line-height: 1.1;
+    text-shadow: 1px 1px #000, -1px -1px #000;
+}
+.jarvis-art-launcher[data-jarvis-art-anchor] {
+    position: absolute;
+    z-index: 6;
+    left: var(--jarvis-art-launcher-x);
+    top: var(--jarvis-art-launcher-y);
+    transform: translateX(-50%);
+}
+.jarvis-art-launcher[data-jarvis-art-anchor][data-jarvis-art-above] {
+    transform: translate(-50%, -100%);
+}
+#events .nc-event-container > .jarvis-art-launcher:not([data-jarvis-art-anchor]) {
+    position: absolute;
+    z-index: 6;
+    left: 8%;
+    top: 28%;
+}
+#seasons_tab_title .jarvis-art-launcher {
+    margin-inline-start: .4rem;
+    vertical-align: middle;
+}
+.league_girl.hidden_girl .jarvis-art-launcher {
+    display: none;
+}
 #events .nc-event-container .nc-event-reward-container .nc-events-prize-locations-container .jarvis-event-copy-row > button.jarvis-event-copy.blue_button_L {
     flex: none;
     display: inline-flex;

@@ -1,4 +1,4 @@
-import type { ArtGroups, ArtKind } from './gameArt';
+import type { ArtGroups, ArtItem, ArtKind } from './gameArt';
 import { playSpine } from './spinePreview';
 import { ArtGestures } from './ArtGestures';
 import css from './artPreview.css';
@@ -19,6 +19,7 @@ export class ArtPreview {
     private next: HTMLButtonElement;
     private status = document.createElement('span');
     private art: ArtGroups | null = null;
+    private originalArt: ArtItem | undefined;
     private portrait: HTMLElement | null = null;
     private replacement: HTMLElement | null = null;
     private loading: AbortController | null = null;
@@ -45,7 +46,7 @@ export class ArtPreview {
         this.controls.addEventListener('click', event => event.stopPropagation());
         const groups = document.createElement('div');
         groups.className = 'jarvis-art-groups';
-        this.originalButton = this.button('Original', () => this.reset());
+        this.originalButton = this.button('Original', () => this.showOriginal());
         groups.append(this.originalButton);
         for (const kind of kinds) {
             const button = this.button(labels[kind], () => {
@@ -113,18 +114,21 @@ export class ArtPreview {
         } else this.controls.style.removeProperty('--jarvis-art-dock-clearance');
     }
 
-    setCharacter(art: ArtGroups | null, portrait: HTMLElement | null) {
+    setCharacter(art: ArtGroups | null, portrait: HTMLElement | null, original?: ArtItem) {
+        this.originalArt = undefined;
         this.reset();
         this.portrait?.classList.remove(originalMedia);
         this.art = art;
         this.portrait = portrait;
+        this.originalArt = original;
         this.portrait?.classList.add(originalMedia);
-        this.refreshControls();
+        if (original) this.showItem();
+        else this.refreshControls();
     }
 
     setScenesEnabled(enabled: boolean) {
         this.scenesEnabled = enabled;
-        if (!enabled && this.kind === 'scenes') this.reset();
+        if (!enabled && this.kind === 'scenes') this.showOriginal();
         else this.refreshControls();
     }
 
@@ -147,7 +151,7 @@ export class ArtPreview {
     }
 
     private get items() {
-        return this.kind ? this.art?.[this.kind] ?? [] : [];
+        return this.kind ? this.art?.[this.kind] ?? [] : this.originalArt ? [this.originalArt] : [];
     }
 
     private getGestureMedia() {
@@ -169,13 +173,13 @@ export class ArtPreview {
             button.hidden = !this.art?.[kind].length || (kind === 'scenes' && !this.scenesEnabled);
             button.setAttribute('aria-pressed', String(kind === this.kind));
         }
-        this.controls.hidden = ![...this.groupButtons.values()].some(button => !button.hidden);
+        this.controls.hidden = !this.originalArt && ![...this.groupButtons.values()].some(button => !button.hidden);
         this.originalButton.setAttribute('aria-pressed', String(this.kind === null));
-        this.adjustButton.hidden = this.kind !== null;
+        this.adjustButton.hidden = this.kind !== null || Boolean(this.originalArt);
         this.adjustButton.setAttribute('aria-pressed', String(this.originalAdjust));
         this.navigation.hidden = this.kind === null;
         this.previous.disabled = this.next.disabled = this.items.length < 2;
-        this.gestures.setEnabled(!this.controls.hidden && (this.kind !== null || this.originalAdjust));
+        this.gestures.setEnabled(!this.controls.hidden && (this.kind !== null || this.originalAdjust || Boolean(this.originalArt)));
     }
 
     private clearPending() {
@@ -217,6 +221,15 @@ export class ArtPreview {
         this.index = 0;
         this.status.textContent = '';
         this.refreshControls();
+    }
+
+    private showOriginal() {
+        if (!this.originalArt) return this.reset();
+        if (this.kind === null) return;
+        this.gestures.reset();
+        this.kind = null;
+        this.index = 0;
+        this.showItem();
     }
 
     private step(delta: number) {

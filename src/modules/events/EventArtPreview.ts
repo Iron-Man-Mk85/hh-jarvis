@@ -2,8 +2,11 @@ import { currentPage } from '../../game';
 import { HHModule, type ModuleSettings } from '../../HHModule';
 import { settingHelp } from '../../settingsHelp';
 import { ArtPreview } from '../art-preview/ArtPreview';
+import { RewardArtButtons } from '../art-preview/RewardArtButtons';
 import { getArtGroups } from '../art-preview/gameArt';
 import type { EventReward } from '../../game-types';
+
+const rewardPages = new Set(['/event.html', '/path-of-valor.html', '/path-of-glory.html', '/penta-drill.html', '/season.html', '/leagues.html']);
 
 export class EventArtPreview extends HHModule {
     private observer: MutationObserver | null = null;
@@ -13,6 +16,7 @@ export class EventArtPreview extends HHModule {
     private info: HTMLElement | null = null;
     private rewardPanel: HTMLElement | null = null;
     private layout: ResizeObserver | null = null;
+    private buttons: RewardArtButtons | null = null;
     private scenesEnabled = true;
 
     constructor() {
@@ -20,21 +24,31 @@ export class EventArtPreview extends HHModule {
         super({ name: baseKey, configSchema: {
             baseKey,
             default: false,
-            label: settingHelp('Inline event previews', 'Browse the selected event character’s poses and released skins beside the main image.'),
+            label: settingHelp('Reward art preview', 'Open a viewer for reward art on events, Path of Valor, Path of Glory, Penta Drill, Season, and Leagues.'),
             subSettings: [{
                 key: 'scenes',
                 label: settingHelp('Show scene previews', 'Also browse the still scene previews that the game provides.'),
                 default: true
+            }, {
+                key: 'inline',
+                label: settingHelp('Inline event controls', 'Put preview controls beside the artwork on event pages.'),
+                default: false
             }]
         } });
     }
 
     shouldRun() {
-        return currentPage === '/event.html';
+        return rewardPages.has(currentPage);
     }
 
-    run({ scenes = true }: ModuleSettings) {
+    run({ scenes = true, inline = false }: ModuleSettings) {
         if (this.hasRun || !this.shouldRun()) return;
+        if (!inline || currentPage !== '/event.html') {
+            this.hasRun = true;
+            this.scenesEnabled = scenes;
+            this.buttons = new RewardArtButtons(currentPage, scenes);
+            return;
+        }
         const root = document.querySelector('#events');
         if (!root) return;
         this.hasRun = true;
@@ -85,12 +99,19 @@ export class EventArtPreview extends HHModule {
     }
 
     updateSubSetting(key: string, value: boolean) {
-        if (key !== 'scenes') return;
-        this.scenesEnabled = value;
-        this.viewer?.setScenesEnabled(value);
+        if (key === 'scenes') {
+            this.scenesEnabled = value;
+            this.viewer?.setScenesEnabled(value);
+            this.buttons?.setScenesEnabled(value);
+        } else if (key === 'inline' && this.hasRun && currentPage === '/event.html') {
+            this.tearDown();
+            this.run({ scenes: this.scenesEnabled, inline: value });
+        }
     }
 
     tearDown() {
+        this.buttons?.destroy();
+        this.buttons = null;
         this.observer?.disconnect();
         this.observer = null;
         this.layout?.disconnect();

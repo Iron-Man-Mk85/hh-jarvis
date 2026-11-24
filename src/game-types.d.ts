@@ -1,5 +1,5 @@
 import type { HHModule } from './HHModule';
-import type { GameArt } from './modules/art-preview/gameArt';
+import type { RewardArt } from './modules/art-preview/gameArt';
 import type { GirlAnimationRenderer } from './modules/art-preview/spinePreview';
 
 type GameId = number | string;
@@ -18,10 +18,7 @@ export interface EventRewardSource {
     sentence?: string;
 }
 
-export interface EventReward {
-    id_girl?: GameId;
-    name?: string;
-    preview?: GameArt;
+export interface EventReward extends RewardArt {
     source?: EventRewardSource;
     source_list?: Record<string, EventRewardSource[] | undefined>;
 }
@@ -84,6 +81,13 @@ declare global {
         };
         event_girls?: EventReward[];
         event_data?: { identifier?: string; girls?: EventReward[] };
+        path_girls?: RewardArt[];
+        seasons_girls?: RewardArt[];
+        leagues_girl?: RewardArt | null;
+        penta_drill_data?: {
+            girl_data?: RewardArt;
+            pass_reminder?: { penta_drill_pass?: { season_girls?: RewardArt[] }[] };
+        };
         Hero?: HeroData;
         shared?: {
             Hero?: HeroData;

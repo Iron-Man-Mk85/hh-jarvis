@@ -12,9 +12,18 @@ export interface GameArt {
 }
 
 export type ArtKind = 'poses' | 'skins' | 'scenes';
-export type SpineSkin = { format: 'spine'; path: string; filename: string; offset: number[] };
+export type SpineSkin = { format: 'spine'; path: string; filename: string; offset: number[]; isSkin?: boolean };
 export type ArtItem = { url?: string; label: string; animation?: SpineSkin | { format: 'video'; asset: string } };
 export type ArtGroups = Record<ArtKind, ArtItem[]>;
+
+export interface RewardArt {
+    id_girl?: string | number;
+    name?: string;
+    preview?: GameArt;
+    avatar?: string;
+    default_avatar?: string;
+    animated_grades?: { grade: number; format?: string; asset?: string; filename?: string; path?: string }[];
+}
 
 function assetUrl(path: string | null | undefined) {
     if (!path || !URL.canParse(path, location.href)) return undefined;
@@ -26,6 +35,27 @@ function assetUrl(path: string | null | undefined) {
 function image(path: string | null, label: string): ArtItem[] {
     const url = assetUrl(path);
     return url ? [{ url, label }] : [];
+}
+
+export function getOriginalArt(reward: RewardArt, native: HTMLElement | null): ArtItem {
+    const photo = native?.querySelector<HTMLImageElement>(':scope > img, :scope > .girl_block img');
+    const video = native?.querySelector<HTMLVideoElement>(':scope > video, :scope > .girl_block video');
+    const renderedVideo = assetUrl(video?.currentSrc || video?.getAttribute('src') || video?.querySelector('source[type="video/webm"]')?.getAttribute('src'));
+    const url = assetUrl(photo?.currentSrc || photo?.getAttribute('src')) ?? assetUrl(reward.avatar) ??
+        assetUrl(reward.default_avatar) ?? assetUrl(reward.preview?.poses?.[0]);
+    const item: ArtItem = { url, label: reward.name || 'Original' };
+    if (renderedVideo) {
+        item.animation = { format: 'video', asset: renderedVideo };
+    } else if (!native || native.querySelector('canvas.animated-girl-display')) {
+        const grade = reward.animated_grades?.find(grade => grade.grade === 0);
+        const asset = assetUrl(grade?.asset);
+        const path = assetUrl(grade?.path);
+        if (grade?.format === 'video' && asset) item.animation = { format: 'video', asset };
+        if (grade?.format === 'spine' && path && grade.filename && /^[\w-]+$/.test(grade.filename)) {
+            item.animation = { format: 'spine', path, filename: grade.filename, offset: [], isSkin: false };
+        }
+    }
+    return item;
 }
 
 export function getArtGroups(preview: GameArt): ArtGroups {

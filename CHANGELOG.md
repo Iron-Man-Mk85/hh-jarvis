@@ -1,5 +1,11 @@
 # Changelog
 
+- **0.11.5**
+  - Open a full-screen reward art viewer from events, Path of Valor, Path of Glory, Penta Drill and its roster, Season, Leagues, and Love Raids. Switch between characters and browse available originals, poses, skins, and scenes. Zoom and pan, or enable inline previews on supported events.
+  - Copy reward names from regular events, Mythic Days, and Crazy Cumback Contest. Regular and Mythic events can include a source column for Sheets. Love Raids copying is available as soon as the page controls are ready.
+  - Restore the missing Mythic Revival preview on Pornstar Harem.
+  - Skip a contest for the day using the icon beside its star. Jarvis opens another unskipped contest when available and prefers unskipped contests on reload. Skipped shortcuts turn dark red and stay clickable.
+  - Find Jarvis settings in compact category tabs. Use the dismissible Silent updates icon beside HH++ and reopen the release notes from settings.
 - **0.8.2** Show the changelog after the shop or other homepage popups close, and keep the update unread until you dismiss the notes.
 - **0.8.0**
   - Middle-click or Ctrl-click the game logo, Path of Valor, or Path of Glory to open a new tab.

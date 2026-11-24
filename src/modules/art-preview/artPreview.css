@@ -11,28 +11,47 @@
     inset: var(--jarvis-art-image-inset, 12% 25% 3%);
     width: var(--jarvis-art-image-width, 50%);
     height: var(--jarvis-art-image-height, 85%);
-    display: grid;
-    place-items: center;
     visibility: hidden;
+    translate: var(--jarvis-art-shift, none);
+    scale: var(--jarvis-art-scale, none);
 }
 
 .jarvis-art-ready {
     visibility: visible;
 }
 
-.jarvis-art-image > :is(img, video, canvas) {
+.jarvis-art-image > :is(img, video) {
+    position: absolute;
+    inset: 0;
     width: 100%;
     height: 100%;
     object-fit: contain;
-    translate: var(--jarvis-art-shift, none);
-    scale: var(--jarvis-art-scale, none);
 }
 
 .jarvis-art-image > canvas.animated-girl-display {
-    position: static !important;
-    width: min(100%, calc(var(--jarvis-art-stage-height, 26rem) * 5 / 12)) !important;
-    height: 100% !important;
-    transform: none !important;
+    position: absolute !important;
+    inset: 50% auto auto 50% !important;
+    width: var(--jarvis-art-canvas-width) !important;
+    height: var(--jarvis-art-canvas-height) !important;
+    margin: 0 !important;
+    transform: translate(-50%, -50%) scale(var(--jarvis-art-canvas-scale)) !important;
+}
+
+.jarvis-art-gestures {
+    position: absolute;
+    inset: 17% 34% 4%;
+    z-index: 1;
+    pointer-events: auto;
+    touch-action: none;
+    cursor: grab;
+}
+
+.jarvis-art-gestures[hidden] {
+    display: none !important;
+}
+
+.jarvis-art-gestures.jarvis-art-dragging {
+    cursor: grabbing;
 }
 
 .jarvis-art-scene {
@@ -79,7 +98,6 @@
 }
 
 .jarvis-art-groups,
-.jarvis-art-tools,
 .jarvis-art-navigation {
     display: flex;
     align-items: center;
@@ -88,8 +106,7 @@
     gap: .3em;
 }
 
-.jarvis-art-navigation,
-.jarvis-art-tools {
+.jarvis-art-navigation {
     margin-top: .35em;
     flex-wrap: nowrap;
 }
@@ -103,4 +120,17 @@
 
 .jarvis-art-controls .blue_button_L[aria-pressed="true"] {
     filter: brightness(1.45) saturate(1.25);
+}
+
+#events .jarvis-art-controls {
+    --jarvis-art-controls-start: 50%;
+    --jarvis-art-controls-top: .4rem;
+    --jarvis-art-controls-end: auto;
+    --jarvis-art-controls-width: 40%;
+    transform: translateX(-50%);
+}
+
+#events .jarvis-art-preview {
+    --jarvis-art-image-inset: 24% 25% 3%;
+    --jarvis-art-image-height: 73%;
 }

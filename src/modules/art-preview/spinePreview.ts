@@ -31,8 +31,13 @@ export function playSpine(host: HTMLElement, skin: SpineSkin, signal: AbortSigna
     };
     try {
         const height = host.clientHeight;
-        host.style.setProperty('--jarvis-art-stage-height', `${height}px`);
-        const scale = height / 4800;
+        const width = Math.min(host.clientWidth, height * 5 / 12);
+        const density = Math.max(3, Math.min(4, window.devicePixelRatio || 1));
+        // The game sizes its drawing buffer from the canvas layout dimensions.
+        host.style.setProperty('--jarvis-art-canvas-width', `${Math.round(width * density)}px`);
+        host.style.setProperty('--jarvis-art-canvas-height', `${Math.round(height * density)}px`);
+        host.style.setProperty('--jarvis-art-canvas-scale', String(1 / density));
+        const scale = height * density / 4800;
         playback = renderer.displayGirlAnimation(playbacks, $(host), skin, { scale, disable_offset: true }, true);
     } catch {
         dispose();

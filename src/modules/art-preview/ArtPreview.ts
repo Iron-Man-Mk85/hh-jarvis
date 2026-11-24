@@ -1,5 +1,6 @@
 import type { ArtGroups, ArtKind } from './gameArt';
 import { playSpine } from './spinePreview';
+import { ArtGestures } from './ArtGestures';
 import css from './artPreview.css';
 
 const labels = { poses: 'Poses', skins: 'Skins', scenes: 'Scenes' } as const;
@@ -24,10 +25,9 @@ export class ArtPreview {
     private kind: ArtKind | null = null;
     private index = 0;
     private scenesEnabled: boolean;
-    private zoom = 100;
-    private x = 0;
-    private y = 0;
-    private resetView: HTMLButtonElement;
+    private gestures: ArtGestures;
+    private adjustButton: HTMLButtonElement;
+    private originalAdjust = false;
 
     constructor(readonly host: HTMLElement, scenesEnabled: boolean, readonly controlHost = host) {
         this.scenesEnabled = scenesEnabled;
@@ -35,6 +35,7 @@ export class ArtPreview {
         document.head.append(this.style);
 
         this.layer.className = 'jarvis-art-preview';
+        this.gestures = new ArtGestures(this.host, this.layer, (zoom, x, y) => this.applyFraming(zoom, x, y));
         this.controls.className = 'jarvis-art-controls';
         this.controls.setAttribute('role', 'group');
         this.controls.setAttribute('aria-label', 'Inline art preview');
@@ -46,6 +47,7 @@ export class ArtPreview {
         for (const kind of kinds) {
             const button = this.button(labels[kind], () => {
                 if (kind === this.kind) return;
+                this.gestures.reset();
                 this.kind = kind;
                 this.index = 0;
                 this.showItem();
@@ -53,6 +55,12 @@ export class ArtPreview {
             this.groupButtons.set(kind, button);
             groups.append(button);
         }
+        this.adjustButton = this.button('Adjust', () => {
+            this.originalAdjust = !this.originalAdjust;
+            this.refreshControls();
+        });
+        this.adjustButton.title = 'Enable wheel zoom and drag to move the original art';
+        groups.append(this.adjustButton);
 
         this.navigation.className = 'jarvis-art-navigation';
         this.previous = this.button('‹', () => this.step(-1));
@@ -61,19 +69,7 @@ export class ArtPreview {
         this.next.setAttribute('aria-label', 'Next preview');
         this.status.setAttribute('role', 'status');
         this.navigation.append(this.previous, this.status, this.next);
-        const zoom = document.createElement('div');
-        zoom.className = 'jarvis-art-tools';
-        zoom.append(this.button('−', () => this.zoomBy(-20), 'Zoom out'));
-        this.resetView = this.button('100%', () => this.resetFraming(), 'Reset zoom and position');
-        zoom.append(this.resetView, this.button('+', () => this.zoomBy(20), 'Zoom in'));
-
-        const pan = document.createElement('div');
-        pan.className = 'jarvis-art-tools';
-        pan.append(this.button('←', () => this.move(-1, 0), 'Move art left'),
-            this.button('↑', () => this.move(0, -1), 'Move art up'),
-            this.button('↓', () => this.move(0, 1), 'Move art down'),
-            this.button('→', () => this.move(1, 0), 'Move art right'));
-        this.controls.append(groups, this.navigation, zoom, pan);
+        this.controls.append(groups, this.navigation);
         this.controlHost.append(this.controls);
         this.host.append(this.layer);
         this.refreshControls();
@@ -85,7 +81,6 @@ export class ArtPreview {
 
     setCharacter(art: ArtGroups | null, portrait: HTMLElement | null) {
         this.reset();
-        this.resetFraming();
         this.portrait?.classList.remove(originalMedia);
         this.art = art;
         this.portrait = portrait;
@@ -101,22 +96,18 @@ export class ArtPreview {
 
     destroy() {
         this.clearImage();
-        this.resetFraming();
+        this.gestures.reset();
         this.portrait?.classList.remove(originalMedia);
         this.layer.remove();
         this.controls.remove();
         this.style.remove();
     }
 
-    private button(label: string, action: () => void, accessibleLabel?: string) {
+    private button(label: string, action: () => void) {
         const button = document.createElement('button');
         button.type = 'button';
         button.className = 'blue_button_L';
         button.textContent = label;
-        if (accessibleLabel) {
-            button.title = accessibleLabel;
-            button.setAttribute('aria-label', accessibleLabel);
-        }
         button.addEventListener('click', action);
         return button;
     }
@@ -132,8 +123,11 @@ export class ArtPreview {
         }
         this.controls.hidden = ![...this.groupButtons.values()].some(button => !button.hidden);
         this.originalButton.setAttribute('aria-pressed', String(this.kind === null));
+        this.adjustButton.hidden = this.kind !== null;
+        this.adjustButton.setAttribute('aria-pressed', String(this.originalAdjust));
         this.navigation.hidden = this.kind === null;
         this.previous.disabled = this.next.disabled = this.items.length < 2;
+        this.gestures.setEnabled(!this.controls.hidden && (this.kind !== null || this.originalAdjust));
     }
 
     private clearImage() {
@@ -144,26 +138,8 @@ export class ArtPreview {
         this.portrait?.classList.remove(hiddenPortrait);
     }
 
-    private zoomBy(step: number) {
-        this.zoom = Math.min(260, Math.max(60, this.zoom + step));
-        this.applyFraming();
-    }
-
-    private move(dx: number, dy: number) {
-        this.x = Math.min(9, Math.max(-9, this.x + dx));
-        this.y = Math.min(9, Math.max(-9, this.y + dy));
-        this.applyFraming();
-    }
-
-    private resetFraming() {
-        this.zoom = 100;
-        this.x = this.y = 0;
-        this.applyFraming();
-    }
-
-    private applyFraming() {
-        this.resetView.textContent = `${this.zoom}%`;
-        const changed = this.zoom !== 100 || this.x !== 0 || this.y !== 0;
+    private applyFraming(zoom: number, x: number, y: number) {
+        const changed = zoom !== 1 || x !== 0 || y !== 0;
         this.portrait?.toggleAttribute('data-jarvis-art-framed', changed);
         for (const node of [this.portrait, this.layer]) {
             if (!node) continue;
@@ -171,15 +147,17 @@ export class ArtPreview {
                 node.style.removeProperty('--jarvis-art-shift');
                 node.style.removeProperty('--jarvis-art-scale');
             } else {
-                node.style.setProperty('--jarvis-art-shift', `${this.x}rem ${this.y}rem`);
-                node.style.setProperty('--jarvis-art-scale', String(this.zoom / 100));
+                node.style.setProperty('--jarvis-art-shift', `${x}px ${y}px`);
+                node.style.setProperty('--jarvis-art-scale', String(zoom));
             }
         }
     }
 
     private reset() {
         this.clearImage();
+        this.gestures.reset();
         this.kind = null;
+        this.originalAdjust = false;
         this.index = 0;
         this.status.textContent = '';
         this.refreshControls();

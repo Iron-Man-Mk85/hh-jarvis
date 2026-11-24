@@ -47,7 +47,7 @@ export class ArtPreview {
         for (const kind of kinds) {
             const button = this.button(labels[kind], () => {
                 if (kind === this.kind) return;
-                this.gestures.reset();
+                if (this.kind === null) this.gestures.reset();
                 this.kind = kind;
                 this.index = 0;
                 this.showItem();
@@ -57,10 +57,14 @@ export class ArtPreview {
         }
         this.adjustButton = this.button('Adjust', () => {
             this.originalAdjust = !this.originalAdjust;
+            if (!this.originalAdjust) this.gestures.reset();
             this.refreshControls();
         });
         this.adjustButton.title = 'Enable wheel zoom and drag to move the original art';
         groups.append(this.adjustButton);
+        const resetView = this.button('Reset', () => this.gestures.reset());
+        resetView.title = 'Reset zoom and position';
+        groups.append(resetView);
 
         this.navigation.className = 'jarvis-art-navigation';
         this.previous = this.button('‹', () => this.step(-1));
@@ -77,6 +81,19 @@ export class ArtPreview {
 
     get mounted() {
         return this.layer.isConnected && this.controls.isConnected;
+    }
+
+    dockBefore(anchor: HTMLElement | null) {
+        const bounds = this.controlHost.getBoundingClientRect();
+        const target = anchor?.getBoundingClientRect();
+        const visible = Boolean(target?.width && target.height && bounds.width && bounds.height);
+        this.controls.toggleAttribute('data-jarvis-art-docked', visible);
+        if (!visible || !target) return;
+
+        const x = (target.left - bounds.left) * this.controlHost.clientWidth / bounds.width - 8;
+        const y = (target.top + target.height / 2 - bounds.top) * this.controlHost.clientHeight / bounds.height;
+        this.controls.style.setProperty('--jarvis-art-anchor-x', `${x}px`);
+        this.controls.style.setProperty('--jarvis-art-anchor-y', `${y}px`);
     }
 
     setCharacter(art: ArtGroups | null, portrait: HTMLElement | null) {

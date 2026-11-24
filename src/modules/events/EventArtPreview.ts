@@ -10,6 +10,8 @@ export class EventArtPreview extends HHModule {
     private viewer: ArtPreview | null = null;
     private reward: EventReward | undefined;
     private slide: HTMLElement | null = null;
+    private info: HTMLElement | null = null;
+    private layout: ResizeObserver | null = null;
     private scenesEnabled = true;
 
     constructor() {
@@ -48,8 +50,22 @@ export class EventArtPreview extends HHModule {
             if (!this.viewer?.mounted || host !== this.viewer.host || eventPanel !== this.viewer.controlHost) {
                 this.viewer?.destroy();
                 this.viewer = host && eventPanel && reward?.preview ? new ArtPreview(host, this.scenesEnabled, eventPanel) : null;
+                this.layout?.disconnect();
+                this.info = null;
                 this.reward = undefined;
                 this.slide = null;
+            }
+            const info = eventPanel?.querySelector<HTMLElement>('.nc-event-reward-container.selected .girl-information') ?? null;
+            if (info !== this.info && this.viewer && eventPanel) {
+                this.info = info;
+                this.layout?.disconnect();
+                this.viewer.dockBefore(info);
+                if (info) {
+                    this.layout = new ResizeObserver(() => this.viewer?.dockBefore(info));
+                    this.layout.observe(info);
+                    if (info.parentElement) this.layout.observe(info.parentElement);
+                    this.layout.observe(eventPanel);
+                }
             }
             if (reward === this.reward && slide === this.slide) return;
             this.reward = reward;
@@ -70,6 +86,9 @@ export class EventArtPreview extends HHModule {
     tearDown() {
         this.observer?.disconnect();
         this.observer = null;
+        this.layout?.disconnect();
+        this.layout = null;
+        this.info = null;
         this.viewer?.destroy();
         this.viewer = null;
         this.reward = undefined;

@@ -80,13 +80,15 @@ export class ArtGestures {
     }
 
     private setZoom(zoom: number) {
-        this.zoom = Math.max(.6, Math.min(2.6, zoom));
-        this.apply(this.zoom, this.x, this.y);
+        if (!Number.isFinite(zoom)) return;
+        this.zoom = Math.max(.6, zoom);
+        this.setPosition(this.x, this.y);
     }
 
     private setPosition(x: number, y: number) {
-        const limitX = this.host.clientWidth * .65;
-        const limitY = this.host.clientHeight * .65;
+        const range = .85 * Math.max(1, this.zoom);
+        const limitX = this.host.clientWidth * range;
+        const limitY = this.host.clientHeight * range;
         this.x = Math.max(-limitX, Math.min(limitX, x));
         this.y = Math.max(-limitY, Math.min(limitY, y));
         this.apply(this.zoom, this.x, this.y);

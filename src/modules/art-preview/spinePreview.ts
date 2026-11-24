@@ -32,7 +32,7 @@ export function playSpine(host: HTMLElement, skin: SpineSkin, signal: AbortSigna
     try {
         const height = host.clientHeight;
         const width = Math.min(host.clientWidth, height * 5 / 12);
-        const density = Math.max(3, Math.min(4, window.devicePixelRatio || 1));
+        const density = Math.min(4096 / height, Math.max(6, Math.ceil((window.devicePixelRatio || 1) * 4)));
         // The game sizes its drawing buffer from the canvas layout dimensions.
         host.style.setProperty('--jarvis-art-canvas-width', `${Math.round(width * density)}px`);
         host.style.setProperty('--jarvis-art-canvas-height', `${Math.round(height * density)}px`);

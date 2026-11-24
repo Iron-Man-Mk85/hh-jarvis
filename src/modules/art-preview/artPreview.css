@@ -86,10 +86,13 @@
 
 .jarvis-art-controls .blue_button_L {
     width: auto;
-    min-width: 2.5em;
     height: auto;
-    min-height: 2.2em;
-    padding: .15em .55em;
+    min-width: 1.75rem;
+    min-height: 1.4rem;
+    padding: .1rem .35rem;
+    font-size: inherit;
+    line-height: 1.1;
+    text-shadow: var(--jarvis-event-text-outline, 0 1px 2px #000);
 }
 
 .jarvis-art-controls [hidden],
@@ -115,7 +118,7 @@
     flex: 1;
     text-align: center;
     overflow-wrap: anywhere;
-    text-shadow: 0 1px 3px #000;
+    text-shadow: var(--jarvis-event-text-outline, 0 1px 2px #000);
 }
 
 .jarvis-art-controls .blue_button_L[aria-pressed="true"] {
@@ -123,14 +126,16 @@
 }
 
 #events .jarvis-art-controls {
-    --jarvis-art-controls-start: 50%;
-    --jarvis-art-controls-top: .4rem;
+    --jarvis-art-controls-start: 8%;
+    --jarvis-art-controls-top: 28%;
     --jarvis-art-controls-end: auto;
-    --jarvis-art-controls-width: 40%;
-    transform: translateX(-50%);
+    --jarvis-art-controls-width: 10.5rem;
+    font-size: .7rem;
 }
 
-#events .jarvis-art-preview {
-    --jarvis-art-image-inset: 24% 25% 3%;
-    --jarvis-art-image-height: 73%;
+.jarvis-art-controls[data-jarvis-art-docked] {
+    left: var(--jarvis-art-anchor-x);
+    top: var(--jarvis-art-anchor-y);
+    right: auto;
+    transform: translate(-100%, -50%);
 }

@@ -87,9 +87,9 @@ export class RewardArtDialog {
         filters.setAttribute('aria-label', 'Artwork type');
         const filterButtons = new Map((Object.keys(labels) as Filter[]).map(filter => {
             const button = control(labels[filter], () => {
-                if (category === filter) return;
-                category = filter;
-                index = 0;
+                if (preferredFilter === filter) return;
+                preferredFilter = filter;
+                preferredIndex = 0;
                 gestures.reset();
                 render();
             });
@@ -174,7 +174,8 @@ export class RewardArtDialog {
 
         let selected = -1;
         let index = 0;
-        let category: Filter = 'all';
+        let preferredIndex = 0;
+        let preferredFilter: Filter = 'all';
         let galleryMode = galleryOnOpen;
         let artwork: Artwork[] = [];
         let visible: Artwork[] = [];
@@ -271,7 +272,7 @@ export class RewardArtDialog {
             };
             visible.forEach((item, itemIndex) => {
                 const tile = control('', () => {
-                    index = itemIndex;
+                    preferredIndex = itemIndex;
                     galleryMode = false;
                     render();
                     view.focus();
@@ -293,20 +294,21 @@ export class RewardArtDialog {
         const step = (delta: number) => {
             if (galleryMode || visible.length < 2) return;
             index = (index + delta + visible.length) % visible.length;
+            preferredIndex = index;
             showItem();
         };
         const render = (current?: Artwork) => {
             const available = artwork.filter(item => item.kind !== 'scenes' || this.scenesEnabled);
             const kinds = new Set(available.map(item => item.kind));
-            if (category !== 'all' && !kinds.has(category)) category = 'all';
+            const category = preferredFilter !== 'all' && kinds.has(preferredFilter) ? preferredFilter : 'all';
             for (const [filter, button] of filterButtons) {
                 button.hidden = filter === 'all' ? kinds.size < 2 : !kinds.has(filter);
                 button.setAttribute('aria-pressed', String(filter === category || (category === 'all' && kinds.size === 1)));
             }
             visible = category === 'all' ? available.filter(item => item.kind !== 'original' || item.animation ||
                 !available.some(pose => pose.kind === 'poses' && pose.url === item.url)) : available.filter(item => item.kind === category);
-            if (current) index = Math.max(0, visible.findIndex(item => item.kind === current.kind && item.url === current.url));
-            index = Math.min(index, Math.max(0, visible.length - 1));
+            const matchingIndex = current ? visible.findIndex(item => item.kind === current.kind && item.url === current.url) : -1;
+            index = matchingIndex >= 0 ? matchingIndex : Math.min(preferredIndex, Math.max(0, visible.length - 1));
             view.textContent = galleryMode ? 'One at a time' : 'Show all';
             paging.hidden = layer.hidden = galleryMode;
             previous.disabled = next.disabled = visible.length < 2;
@@ -325,15 +327,13 @@ export class RewardArtDialog {
             fullName.textContent = entries[selected].reward.name || 'Reward art';
             name.setAttribute('aria-expanded', 'false');
             artwork = artworkFor(entries[selected]);
-            category = 'all';
-            index = 0;
             clearDisplayed();
-            gestures.reset();
+            gestures.setEnabled(false);
             render();
             const entry = entries[selected];
             void entry.loadDetails?.().then(reward => {
                 if (!reward || this.session?.refresh !== render || selected !== entryIndex) return;
-                const current = visible[index];
+                const current = index === preferredIndex ? visible[index] : undefined;
                 fullName.textContent = reward.name || fullName.textContent;
                 artwork = artworkFor({ ...entry, reward });
                 render(current);

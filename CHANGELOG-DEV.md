@@ -1,5 +1,9 @@
 # Development notes
 
+- **0.11.6**
+  - Open art with a small camera button on reward cards. The viewer puts the name and controls at the top, and the character portraits scroll sideways with the mouse wheel.
+  - View all available pictures for a character together, or look through them one at a time with the arrow controls. Click a shortened name to read it in full.
+  - Open one shared viewer from the Seasonal Event overview or market. On character pages, the camera opens that character’s gallery directly.
 - **0.11.5** Switch to an unskipped contest when you skip the open one, and prefer unskipped contests on reload. Skipped shortcuts use a dark red fill, and the skip icon beside the star lights up when active.
 - **0.11.4** Mark an active contest as skipped for today with the button beside its star. The top shortcut shows a red ×, and you can still open the contest from either spot.
 - **0.11.3**

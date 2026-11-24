@@ -65,7 +65,8 @@ export class RewardArtDialog {
         const dialog = document.createElement('dialog');
         dialog.className = 'jarvis-art-dialog container-special-bg';
         dialog.setAttribute('aria-labelledby', 'jarvis-art-dialog-title');
-        const header = document.createElement('header');
+        const header = document.createElement('div');
+        header.className = 'jarvis-art-dialog-header';
         const toolbar = document.createElement('div');
         toolbar.className = 'jarvis-art-toolbar';
         const title = document.createElement('h2');

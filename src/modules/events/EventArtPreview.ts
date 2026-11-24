@@ -67,7 +67,10 @@ export class EventArtPreview extends HHModule {
                     this.layout.observe(eventPanel);
                 }
             }
-            if (reward === this.reward && slide === this.slide) return;
+            if (reward === this.reward && slide === this.slide) {
+                this.viewer?.refreshGestureArea();
+                return;
+            }
             this.reward = reward;
             this.slide = slide;
             this.viewer?.setCharacter(reward?.preview && slide ? getArtGroups(reward.preview) : null, slide);

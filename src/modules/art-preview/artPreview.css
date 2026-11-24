@@ -39,7 +39,6 @@
 
 .jarvis-art-gestures {
     position: absolute;
-    inset: 17% 34% 4%;
     z-index: 1;
     pointer-events: auto;
     touch-action: none;

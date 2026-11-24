@@ -35,7 +35,8 @@ export class ArtPreview {
         document.head.append(this.style);
 
         this.layer.className = 'jarvis-art-preview';
-        this.gestures = new ArtGestures(this.host, this.layer, (zoom, x, y) => this.applyFraming(zoom, x, y));
+        this.gestures = new ArtGestures(this.layer, this.controlHost, () => this.getGestureMedia(),
+            (zoom, x, y) => this.applyFraming(zoom, x, y));
         this.controls.className = 'jarvis-art-controls';
         this.controls.setAttribute('role', 'group');
         this.controls.setAttribute('aria-label', 'Inline art preview');
@@ -83,6 +84,10 @@ export class ArtPreview {
         return this.layer.isConnected && this.controls.isConnected;
     }
 
+    refreshGestureArea() {
+        this.gestures.refresh();
+    }
+
     dockBefore(anchor: HTMLElement | null) {
         const bounds = this.controlHost.getBoundingClientRect();
         const target = anchor?.getBoundingClientRect();
@@ -113,7 +118,7 @@ export class ArtPreview {
 
     destroy() {
         this.clearImage();
-        this.gestures.reset();
+        this.gestures.destroy();
         this.portrait?.classList.remove(originalMedia);
         this.layer.remove();
         this.controls.remove();
@@ -131,6 +136,20 @@ export class ArtPreview {
 
     private get items() {
         return this.kind ? this.art?.[this.kind] ?? [] : [];
+    }
+
+    private getGestureMedia() {
+        type Media = HTMLImageElement | HTMLCanvasElement | HTMLVideoElement;
+        if (this.replacement?.classList.contains('jarvis-art-ready')) {
+            return this.replacement.querySelector<Media>('img, canvas, video');
+        }
+        for (const selector of ['canvas', 'video', 'img.slide-img', 'img']) {
+            const element = this.portrait?.querySelector<Media>(selector);
+            if (!element?.getClientRects().length) continue;
+            const style = getComputedStyle(element);
+            if (style.visibility === 'visible' && Number(style.opacity) > 0) return element;
+        }
+        return null;
     }
 
     private refreshControls() {
@@ -209,6 +228,7 @@ export class ArtPreview {
             stage.removeAttribute('aria-hidden');
             this.portrait?.classList.add(hiddenPortrait);
             this.status.textContent = `${item.label} · ${this.index + 1}/${this.items.length}`;
+            this.gestures.fitViewport();
         };
         const unavailable = () => {
             this.status.textContent = 'Preview unavailable';

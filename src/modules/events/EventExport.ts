@@ -74,15 +74,15 @@ export class EventExport extends HHModule {
         if (this.hasRun || !this.shouldRun()) return;
         const event = new URLSearchParams(location.search).get('tab') ?? window.event_data?.identifier ?? '';
         const match = event.match(supportedTab);
-        const tabs = document.querySelector('#events .nc-panel-header .events-list');
-        if (!match || !tabs) return;
+        const eventPanel = document.querySelector('#events .nc-event-container');
+        if (!match || !eventPanel) return;
         const [, kind, id] = match;
         this.hasRun = true;
         this.includeSources = includeSources;
 
         const button = document.createElement('button');
         button.type = 'button';
-        button.className = 'jarvis-setting-action jarvis-event-copy';
+        button.className = 'blue_button_L jarvis-event-copy';
         const label = document.createElement('span');
         label.setAttribute('aria-live', 'polite');
         label.textContent = 'Copy event names';
@@ -112,7 +112,7 @@ export class EventExport extends HHModule {
                 }
             }
         });
-        tabs.appendChild(button);
+        eventPanel.appendChild(button);
         this.button = button;
     }
 

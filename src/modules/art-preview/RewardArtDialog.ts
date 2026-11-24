@@ -32,6 +32,16 @@ function scrollSideways(strip: HTMLElement) {
     }, { passive: false });
 }
 
+function observeStrip(strip: HTMLElement, onVisibility: (node: Element, visible: boolean) => void) {
+    return new IntersectionObserver(entries => {
+        const bounds = strip.getBoundingClientRect();
+        for (const { target, intersectionRatio } of entries) {
+            const tile = target.getBoundingClientRect();
+            onVisibility(target, intersectionRatio > 0 && tile.left < bounds.right && tile.right > bounds.left);
+        }
+    }, { root: strip, threshold: [0, .001] });
+}
+
 function artworkFor({ reward, native }: RewardArtEntry): Artwork[] {
     const groups = getArtGroups(reward.preview ?? {});
     const original = getOriginalArt(reward, native ?? null);
@@ -114,6 +124,13 @@ export class RewardArtDialog {
         picker.className = 'jarvis-art-character-picker hh-scroll';
         picker.setAttribute('role', 'group');
         picker.setAttribute('aria-label', 'Characters');
+        const thumbnails = new Map<Element, () => void>();
+        const pickerObserver = observeStrip(picker, (choice, visible) => {
+            if (!visible) return;
+            pickerObserver.unobserve(choice);
+            thumbnails.get(choice)?.();
+            thumbnails.delete(choice);
+        });
         const choices = entries.length > 1 ? entries.map(({ reward }, entryIndex) => {
             const label = reward.name || `Character ${entryIndex + 1}`;
             const choice = control(label, () => selectCharacter(entryIndex));
@@ -123,12 +140,14 @@ export class RewardArtDialog {
             choice.title = label;
             const thumbnail = rewardThumbnail(reward);
             if (thumbnail) {
-                const icon = document.createElement('img');
-                icon.alt = '';
-                icon.loading = 'lazy';
-                icon.addEventListener('error', () => { choice.textContent = label; }, { once: true });
-                icon.src = thumbnail;
-                choice.replaceChildren(icon);
+                thumbnails.set(choice, () => {
+                    const icon = document.createElement('img');
+                    icon.alt = '';
+                    icon.addEventListener('error', () => { choice.textContent = label; }, { once: true });
+                    choice.replaceChildren(icon);
+                    icon.src = thumbnail;
+                });
+                pickerObserver.observe(choice);
             }
             picker.append(choice);
             return choice;
@@ -158,7 +177,7 @@ export class RewardArtDialog {
         let visible: Artwork[] = [];
         let displayed: { media: HTMLElement; load: AbortController } | undefined;
         let pending: typeof displayed;
-        let galleryLoad: AbortController | undefined;
+        let stopGallery: (() => void) | undefined;
 
         const gestures = new ArtGestures(layer, stage, () => displayed?.media.querySelector('img, canvas, video') ?? null,
             (zoom, x, y) => {
@@ -211,8 +230,43 @@ export class RewardArtDialog {
             clearPending();
             clearDisplayed();
             const load = new AbortController();
-            galleryLoad = load;
-            visible.forEach((item, itemIndex) => {
+            const tiles = new Map<HTMLElement, { item: Artwork; media: HTMLElement; started: boolean; visible: boolean }>();
+            const observer = observeStrip(gallery, (element, shown) => {
+                if (load.signal.aborted) return;
+                const tile = element as HTMLElement;
+                const state = tiles.get(tile);
+                if (!state) return;
+                state.visible = shown;
+                const { media, item } = state;
+                if (state.started) {
+                    const video = media.querySelector('video');
+                    if (!video || !media.classList.contains('jarvis-art-ready')) return;
+                    if (shown) void video.play().catch(() => {});
+                    else video.pause();
+                    return;
+                }
+                if (!shown) return;
+                state.started = true;
+                mountArt(media, item, load.signal, () => {
+                    const photo = media.querySelector('img');
+                    const video = media.querySelector('video');
+                    const width = photo?.naturalWidth ?? video?.videoWidth;
+                    const height = photo?.naturalHeight ?? video?.videoHeight;
+                    if (width && height) tile.style.setProperty('--jarvis-art-ratio', String(width / height));
+                    media.classList.add('jarvis-art-ready');
+                    if (video) {
+                        if (!state.visible) video.pause();
+                    } else observer.unobserve(tile);
+                }, () => {
+                    observer.unobserve(tile);
+                    media.textContent = 'Preview unavailable';
+                });
+            });
+            stopGallery = () => {
+                observer.disconnect();
+                load.abort();
+            };
+            const buttons = visible.map((item, itemIndex) => {
                 const tile = control('', () => {
                     index = itemIndex;
                     galleryMode = false;
@@ -222,15 +276,17 @@ export class RewardArtDialog {
                 tile.className = 'jarvis-art-tile';
                 tile.title = item.label;
                 tile.setAttribute('aria-label', `Open ${item.label}`);
+                if (item.animation?.format === 'spine') tile.style.setProperty('--jarvis-art-ratio', String(5 / 12));
                 const media = document.createElement('span');
                 media.className = 'jarvis-art-tile-media';
                 tile.append(media);
                 gallery.append(tile);
-                mountArt(media, item, load.signal, () => { media.classList.add('jarvis-art-ready'); }, () => {
-                    media.textContent = 'Preview unavailable';
-                }, true);
+                tiles.set(tile, { item, media, started: false, visible: false });
+                return tile;
             });
             gallery.scrollLeft = 0;
+            if (index > 0 && buttons[index]) gallery.scrollLeft = buttons[index].offsetLeft - buttons[0].offsetLeft;
+            for (const button of buttons) observer.observe(button);
             status.textContent = visible.length ? `${visible.length} ${visible.length === 1 ? 'image' : 'images'}` : 'No artwork available';
         };
         const step = (delta: number) => {
@@ -258,7 +314,8 @@ export class RewardArtDialog {
             previous.disabled = next.disabled = visible.length < 2;
             gallery.hidden = !galleryMode;
             gestures.setEnabled(!galleryMode);
-            galleryLoad?.abort();
+            stopGallery?.();
+            stopGallery = undefined;
             gallery.replaceChildren();
             if (galleryMode) showGallery();
             else showItem();
@@ -290,7 +347,8 @@ export class RewardArtDialog {
             close: () => {
                 clearPending();
                 clearDisplayed();
-                galleryLoad?.abort();
+                pickerObserver.disconnect();
+                stopGallery?.();
                 gestures.destroy();
                 dialog.close();
                 dialog.remove();

@@ -18,6 +18,9 @@ let nextAnimation = 0;
 export function playSpine(host: HTMLElement, skin: SpineSkin, signal: AbortSignal, ready: () => void, failed: () => void) {
     const renderer = window.shared?.girl_animation;
     if (!renderer?.displayGirlAnimation || !renderer.removeCurrentAnimations) return false;
+    const availableHeight = () => Math.min(host.clientHeight, host.clientWidth * 12 / 5);
+    const height = availableHeight();
+    if (!height) return false;
 
     // The game clears its own animation array when switching rewards. Keep our canvas separate.
     const storage = window as unknown as Record<string, unknown>;
@@ -25,20 +28,26 @@ export function playSpine(host: HTMLElement, skin: SpineSkin, signal: AbortSigna
     const playbacks: SpinePlayback[] = [];
     storage[key] = playbacks;
     let playback: SpinePlayback;
+    let layout: ResizeObserver | undefined;
     const dispose = () => {
+        layout?.disconnect();
         renderer.removeCurrentAnimations(key);
         delete storage[key];
     };
     try {
-        const height = host.clientHeight;
-        const width = Math.min(host.clientWidth, height * 5 / 12);
+        const width = height * 5 / 12;
         const density = Math.min(4096 / height, Math.max(6, Math.ceil((window.devicePixelRatio || 1) * 4)));
+        const canvasHeight = Math.round(height * density);
         // The game sizes its drawing buffer from the canvas layout dimensions.
         host.style.setProperty('--jarvis-art-canvas-width', `${Math.round(width * density)}px`);
-        host.style.setProperty('--jarvis-art-canvas-height', `${Math.round(height * density)}px`);
+        host.style.setProperty('--jarvis-art-canvas-height', `${canvasHeight}px`);
         host.style.setProperty('--jarvis-art-canvas-scale', String(1 / density));
         const scale = height * density / 4800;
         playback = renderer.displayGirlAnimation(playbacks, $(host), skin, { scale, disable_offset: true }, skin.isSkin !== false);
+        layout = new ResizeObserver(() => {
+            host.style.setProperty('--jarvis-art-canvas-scale', String(availableHeight() / canvasHeight));
+        });
+        layout.observe(host);
     } catch {
         dispose();
         return false;
@@ -61,7 +70,10 @@ export function playSpine(host: HTMLElement, skin: SpineSkin, signal: AbortSigna
         }
         requestAnimationFrame(check);
     };
-    signal.addEventListener('abort', () => { if (started) dispose(); }, { once: true });
+    signal.addEventListener('abort', () => {
+        layout?.disconnect();
+        if (started) dispose();
+    }, { once: true });
     requestAnimationFrame(check);
     return true;
 }

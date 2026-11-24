@@ -354,9 +354,10 @@
 }
 
 .jarvis-art-dialog-stage {
-    flex: 1;
+    flex: 1 1 0;
     min-height: 0;
     position: relative;
+    overflow: hidden;
 }
 
 .jarvis-art-dialog .jarvis-art-image {
@@ -366,19 +367,22 @@
 }
 
 .jarvis-art-gallery {
-    box-sizing: border-box;
+    position: absolute;
+    inset: 0;
+    container-type: size;
     display: flex;
-    gap: .5rem;
-    height: 100%;
-    padding-inline: .5rem;
+    gap: clamp(1rem, 2.5vw, 2.5rem);
+    padding-inline: clamp(.75rem, 2vw, 2rem);
     overflow: auto hidden;
     overscroll-behavior-inline: contain;
 }
 
 .jarvis-art-tile {
-    flex: none;
+    flex: 0 0 min(100cqw, calc(100cqh * var(--jarvis-art-ratio, 1)));
+    min-inline-size: 0;
+    position: relative;
     display: block;
-    height: 100%;
+    margin: 0;
     padding: 0;
     border: 0;
     background: transparent;
@@ -390,18 +394,21 @@
 .jarvis-art-tile-media {
     display: grid;
     place-items: center;
-    position: relative;
-    height: 100%;
-    overflow: hidden;
-}
-
-.jarvis-art-tile-media:is(:not(.jarvis-art-ready), :has(> canvas)) {
-    aspect-ratio: 5 / 12;
+    position: absolute;
+    inset: 0;
 }
 
 .jarvis-art-tile-media > :is(img, video) {
-    display: block;
-    width: auto;
+    position: absolute;
+    inset: 0;
+    width: 100%;
     height: 100%;
-    max-width: none;
+    object-fit: contain;
+    object-position: center bottom;
+}
+
+.jarvis-art-tile-media > canvas.animated-girl-display {
+    inset: auto auto 0 50% !important;
+    transform: translateX(-50%) scale(var(--jarvis-art-canvas-scale)) !important;
+    transform-origin: center bottom;
 }

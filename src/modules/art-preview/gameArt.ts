@@ -84,7 +84,7 @@ function assetUrl(path: string | null | undefined) {
 }
 
 export function rewardThumbnail(reward: RewardArt) {
-    return assetUrl(reward.ico) ?? assetUrl(reward.avatar) ?? assetUrl(reward.preview?.poses?.[0]);
+    return assetUrl(reward.ico);
 }
 
 function image(path: string | null, label: string): ArtItem[] {

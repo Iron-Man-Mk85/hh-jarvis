@@ -4,7 +4,7 @@ import { getArtGroups, getOriginalArt, rewardThumbnail, type ArtItem, type ArtKi
 import css from './artPreview.css';
 
 const rarities = new Set(['common', 'rare', 'epic', 'legendary', 'mythic']);
-const labels = { all: 'All art', original: 'Original', poses: 'Poses', skins: 'Skins', scenes: 'Scenes' } as const;
+const labels = { all: 'All art', withoutScenes: 'All but scenes', original: 'Original', poses: 'Poses', skins: 'Skins', scenes: 'Scenes' } as const;
 type Filter = keyof typeof labels;
 type Artwork = ArtItem & { kind: 'original' | ArtKind };
 
@@ -300,13 +300,19 @@ export class RewardArtDialog {
         const render = (current?: Artwork) => {
             const available = artwork.filter(item => item.kind !== 'scenes' || this.scenesEnabled);
             const kinds = new Set(available.map(item => item.kind));
-            const category = preferredFilter !== 'all' && kinds.has(preferredFilter) ? preferredFilter : 'all';
+            const category = preferredFilter === 'all' || preferredFilter === 'withoutScenes' || kinds.has(preferredFilter) ? preferredFilter : 'all';
             for (const [filter, button] of filterButtons) {
-                button.hidden = filter === 'all' ? kinds.size < 2 : !kinds.has(filter);
-                button.setAttribute('aria-pressed', String(filter === category || (category === 'all' && kinds.size === 1)));
+                if (filter === 'all') button.hidden = kinds.size < 2;
+                else if (filter === 'withoutScenes') button.hidden = category !== filter && (kinds.size < 2 || !kinds.has('scenes'));
+                else button.hidden = !kinds.has(filter);
+                button.setAttribute('aria-pressed', String(filter === category || (category === 'all' && kinds.size === 1 && !button.hidden)));
             }
-            visible = category === 'all' ? available.filter(item => item.kind !== 'original' || item.animation ||
-                !available.some(pose => pose.kind === 'poses' && pose.url === item.url)) : available.filter(item => item.kind === category);
+            const combined = category === 'all' || category === 'withoutScenes';
+            visible = available.filter(item => {
+                if (!combined) return item.kind === category;
+                if (category === 'withoutScenes' && item.kind === 'scenes') return false;
+                return item.kind !== 'original' || item.animation || !available.some(pose => pose.kind === 'poses' && pose.url === item.url);
+            });
             const matchingIndex = current ? visible.findIndex(item => item.kind === current.kind && item.url === current.url) : -1;
             index = matchingIndex >= 0 ? matchingIndex : Math.min(preferredIndex, Math.max(0, visible.length - 1));
             view.textContent = galleryMode ? 'One at a time' : 'Show all';

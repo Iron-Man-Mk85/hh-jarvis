@@ -1,5 +1,9 @@
 # Development notes
 
+- **0.11.9**
+  - Find the Seasonal camera directly after the last event tab and the viewer’s Close button inside the top-right corner.
+  - Center artwork rows that fit in Show all. Rows that need scrolling start on the left, with alignment updating as the window resizes.
+  - Keep the view mode, art tab, current picture number when available, and zoom while switching characters.
 - **0.11.8**
   - In Show all, see the full artwork with wider gaps, and keep animated originals and skins playing.
   - Load artwork and thumbnails as they come into view. Reuse the game’s asset URLs so the browser can serve cached files.

@@ -1,5 +1,9 @@
 # Development notes
 
+- **0.11.7**
+  - Open artwork with a camera icon on every supported page. The Seasonal Event overview and market put it in the same place.
+  - Browse all artwork in one full-height row. Scroll sideways with the wheel and click a picture to open it with zoom controls.
+  - See a larger character name and game-styled controls, with Close in the upper-right corner and arrows that stay in place as the counter changes.
 - **0.11.6**
   - Open art with a small camera button on reward cards. The viewer puts the name and controls at the top, and the character portraits scroll sideways with the mouse wheel.
   - View all available pictures for a character together, or look through them one at a time with the arrow controls. Click a shortened name to read it in full.

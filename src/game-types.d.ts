@@ -9,6 +9,19 @@ export interface GirlData {
     shards?: number;
 }
 
+export interface EventRewardSource {
+    name?: string;
+    group?: { name?: string; id?: GameId | null };
+    anchor_source?: { url?: string };
+    sentence?: string;
+}
+
+export interface EventReward {
+    name?: string;
+    source?: EventRewardSource;
+    source_list?: Record<string, EventRewardSource[] | undefined>;
+}
+
 export interface LoveRaid {
     id_raid: GameId;
     id_girl: GameId;
@@ -65,6 +78,8 @@ declare global {
             active?: ContestData[] | Record<string, ContestData>;
             finished?: ContestData[] | Record<string, ContestData>;
         };
+        event_girls?: EventReward[];
+        event_data?: { identifier?: string; girls?: EventReward[] };
         Hero?: HeroData;
         shared?: {
             Hero?: HeroData;

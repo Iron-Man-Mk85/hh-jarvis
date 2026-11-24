@@ -9,7 +9,7 @@ export class EventArtPreview extends HHModule {
     private observer: MutationObserver | null = null;
     private viewer: ArtPreview | null = null;
     private reward: EventReward | undefined;
-    private image: HTMLImageElement | null = null;
+    private slide: HTMLElement | null = null;
     private scenesEnabled = true;
 
     constructor() {
@@ -38,23 +38,23 @@ export class EventArtPreview extends HHModule {
         this.scenesEnabled = scenes;
 
         const sync = () => {
-            const host = root.querySelector<HTMLElement>('.nc-event-reward-container.selected .nc-event-reward-preview');
-            const slide = host?.querySelector('.slide.selected[id-girl]');
-            const image = slide?.querySelector<HTMLImageElement>('img.slide-img') ?? null;
+            const eventPanel = root.querySelector<HTMLElement>('.nc-event-container');
+            const host = eventPanel?.querySelector<HTMLElement>('.nc-event-reward-container.selected .nc-event-reward-preview');
+            const slide = host?.querySelector<HTMLElement>('.slide.selected[id-girl]') ?? null;
             const id = slide?.getAttribute('id-girl');
             const rewards = window.event_girls ?? window.event_data?.girls ?? [];
             const reward = id ? rewards.find(reward => String(reward.id_girl) === id) : undefined;
 
-            if (host !== this.viewer?.host) {
+            if (!this.viewer?.mounted || host !== this.viewer.host || eventPanel !== this.viewer.controlHost) {
                 this.viewer?.destroy();
-                this.viewer = host && reward?.preview ? new ArtPreview(host, this.scenesEnabled) : null;
+                this.viewer = host && eventPanel && reward?.preview ? new ArtPreview(host, this.scenesEnabled, eventPanel) : null;
                 this.reward = undefined;
-                this.image = null;
+                this.slide = null;
             }
-            if (reward === this.reward && image === this.image) return;
+            if (reward === this.reward && slide === this.slide) return;
             this.reward = reward;
-            this.image = image;
-            this.viewer?.setCharacter(reward?.preview && image ? getArtGroups(reward.preview) : null, image);
+            this.slide = slide;
+            this.viewer?.setCharacter(reward?.preview && slide ? getArtGroups(reward.preview) : null, slide);
         };
         this.observer = new MutationObserver(sync);
         this.observer.observe(root, { childList: true, subtree: true, attributes: true, attributeFilter: ['class', 'id-girl'] });
@@ -73,7 +73,7 @@ export class EventArtPreview extends HHModule {
         this.viewer?.destroy();
         this.viewer = null;
         this.reward = undefined;
-        this.image = null;
+        this.slide = null;
         this.hasRun = false;
     }
 }

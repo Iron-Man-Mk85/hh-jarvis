@@ -1,8 +1,10 @@
 import type { ArtGroups, ArtKind } from './gameArt';
+import { playSpine } from './spinePreview';
 import css from './artPreview.css';
 
 const labels = { poses: 'Poses', skins: 'Skins', scenes: 'Scenes' } as const;
 const kinds = Object.keys(labels) as ArtKind[];
+const originalMedia = 'jarvis-art-native';
 const hiddenPortrait = 'jarvis-art-original-hidden';
 
 export class ArtPreview {
@@ -17,13 +19,17 @@ export class ArtPreview {
     private status = document.createElement('span');
     private art: ArtGroups | null = null;
     private portrait: HTMLElement | null = null;
-    private displayed: HTMLImageElement | null = null;
-    private pending: HTMLImageElement | null = null;
+    private replacement: HTMLElement | null = null;
+    private loading: AbortController | null = null;
     private kind: ArtKind | null = null;
     private index = 0;
     private scenesEnabled: boolean;
+    private zoom = 100;
+    private x = 0;
+    private y = 0;
+    private resetView: HTMLButtonElement;
 
-    constructor(readonly host: HTMLElement, scenesEnabled: boolean) {
+    constructor(readonly host: HTMLElement, scenesEnabled: boolean, readonly controlHost = host) {
         this.scenesEnabled = scenesEnabled;
         this.style.textContent = css;
         document.head.append(this.style);
@@ -55,16 +61,35 @@ export class ArtPreview {
         this.next.setAttribute('aria-label', 'Next preview');
         this.status.setAttribute('role', 'status');
         this.navigation.append(this.previous, this.status, this.next);
-        this.controls.append(groups, this.navigation);
-        this.layer.append(this.controls);
+        const zoom = document.createElement('div');
+        zoom.className = 'jarvis-art-tools';
+        zoom.append(this.button('−', () => this.zoomBy(-20), 'Zoom out'));
+        this.resetView = this.button('100%', () => this.resetFraming(), 'Reset zoom and position');
+        zoom.append(this.resetView, this.button('+', () => this.zoomBy(20), 'Zoom in'));
+
+        const pan = document.createElement('div');
+        pan.className = 'jarvis-art-tools';
+        pan.append(this.button('←', () => this.move(-1, 0), 'Move art left'),
+            this.button('↑', () => this.move(0, -1), 'Move art up'),
+            this.button('↓', () => this.move(0, 1), 'Move art down'),
+            this.button('→', () => this.move(1, 0), 'Move art right'));
+        this.controls.append(groups, this.navigation, zoom, pan);
+        this.controlHost.append(this.controls);
         this.host.append(this.layer);
         this.refreshControls();
     }
 
+    get mounted() {
+        return this.layer.isConnected && this.controls.isConnected;
+    }
+
     setCharacter(art: ArtGroups | null, portrait: HTMLElement | null) {
         this.reset();
+        this.resetFraming();
+        this.portrait?.classList.remove(originalMedia);
         this.art = art;
         this.portrait = portrait;
+        this.portrait?.classList.add(originalMedia);
         this.refreshControls();
     }
 
@@ -76,15 +101,22 @@ export class ArtPreview {
 
     destroy() {
         this.clearImage();
+        this.resetFraming();
+        this.portrait?.classList.remove(originalMedia);
         this.layer.remove();
+        this.controls.remove();
         this.style.remove();
     }
 
-    private button(label: string, action: () => void) {
+    private button(label: string, action: () => void, accessibleLabel?: string) {
         const button = document.createElement('button');
         button.type = 'button';
-        button.className = 'jarvis-setting-action';
+        button.className = 'blue_button_L';
         button.textContent = label;
+        if (accessibleLabel) {
+            button.title = accessibleLabel;
+            button.setAttribute('aria-label', accessibleLabel);
+        }
         button.addEventListener('click', action);
         return button;
     }
@@ -105,10 +137,44 @@ export class ArtPreview {
     }
 
     private clearImage() {
-        this.pending = null;
-        this.displayed?.remove();
-        this.displayed = null;
+        this.loading?.abort();
+        this.loading = null;
+        this.replacement?.remove();
+        this.replacement = null;
         this.portrait?.classList.remove(hiddenPortrait);
+    }
+
+    private zoomBy(step: number) {
+        this.zoom = Math.min(260, Math.max(60, this.zoom + step));
+        this.applyFraming();
+    }
+
+    private move(dx: number, dy: number) {
+        this.x = Math.min(9, Math.max(-9, this.x + dx));
+        this.y = Math.min(9, Math.max(-9, this.y + dy));
+        this.applyFraming();
+    }
+
+    private resetFraming() {
+        this.zoom = 100;
+        this.x = this.y = 0;
+        this.applyFraming();
+    }
+
+    private applyFraming() {
+        this.resetView.textContent = `${this.zoom}%`;
+        const changed = this.zoom !== 100 || this.x !== 0 || this.y !== 0;
+        this.portrait?.toggleAttribute('data-jarvis-art-framed', changed);
+        for (const node of [this.portrait, this.layer]) {
+            if (!node) continue;
+            if (!changed) {
+                node.style.removeProperty('--jarvis-art-shift');
+                node.style.removeProperty('--jarvis-art-scale');
+            } else {
+                node.style.setProperty('--jarvis-art-shift', `${this.x}rem ${this.y}rem`);
+                node.style.setProperty('--jarvis-art-scale', String(this.zoom / 100));
+            }
+        }
     }
 
     private reset() {
@@ -133,25 +199,61 @@ export class ArtPreview {
         this.clearImage();
         this.refreshControls();
         this.status.textContent = 'Loading…';
-        const image = document.createElement('img');
-        image.className = 'jarvis-art-image';
-        image.classList.toggle('jarvis-art-scene', this.kind === 'scenes');
-        image.alt = item.label;
-        this.pending = image;
+        this.loading = new AbortController();
+        const { signal } = this.loading;
+        const stage = document.createElement('div');
+        stage.className = 'jarvis-art-image';
+        stage.classList.toggle('jarvis-art-scene', this.kind === 'scenes');
+        stage.setAttribute('aria-hidden', 'true');
+        this.layer.append(stage);
+        this.replacement = stage;
 
-        image.onload = () => {
-            if (this.pending !== image) return;
-            this.pending = null;
-            this.displayed = image;
-            this.layer.prepend(image);
+        const ready = () => {
+            if (signal.aborted) return;
+            stage.classList.add('jarvis-art-ready');
+            stage.removeAttribute('aria-hidden');
             this.portrait?.classList.add(hiddenPortrait);
             this.status.textContent = `${item.label} · ${this.index + 1}/${this.items.length}`;
         };
-        image.onerror = () => {
-            if (this.pending !== image) return;
-            this.pending = null;
+        const unavailable = () => {
             this.status.textContent = 'Preview unavailable';
         };
-        image.src = item.url;
+        const showStill = () => {
+            stage.replaceChildren();
+            if (!item.url) return unavailable();
+            const image = document.createElement('img');
+            image.alt = item.label;
+            image.addEventListener('load', ready, { once: true, signal });
+            image.addEventListener('error', unavailable, { once: true, signal });
+            stage.append(image);
+            image.src = item.url;
+        };
+
+        const animation = item.animation;
+        if (animation?.format === 'spine') {
+            if (playSpine(stage, animation, signal, ready, showStill)) return;
+        } else if (animation?.format === 'video') {
+            const video = document.createElement('video');
+            video.muted = video.loop = video.autoplay = video.playsInline = true;
+            video.setAttribute('aria-label', item.label);
+            video.addEventListener('playing', ready, { once: true, signal });
+            const stop = () => {
+                video.pause();
+                video.removeAttribute('src');
+                video.load();
+            };
+            const fallback = () => {
+                if (signal.aborted || !stage.contains(video)) return;
+                stop();
+                showStill();
+            };
+            video.addEventListener('error', fallback, { once: true, signal });
+            signal.addEventListener('abort', stop, { once: true });
+            stage.append(video);
+            video.src = animation.asset;
+            void video.play().catch(fallback);
+            return;
+        }
+        showStill();
     }
 }

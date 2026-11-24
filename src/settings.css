@@ -338,6 +338,12 @@ td[data-jarvis-mark] > a {
     min-width: 8em;
     padding-inline: .65em;
 }
+#events .jarvis-art-controls {
+    --jarvis-art-controls-start: 7.8%;
+    --jarvis-art-controls-top: 20%;
+    --jarvis-art-controls-end: auto;
+    --jarvis-art-controls-width: 25%;
+}
 .jarvis-mark-setting-actions,
 .jarvis-mark-actions {
     display: flex;

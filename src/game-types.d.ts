@@ -1,5 +1,6 @@
 import type { HHModule } from './HHModule';
 import type { GameArt } from './modules/art-preview/gameArt';
+import type { GirlAnimationRenderer } from './modules/art-preview/spinePreview';
 
 type GameId = number | string;
 
@@ -86,6 +87,7 @@ declare global {
         Hero?: HeroData;
         shared?: {
             Hero?: HeroData;
+            girl_animation?: GirlAnimationRenderer;
         };
         opponents_list?: LeagueOpponent[];
         current_tier_number?: number | string;

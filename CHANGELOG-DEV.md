@@ -1,5 +1,6 @@
 # Development notes
 
+- **0.10.0** Browse poses, released skins, and optional still scene previews directly beside the selected event reward. Use Original to return to the game image.
 - **0.9.0**
   - Turn on Silent updates to show the homepage update icon and dismiss it with a click. View changelog still opens the notes from settings.
   - Copy base character names from regular event, Mythic Days, and Crazy Cumback Contest pages in one click. Include a TSV source column when every reward has a known event source.

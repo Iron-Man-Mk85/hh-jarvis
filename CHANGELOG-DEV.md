@@ -1,5 +1,6 @@
 # Development notes
 
+- **0.10.4** Zoom toward the pointer and grab the artwork wherever you move it. Keep fitted art within view and pan enlarged art from edge to edge.
 - **0.10.3**
   - Find the compact preview controls beside the info icon, with outlined labels and a Reset button.
   - Keep zoom and position while switching between alternate previews. Turn off Adjust to restore the original framing. Zoom in further and pan across the entire enlarged image.

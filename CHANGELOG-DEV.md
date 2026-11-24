@@ -1,5 +1,6 @@
 # Development notes
 
+- **0.11.1** View reward art at the full browser window size and switch characters using the game's rarity-framed reward tiles. Find Season's Preview art button below the Kiss counter.
 - **0.11.0**
   - Open a compact reward art viewer from events, Path of Valor, Path of Glory, Penta Drill and its roster, Season, and Leagues. Browse originals, poses, skins, and available scenes.
   - Keep the inline event controls as an option. The reward panel anchors them when there is no info button.

@@ -339,6 +339,9 @@ td[data-jarvis-mark] > a {
     gap: .4rem;
     width: 100%;
 }
+#events .jarvis-event-copy-row:not(:has(.controls-button-container)) {
+    margin-block: .3rem 0;
+}
 #events .nc-event-container .nc-event-reward-container .nc-events-prize-locations-container .jarvis-event-copy-row > button.jarvis-event-copy.blue_button_L {
     flex: none;
     display: inline-flex;

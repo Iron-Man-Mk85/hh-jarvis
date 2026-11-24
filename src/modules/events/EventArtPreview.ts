@@ -11,6 +11,7 @@ export class EventArtPreview extends HHModule {
     private reward: EventReward | undefined;
     private slide: HTMLElement | null = null;
     private info: HTMLElement | null = null;
+    private rewardPanel: HTMLElement | null = null;
     private layout: ResizeObserver | null = null;
     private scenesEnabled = true;
 
@@ -52,18 +53,20 @@ export class EventArtPreview extends HHModule {
                 this.viewer = host && eventPanel && reward?.preview ? new ArtPreview(host, this.scenesEnabled, eventPanel) : null;
                 this.layout?.disconnect();
                 this.info = null;
+                this.rewardPanel = null;
                 this.reward = undefined;
                 this.slide = null;
             }
             const info = eventPanel?.querySelector<HTMLElement>('.nc-event-reward-container.selected .girl-information') ?? null;
-            const rewardPanel = info?.closest<HTMLElement>('.nc-events-prize-locations-container') ?? null;
+            const rewardPanel = eventPanel?.querySelector<HTMLElement>('.nc-event-reward-container.selected .nc-events-prize-locations-container') ?? null;
             this.viewer?.dockBefore(info, rewardPanel);
-            if (info !== this.info && this.viewer && eventPanel) {
+            if ((info !== this.info || rewardPanel !== this.rewardPanel) && this.viewer && eventPanel) {
                 this.info = info;
+                this.rewardPanel = rewardPanel;
                 this.layout?.disconnect();
-                if (info) {
+                if (info || rewardPanel) {
                     this.layout = new ResizeObserver(() => this.viewer?.dockBefore(info, rewardPanel));
-                    this.layout.observe(info);
+                    if (info) this.layout.observe(info);
                     if (rewardPanel) this.layout.observe(rewardPanel);
                     this.layout.observe(eventPanel);
                 }
@@ -93,6 +96,7 @@ export class EventArtPreview extends HHModule {
         this.layout?.disconnect();
         this.layout = null;
         this.info = null;
+        this.rewardPanel = null;
         this.viewer?.destroy();
         this.viewer = null;
         this.reward = undefined;

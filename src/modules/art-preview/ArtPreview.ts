@@ -22,6 +22,8 @@ export class ArtPreview {
     private portrait: HTMLElement | null = null;
     private replacement: HTMLElement | null = null;
     private loading: AbortController | null = null;
+    private pendingStage: HTMLElement | null = null;
+    private displayAbort: AbortController | null = null;
     private kind: ArtKind | null = null;
     private index = 0;
     private scenesEnabled: boolean;
@@ -91,19 +93,23 @@ export class ArtPreview {
     dockBefore(anchor: HTMLElement | null, clearAbove: HTMLElement | null) {
         const bounds = this.controlHost.getBoundingClientRect();
         const target = anchor?.getBoundingClientRect();
-        const visible = Boolean(target?.width && target.height && bounds.width && bounds.height);
+        const boundary = clearAbove?.getBoundingClientRect();
+        const icon = target?.width && target.height ? target : null;
+        const panel = boundary?.height ? boundary : null;
+        const visible = Boolean((icon || panel) && bounds.width && bounds.height);
         this.controls.toggleAttribute('data-jarvis-art-docked', visible);
-        if (!visible || !target) return;
+        const reference = icon ?? panel;
+        if (!visible || !reference) return;
 
-        const x = (target.left - bounds.left) * this.controlHost.clientWidth / bounds.width - 8;
-        const centerY = target.top + target.height / 2;
+        const right = reference.left + (icon ? 0 : reference.width * .65);
+        const x = (right - bounds.left) * this.controlHost.clientWidth / bounds.width - 8;
+        const centerY = reference.top + (icon ? reference.height / 2 : 0);
         const scaleY = this.controlHost.clientHeight / bounds.height;
         const y = (centerY - bounds.top) * scaleY;
         this.controls.style.setProperty('--jarvis-art-anchor-x', `${x}px`);
         this.controls.style.setProperty('--jarvis-art-anchor-y', `${y}px`);
-        const boundary = clearAbove?.getBoundingClientRect();
-        if (boundary?.height) {
-            this.controls.style.setProperty('--jarvis-art-dock-clearance', `${(boundary.top - centerY) * scaleY - 8}px`);
+        if (panel) {
+            this.controls.style.setProperty('--jarvis-art-dock-clearance', `${(panel.top - centerY) * scaleY - 8}px`);
         } else this.controls.style.removeProperty('--jarvis-art-dock-clearance');
     }
 
@@ -172,9 +178,17 @@ export class ArtPreview {
         this.gestures.setEnabled(!this.controls.hidden && (this.kind !== null || this.originalAdjust));
     }
 
-    private clearImage() {
+    private clearPending() {
         this.loading?.abort();
         this.loading = null;
+        this.pendingStage?.remove();
+        this.pendingStage = null;
+    }
+
+    private clearImage() {
+        this.clearPending();
+        this.displayAbort?.abort();
+        this.displayAbort = null;
         this.replacement?.remove();
         this.replacement = null;
         this.portrait?.classList.remove(hiddenPortrait);
@@ -216,20 +230,29 @@ export class ArtPreview {
         const item = this.items[this.index];
         if (!item) return;
 
-        this.clearImage();
+        this.clearPending();
         this.refreshControls();
         this.status.textContent = 'Loading…';
-        this.loading = new AbortController();
-        const { signal } = this.loading;
+        const loading = new AbortController();
+        this.loading = loading;
+        const { signal } = loading;
         const stage = document.createElement('div');
         stage.className = 'jarvis-art-image';
         stage.classList.toggle('jarvis-art-scene', this.kind === 'scenes');
         stage.setAttribute('aria-hidden', 'true');
         this.layer.append(stage);
-        this.replacement = stage;
+        this.pendingStage = stage;
 
         const ready = () => {
             if (signal.aborted) return;
+            if (this.replacement !== stage) {
+                this.displayAbort?.abort();
+                this.replacement?.remove();
+                this.replacement = stage;
+                this.displayAbort = loading;
+                this.loading = null;
+                this.pendingStage = null;
+            } else if (this.loading) return;
             stage.classList.add('jarvis-art-ready');
             stage.removeAttribute('aria-hidden');
             this.portrait?.classList.add(hiddenPortrait);
@@ -237,6 +260,9 @@ export class ArtPreview {
             this.gestures.fitViewport();
         };
         const unavailable = () => {
+            if (signal.aborted) return;
+            if (this.pendingStage === stage) this.clearPending();
+            else if (this.loading) return;
             this.status.textContent = 'Preview unavailable';
         };
         const showStill = () => {

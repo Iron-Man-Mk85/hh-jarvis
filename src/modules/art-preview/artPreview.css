@@ -28,7 +28,7 @@
     object-fit: contain;
 }
 
-.jarvis-art-image > canvas.animated-girl-display {
+:is(.jarvis-art-image, .jarvis-art-tile-media) > canvas.animated-girl-display {
     position: absolute !important;
     inset: 50% auto auto 50% !important;
     width: var(--jarvis-art-canvas-width) !important;
@@ -157,7 +157,7 @@
     overflow: hidden;
 }
 
-.jarvis-art-dialog[open], .jarvis-art-dialog-body {
+.jarvis-art-dialog[open] {
     display: flex;
     flex-direction: column;
     gap: .5rem;
@@ -168,21 +168,100 @@
 }
 
 .jarvis-art-dialog > header {
-    display: flex;
-    flex-wrap: wrap;
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
     align-items: center;
     gap: .5rem;
 }
 
-.jarvis-art-dialog > header h2 {
-    flex: 1;
-    margin: 0;
-    font-size: 1.2rem;
+.jarvis-art-toolbar {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    align-items: center;
+    gap: .25rem .4rem;
+    min-width: 0;
+    font-size: clamp(.75rem, 1.5vw, 1rem);
 }
 
-.jarvis-art-dialog > header > button {
-    max-width: 100%;
-    padding: .25rem .6rem;
+.jarvis-art-toolbar h2 {
+    min-width: 0;
+    margin: 0;
+    font-size: clamp(.95rem, 2.2vw, 1.5rem);
+}
+
+.jarvis-art-toolbar h2 > button.blue_button_L {
+    position: relative;
+    width: 100%;
+    height: 1.8em;
+    padding-inline: .2em;
+    border: 0;
+    background: none;
+    box-shadow: none;
+    text-align: start;
+    text-overflow: ellipsis;
+    font-weight: inherit;
+}
+
+.jarvis-art-toolbar h2 > button span {
+    display: block;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.jarvis-art-toolbar h2 > button[aria-expanded="true"] span {
+    position: absolute;
+    z-index: 1;
+    inset: 0 0 auto;
+    padding: .25em .45em;
+    border-radius: .35em;
+    background-color: #251e2b;
+    box-shadow: 0 .15em .4em #000a;
+    overflow-wrap: anywhere;
+    white-space: normal;
+}
+
+.jarvis-art-toolbar button.blue_button_L {
+    box-sizing: border-box;
+    width: auto;
+    height: auto;
+    min-width: 1.75em;
+    min-height: 1.8em;
+    margin: 0;
+    padding: .22em .55em;
+    font-size: inherit;
+    line-height: 1.2;
+    white-space: nowrap;
+    text-shadow: 0 2px 2px #000d;
+}
+
+.jarvis-art-toolbar button[aria-pressed="true"] {
+    background: linear-gradient(#b77930, #79491e);
+}
+
+.jarvis-art-filters,
+.jarvis-art-dialog-navigation {
+    grid-column: 1 / -1;
+    display: flex;
+    align-items: center;
+    gap: .25em;
+}
+
+.jarvis-art-filters {
+    min-height: 1.8em;
+    flex-wrap: wrap;
+}
+
+.jarvis-art-dialog-navigation [role="status"] {
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    text-align: center;
+}
+
+.jarvis-art-dialog [hidden] {
+    display: none !important;
 }
 
 .jarvis-art-character-picker {
@@ -191,13 +270,14 @@
     min-width: 0;
     max-width: 100%;
     padding: .25rem;
-    overflow-x: auto;
+    overflow: auto hidden;
+    overscroll-behavior-inline: contain;
 }
 
 .jarvis-art-character-picker .jarvis-art-character {
     flex: none;
-    width: 3.5rem;
-    height: 3.5rem;
+    width: clamp(2.25rem, 6vw, 3.5rem);
+    height: clamp(2.25rem, 6vw, 3.5rem);
     margin: 0;
     padding: 0;
     overflow: hidden;
@@ -214,24 +294,25 @@
 }
 
 .jarvis-art-character-picker .jarvis-art-character[aria-pressed="true"] {
+    background-color: #a7712e;
     outline: 2px solid #fff;
-    outline-offset: 1px;
+    outline-offset: -2px;
 }
 
-@media (max-width: 36rem) {
-    .jarvis-art-character-picker {
-        flex-basis: 100%;
-        order: 1;
+@media (max-width: 38rem) {
+    .jarvis-art-dialog {
+        padding: .4rem;
+    }
+
+    .jarvis-art-dialog > header:has(.jarvis-art-character-picker[hidden]) {
+        grid-template-columns: minmax(0, 1fr);
     }
 }
 
-.jarvis-art-dialog-body, .jarvis-art-dialog-stage {
+.jarvis-art-dialog-stage {
     flex: 1;
     min-height: 0;
     position: relative;
-}
-
-.jarvis-art-dialog-stage {
     background: #0004;
 }
 
@@ -241,14 +322,45 @@
     height: 96%;
 }
 
-.jarvis-art-dialog .jarvis-art-controls {
-    position: relative;
-    inset: auto;
-    width: 100%;
-    max-width: none;
+.jarvis-art-gallery {
+    box-sizing: border-box;
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(min(100%, 13rem), 1fr));
+    align-content: start;
+    gap: .65rem;
+    height: 100%;
+    padding: .65rem;
+    overflow: auto;
 }
 
-.jarvis-art-dialog .jarvis-art-navigation {
-    width: min(18rem, 100%);
-    margin-inline: auto;
+.jarvis-art-tile {
+    display: grid;
+    gap: .35rem;
+    padding: .5rem;
+    border: 1px solid #ffffff40;
+    border-radius: .5rem;
+    background-color: #2d2537;
+    color: inherit;
+    font: inherit;
+    cursor: pointer;
+}
+
+.jarvis-art-tile:hover {
+    background-color: #473954;
+}
+
+.jarvis-art-tile-media {
+    display: grid;
+    place-items: center;
+    position: relative;
+    height: clamp(10rem, 45dvh, 26rem);
+    min-width: 0;
+    overflow: hidden;
+}
+
+.jarvis-art-tile-media > :is(img, video) {
+    width: 100%;
+    height: 100%;
+    min-height: 0;
+    object-fit: contain;
 }

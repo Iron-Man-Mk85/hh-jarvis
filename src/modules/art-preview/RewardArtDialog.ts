@@ -1,85 +1,284 @@
-import { ArtPreview } from './ArtPreview';
-import { getArtGroups, getOriginalArt, rewardThumbnail, type RewardArt } from './gameArt';
+import { ArtGestures } from './ArtGestures';
+import { mountArt } from './artMedia';
+import { getArtGroups, getOriginalArt, rewardThumbnail, type ArtItem, type ArtKind, type RewardArt } from './gameArt';
+import css from './artPreview.css';
 
 const rarities = new Set(['common', 'rare', 'epic', 'legendary', 'mythic']);
+const labels = { all: 'All art', original: 'Original', poses: 'Poses', skins: 'Skins', scenes: 'Scenes' } as const;
+type Filter = keyof typeof labels;
+type Artwork = ArtItem & { kind: 'original' | ArtKind };
 
 export interface RewardArtEntry {
     reward: RewardArt;
     native?: HTMLElement;
 }
 
-export class RewardArtDialog {
-    private session: { dialog: HTMLDialogElement; viewer: ArtPreview; opener: HTMLElement } | null = null;
+function control(label: string, action: () => void) {
+    const button = document.createElement('button');
+    button.type = 'button';
+    button.className = 'blue_button_L';
+    button.textContent = label;
+    button.addEventListener('click', action);
+    return button;
+}
 
-    show(entries: RewardArtEntry[], opener: HTMLElement, initialIndex = 0) {
+function artworkFor({ reward, native }: RewardArtEntry): Artwork[] {
+    const groups = getArtGroups(reward.preview ?? {});
+    const original = getOriginalArt(reward, native ?? null);
+    const artwork: Artwork[] = [];
+    if (original.url || original.animation) artwork.push({ ...original, label: 'Original', kind: 'original' });
+    for (const kind of Object.keys(groups) as ArtKind[]) {
+        artwork.push(...groups[kind].map(item => ({ ...item, kind })));
+    }
+    return artwork;
+}
+
+export class RewardArtDialog {
+    private session: { close: () => void; refresh: () => void } | null = null;
+
+    show(entries: RewardArtEntry[], opener: HTMLElement, initialIndex = 0, galleryOnOpen = false) {
         if (!entries.length) return;
         this.close();
+        const style = document.createElement('style');
+        style.textContent = css;
+        document.head.append(style);
+
         const dialog = document.createElement('dialog');
         dialog.className = 'jarvis-art-dialog container-special-bg';
         dialog.setAttribute('aria-labelledby', 'jarvis-art-dialog-title');
         const header = document.createElement('header');
+        const toolbar = document.createElement('div');
+        toolbar.className = 'jarvis-art-toolbar';
         const title = document.createElement('h2');
         title.id = 'jarvis-art-dialog-title';
-        const close = document.createElement('button');
-        close.type = 'button';
-        close.className = 'blue_button_L';
-        close.textContent = 'Close';
-        close.addEventListener('click', () => this.close());
-        header.append(title);
+        const name = control('', () => name.setAttribute('aria-expanded', String(name.getAttribute('aria-expanded') === 'false')));
+        const fullName = document.createElement('span');
+        name.replaceChildren(fullName);
+        const close = control('×', () => this.close());
+        close.setAttribute('aria-label', 'Close art preview');
+        close.title = 'Close art preview';
+        title.append(name);
 
-        const choices: HTMLButtonElement[] = [];
-        if (entries.length > 1) {
-            const picker = document.createElement('div');
-            picker.className = 'jarvis-art-character-picker hh-scroll';
-            picker.setAttribute('role', 'group');
-            picker.setAttribute('aria-label', 'Reward character');
-            entries.forEach(({ reward }, index) => {
-                const choice = document.createElement('button');
-                const name = reward.name || `Reward ${index + 1}`;
-                const rarity = reward.rarity || 'common';
-                choice.type = 'button';
-                choice.className = `slot slot_girl_shards size_small jarvis-art-character ${rarities.has(rarity) ? rarity : 'common'}`;
-                choice.setAttribute('aria-label', name);
-                choice.title = name;
-                const thumbnail = rewardThumbnail(reward);
-                if (thumbnail) {
-                    const icon = document.createElement('img');
-                    icon.alt = '';
-                    icon.addEventListener('error', () => { choice.textContent = name; }, { once: true });
-                    icon.src = thumbnail;
-                    choice.append(icon);
-                } else choice.textContent = name;
-                choice.addEventListener('click', () => render(index));
-                choices.push(choice);
-                picker.append(choice);
+        const filters = document.createElement('div');
+        filters.className = 'jarvis-art-filters';
+        filters.setAttribute('role', 'group');
+        filters.setAttribute('aria-label', 'Artwork type');
+        const filterButtons = new Map((Object.keys(labels) as Filter[]).map(filter => {
+            const button = control(labels[filter], () => {
+                if (category === filter) return;
+                category = filter;
+                index = 0;
+                gestures.reset();
+                render();
             });
-            header.append(picker);
-        }
-        header.append(close);
+            filters.append(button);
+            return [filter, button];
+        }));
 
-        const viewerArea = document.createElement('div');
-        viewerArea.className = 'jarvis-art-dialog-body';
+        const navigation = document.createElement('div');
+        navigation.className = 'jarvis-art-dialog-navigation';
+        const view = control('Show all', () => {
+            galleryMode = !galleryMode;
+            gestures.reset();
+            render();
+        });
+        const previous = control('‹', () => step(-1));
+        previous.setAttribute('aria-label', 'Previous preview');
+        const next = control('›', () => step(1));
+        next.setAttribute('aria-label', 'Next preview');
+        const reset = control('↺', () => gestures.reset());
+        reset.title = 'Reset zoom and position';
+        reset.setAttribute('aria-label', reset.title);
+        const status = document.createElement('span');
+        status.setAttribute('role', 'status');
+        navigation.append(view, previous, status, next, reset);
+        toolbar.append(title, close, filters, navigation);
+        header.append(toolbar);
+
+        const picker = document.createElement('div');
+        picker.className = 'jarvis-art-character-picker hh-scroll';
+        picker.setAttribute('role', 'group');
+        picker.setAttribute('aria-label', 'Characters');
+        const choices = entries.length > 1 ? entries.map(({ reward }, entryIndex) => {
+            const label = reward.name || `Character ${entryIndex + 1}`;
+            const choice = control(label, () => selectCharacter(entryIndex));
+            const rarity = reward.rarity || 'common';
+            choice.className = `slot slot_girl_shards size_small jarvis-art-character ${rarities.has(rarity) ? rarity : 'common'}`;
+            choice.setAttribute('aria-label', label);
+            choice.title = label;
+            const thumbnail = rewardThumbnail(reward);
+            if (thumbnail) {
+                const icon = document.createElement('img');
+                icon.alt = '';
+                icon.loading = 'lazy';
+                icon.addEventListener('error', () => { choice.textContent = label; }, { once: true });
+                icon.src = thumbnail;
+                choice.replaceChildren(icon);
+            }
+            picker.append(choice);
+            return choice;
+        }) : [];
+        picker.hidden = !choices.length;
+        picker.addEventListener('wheel', event => {
+            if (event.ctrlKey || Math.abs(event.deltaX) >= Math.abs(event.deltaY) || picker.scrollWidth <= picker.clientWidth) return;
+            event.preventDefault();
+            picker.scrollLeft += event.deltaY * (event.deltaMode === 1 ? 16 : event.deltaMode === 2 ? picker.clientWidth : 1);
+        }, { passive: false });
+        header.append(picker);
+
         const stage = document.createElement('div');
         stage.className = 'jarvis-art-dialog-stage';
-        viewerArea.append(stage);
-        dialog.append(header, viewerArea);
+        const layer = document.createElement('div');
+        layer.className = 'jarvis-art-preview';
+        const gallery = document.createElement('div');
+        gallery.className = 'jarvis-art-gallery hh-scroll';
+        stage.append(layer, gallery);
+        dialog.append(header, stage);
         document.body.append(dialog);
-        const viewer = new ArtPreview(stage, this.scenesEnabled, viewerArea);
-        this.session = { dialog, viewer, opener };
-        dialog.addEventListener('keydown', event => { if (event.key === 'Escape') event.stopPropagation(); });
-        dialog.addEventListener('cancel', event => { event.preventDefault(); this.close(); });
-        dialog.addEventListener('close', () => { if (this.session?.dialog === dialog) this.close(); });
+
         let selected = -1;
-        const render = (index: number) => {
-            if (selected === index) return;
-            selected = index;
-            choices.forEach((choice, index) => choice.setAttribute('aria-pressed', String(index === selected)));
-            const { reward, native } = entries[index];
-            title.textContent = reward.name || 'Reward art';
-            viewer.setCharacter(getArtGroups(reward.preview ?? {}), null, getOriginalArt(reward, native ?? null));
+        let index = 0;
+        let category: Filter = 'all';
+        let galleryMode = galleryOnOpen;
+        let artwork: Artwork[] = [];
+        let visible: Artwork[] = [];
+        let displayed: { media: HTMLElement; load: AbortController } | undefined;
+        let pending: typeof displayed;
+        let galleryLoad: AbortController | undefined;
+
+        const gestures = new ArtGestures(layer, stage, () => displayed?.media.querySelector('img, canvas, video') ?? null,
+            (zoom, x, y) => {
+                layer.style.setProperty('--jarvis-art-shift', `${x}px ${y}px`);
+                layer.style.setProperty('--jarvis-art-scale', String(zoom));
+            });
+        const clearPending = () => {
+            pending?.load.abort();
+            pending?.media.remove();
+            pending = undefined;
         };
+        const clearDisplayed = () => {
+            displayed?.load.abort();
+            displayed?.media.remove();
+            displayed = undefined;
+            gestures.refresh();
+        };
+        const showItem = () => {
+            clearPending();
+            const item = visible[index];
+            if (!item) {
+                clearDisplayed();
+                status.textContent = 'No artwork available';
+                return;
+            }
+            const caption = `${item.label} · ${index + 1}/${visible.length}`;
+            status.textContent = 'Loading…';
+            const media = document.createElement('div');
+            media.className = 'jarvis-art-image';
+            media.setAttribute('aria-hidden', 'true');
+            layer.append(media);
+            const load = new AbortController();
+            pending = { media, load };
+            mountArt(media, item, load.signal, () => {
+                if (load.signal.aborted || pending?.media !== media) return;
+                clearDisplayed();
+                displayed = pending;
+                pending = undefined;
+                media.classList.add('jarvis-art-ready');
+                media.removeAttribute('aria-hidden');
+                status.textContent = caption;
+                gestures.fitViewport();
+            }, () => {
+                if (load.signal.aborted) return;
+                clearPending();
+                status.textContent = 'Preview unavailable';
+            });
+        };
+        const showGallery = () => {
+            clearPending();
+            clearDisplayed();
+            const load = new AbortController();
+            galleryLoad = load;
+            visible.forEach((item, itemIndex) => {
+                const tile = control(item.label, () => {
+                    index = itemIndex;
+                    galleryMode = false;
+                    render();
+                    view.focus();
+                });
+                tile.className = 'jarvis-art-tile';
+                const media = document.createElement('span');
+                media.className = 'jarvis-art-tile-media';
+                tile.prepend(media);
+                gallery.append(tile);
+                mountArt(media, item, load.signal, () => {}, () => { media.textContent = 'Preview unavailable'; }, true);
+            });
+            gallery.scrollTop = 0;
+            status.textContent = visible.length ? `${visible.length} ${visible.length === 1 ? 'image' : 'images'}` : 'No artwork available';
+        };
+        const step = (delta: number) => {
+            if (galleryMode || visible.length < 2) return;
+            index = (index + delta + visible.length) % visible.length;
+            showItem();
+        };
+        const render = () => {
+            const available = artwork.filter(item => item.kind !== 'scenes' || this.scenesEnabled);
+            const kinds = new Set(available.map(item => item.kind));
+            if (category !== 'all' && !kinds.has(category)) category = 'all';
+            for (const [filter, button] of filterButtons) {
+                button.hidden = filter === 'all' ? kinds.size < 2 : !kinds.has(filter);
+                button.setAttribute('aria-pressed', String(filter === category || (category === 'all' && kinds.size === 1)));
+            }
+            visible = category === 'all' ? available.filter(item => item.kind !== 'original' || item.animation ||
+                !available.some(pose => pose.kind === 'poses' && pose.url === item.url)) : available.filter(item => item.kind === category);
+            index = Math.min(index, Math.max(0, visible.length - 1));
+            view.textContent = galleryMode ? 'One at a time' : 'Show all';
+            previous.hidden = next.hidden = reset.hidden = layer.hidden = galleryMode;
+            previous.disabled = next.disabled = visible.length < 2;
+            gallery.hidden = !galleryMode;
+            gestures.setEnabled(!galleryMode);
+            galleryLoad?.abort();
+            gallery.replaceChildren();
+            if (galleryMode) showGallery();
+            else showItem();
+        };
+        const selectCharacter = (entryIndex: number) => {
+            if (selected === entryIndex) return;
+            selected = entryIndex;
+            choices.forEach((choice, choiceIndex) => choice.setAttribute('aria-pressed', String(choiceIndex === selected)));
+            fullName.textContent = entries[selected].reward.name || 'Reward art';
+            name.setAttribute('aria-expanded', 'false');
+            artwork = artworkFor(entries[selected]);
+            category = 'all';
+            index = 0;
+            clearDisplayed();
+            gestures.reset();
+            render();
+        };
+
+        this.session = {
+            refresh: render,
+            close: () => {
+                clearPending();
+                clearDisplayed();
+                galleryLoad?.abort();
+                gestures.destroy();
+                dialog.close();
+                dialog.remove();
+                style.remove();
+                if (opener.isConnected) opener.focus({ preventScroll: true });
+            }
+        };
+        dialog.addEventListener('keydown', event => {
+            if (event.key === 'Escape') event.stopPropagation();
+            if (galleryMode || !['ArrowLeft', 'ArrowRight'].includes(event.key) || event.defaultPrevented) return;
+            event.preventDefault();
+            event.stopPropagation();
+            step(event.key === 'ArrowLeft' ? -1 : 1);
+        });
+        dialog.addEventListener('cancel', event => { event.preventDefault(); this.close(); });
+        dialog.addEventListener('close', () => { if (this.session?.refresh === render) this.close(); });
         dialog.showModal();
-        render(initialIndex);
+        selectCharacter(initialIndex);
         close.focus({ preventScroll: true });
     }
 
@@ -87,16 +286,12 @@ export class RewardArtDialog {
 
     setScenesEnabled(enabled: boolean) {
         this.scenesEnabled = enabled;
-        this.session?.viewer.setScenesEnabled(enabled);
+        this.session?.refresh();
     }
 
     close() {
-        if (!this.session) return;
-        const { dialog, viewer, opener } = this.session;
+        const session = this.session;
         this.session = null;
-        viewer.destroy();
-        dialog.close();
-        dialog.remove();
-        if (opener.isConnected) opener.focus({ preventScroll: true });
+        session?.close();
     }
 }

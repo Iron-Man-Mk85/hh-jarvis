@@ -1,5 +1,5 @@
 import { $ } from '../../game';
-import { hasPreviewArt, normalizeReward, type GameReward, type RewardArt, type RewardResponse } from './gameArt';
+import { hasPreviewArt, normalizeReward, requestRewardArt, type GameReward, type RewardArt, type RewardResponse } from './gameArt';
 import type { RewardArtEntry } from './RewardArtDialog';
 
 const overviewId = 'home_tab_container';
@@ -58,7 +58,7 @@ export class SeasonalArt {
     private loadDetails(reward: RewardArt, id: string): Promise<RewardArt | undefined> {
         const cached = this.details.get(id);
         if (cached) return cached;
-        const request = this.requestGirl(id).then(detail => {
+        const request = requestRewardArt(id).then(detail => {
             if (!detail) {
                 this.details.delete(id);
                 return undefined;
@@ -67,18 +67,5 @@ export class SeasonalArt {
         });
         this.details.set(id, request);
         return request;
-    }
-
-    private async requestGirl(id: string) {
-        if (!/^\d+$/.test(id)) return undefined;
-        try {
-            const game = window.shared?.general ?? window;
-            const response = await game.hh_ajax?.({ action: 'get_girl', id_girl: id }).promise();
-            if (!response?.success || !response.girl) return undefined;
-            const reward = normalizeReward(response.girl);
-            return String(reward.id_girl) === id ? reward : undefined;
-        } catch {
-            return undefined;
-        }
     }
 }

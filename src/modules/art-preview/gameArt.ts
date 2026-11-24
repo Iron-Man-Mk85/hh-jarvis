@@ -36,6 +36,7 @@ export interface GameReward extends RewardArt, GameArt {
 export interface RewardResponse {
     success?: boolean;
     girl?: GameReward;
+    girls_list?: GameReward[];
     inventory?: { shards?: GameReward[]; girls?: GameReward[] }[];
 }
 
@@ -60,6 +61,19 @@ export function normalizeReward(data: GameReward): RewardArt {
 
 export function hasPreviewArt(reward: RewardArt) {
     return Object.values(getArtGroups(reward.preview ?? {})).some(group => group.length);
+}
+
+export async function requestRewardArt(id: string) {
+    if (!/^\d+$/.test(id)) return undefined;
+    try {
+        const game = window.shared?.general?.hh_ajax ? window.shared.general : window;
+        const response = await game.hh_ajax?.({ action: 'get_girl', id_girl: id }).promise();
+        if (!response?.success || !response.girl) return undefined;
+        const reward = normalizeReward(response.girl);
+        return String(reward.id_girl) === id ? reward : undefined;
+    } catch {
+        return undefined;
+    }
 }
 
 function assetUrl(path: string | null | undefined) {

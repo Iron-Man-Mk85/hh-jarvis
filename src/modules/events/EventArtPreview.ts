@@ -24,7 +24,7 @@ export class EventArtPreview extends HHModule {
         super({ name: baseKey, configSchema: {
             baseKey,
             default: false,
-            label: settingHelp('Reward art preview', 'Open a viewer for reward art on events, Love Raids, Path of Valor, Path of Glory, Penta Drill, Season, Seasonal Events, and Leagues.'),
+            label: settingHelp('Reward art preview', 'Open a viewer for art on events, Love Raids, Path of Valor, Path of Glory, Penta Drill, Season, Seasonal Events, Leagues, and character pages.'),
             subSettings: [{
                 key: 'scenes',
                 label: settingHelp('Show scene previews', 'Also browse the still scene previews that the game provides.'),
@@ -38,7 +38,7 @@ export class EventArtPreview extends HHModule {
     }
 
     shouldRun() {
-        return rewardPages.has(currentPage);
+        return rewardPages.has(currentPage) || currentPage.startsWith('/characters/');
     }
 
     run({ scenes = true, inline = false }: ModuleSettings) {

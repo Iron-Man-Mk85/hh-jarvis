@@ -1,6 +1,7 @@
 import type { RewardArt } from './gameArt';
 import { RewardArtDialog, type RewardArtEntry } from './RewardArtDialog';
 import { SeasonalArt } from './SeasonalArt';
+import { CharacterArt } from './CharacterArt';
 import { getLoveRaids } from '../love-raids/gameData';
 
 interface Target {
@@ -12,6 +13,7 @@ interface Target {
     initialIndex?: number;
     compact?: boolean;
     prepend?: boolean;
+    galleryOnOpen?: boolean;
 }
 
 function target(host: HTMLElement | null, reward: RewardArt | undefined | null, anchor?: HTMLElement | null,
@@ -112,6 +114,7 @@ export class RewardArtButtons {
     private frame = 0;
     private dialog: RewardArtDialog;
     private seasonal: SeasonalArt | undefined;
+    private character: CharacterArt | undefined;
 
     constructor(private page: string, scenes: boolean) {
         this.dialog = new RewardArtDialog(scenes);
@@ -120,10 +123,11 @@ export class RewardArtButtons {
             this.frame = requestAnimationFrame(() => { this.frame = 0; this.sync(); });
         };
         this.seasonal = page === '/seasonal.html' ? new SeasonalArt(schedule) : undefined;
+        this.character = page.startsWith('/characters/') ? new CharacterArt(schedule) : undefined;
         this.observer = new MutationObserver(records => {
             if (records.some(({ target }) => !(target instanceof Element && target.closest('.jarvis-art-dialog')))) schedule();
         });
-        this.observer.observe(document.body, { childList: true, subtree: true, attributes: true, attributeFilter: ['class', 'girl-id', 'id-girl'] });
+        this.observer.observe(document.body, { childList: true, subtree: true, attributes: true, attributeFilter: ['class', 'girl', 'girl-id', 'id-girl'] });
         this.sync();
     }
 
@@ -133,6 +137,7 @@ export class RewardArtButtons {
 
     destroy() {
         this.seasonal?.destroy();
+        this.character?.destroy();
         this.observer.disconnect();
         cancelAnimationFrame(this.frame);
         this.dialog.close();
@@ -144,8 +149,8 @@ export class RewardArtButtons {
     }
 
     private sync() {
-        const seasonal = this.seasonal?.getTarget();
-        const targets: Target[] = seasonal ? [seasonal] : rewardTargets(this.page);
+        const pageTarget = this.seasonal?.getTarget() ?? this.character?.getTarget();
+        const targets: Target[] = pageTarget ? [pageTarget] : rewardTargets(this.page);
         const populated = targets.filter(target => target.entries.length);
         const active = new Set(populated.map(target => target.host));
         for (const [host, { button, layout }] of this.launchers) {
@@ -180,7 +185,7 @@ export class RewardArtButtons {
             const launcher: Launcher = { button, target, layout: new ResizeObserver(() => this.position(button, launcher.target)) };
             button.addEventListener('click', event => {
                 event.stopPropagation();
-                this.dialog.show(launcher.target.entries, button, launcher.target.initialIndex);
+                this.dialog.show(launcher.target.entries, button, launcher.target.initialIndex, launcher.target.galleryOnOpen);
             });
             if (target.prepend) target.host.prepend(button);
             else target.host.append(button);

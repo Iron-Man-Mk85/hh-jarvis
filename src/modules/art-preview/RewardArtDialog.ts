@@ -259,6 +259,7 @@ export class RewardArtDialog {
             void entry.loadDetails?.().then(reward => {
                 if (!reward || this.session?.refresh !== render || selected !== entryIndex) return;
                 const current = visible[index];
+                fullName.textContent = reward.name || fullName.textContent;
                 artwork = artworkFor({ ...entry, reward });
                 render(current);
             });

@@ -424,6 +424,15 @@ td[data-jarvis-mark] > a {
     align-self: flex-start;
     margin: .35rem;
 }
+#harem_right :is(.avatar-box, .middle_part.missing_girl) > .jarvis-art-launcher {
+    position: absolute;
+    inset-block-start: .35rem;
+    inset-inline-start: .35rem;
+    z-index: 6;
+}
+#harem_right .middle_part.missing_girl:has(> .jarvis-art-launcher) {
+    position: relative;
+}
 #events .nc-event-container .nc-event-reward-container .nc-events-prize-locations-container .jarvis-event-copy-row > button.jarvis-event-copy.blue_button_L {
     flex: none;
     display: inline-flex;

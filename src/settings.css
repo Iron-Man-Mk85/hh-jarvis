@@ -329,6 +329,9 @@ td[data-jarvis-mark] > a {
     cursor: default;
     opacity: .5;
 }
+#events {
+    --jarvis-event-text-outline: 1px 1px #000, -1px 1px #000, -1px -1px #000, 1px -1px #000;
+}
 #events .jarvis-event-copy-row {
     display: flex;
     align-items: center;
@@ -336,12 +339,21 @@ td[data-jarvis-mark] > a {
     gap: .4rem;
     width: 100%;
 }
-#events .jarvis-event-copy {
+#events .nc-event-container .nc-event-reward-container .nc-events-prize-locations-container .jarvis-event-copy-row > button.jarvis-event-copy.blue_button_L {
     flex: none;
-    width: 7.5rem;
-    height: 2.35rem;
-    padding: .15rem .3rem;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    box-sizing: border-box;
+    width: max-content !important;
+    min-width: 7.5rem !important;
+    height: 2rem !important;
+    padding: .1rem .6rem !important;
+    border-radius: 999px !important;
     font-size: .8rem;
+    line-height: 1.1;
+    white-space: nowrap;
+    text-shadow: var(--jarvis-event-text-outline);
 }
 .jarvis-mark-setting-actions,
 .jarvis-mark-actions {

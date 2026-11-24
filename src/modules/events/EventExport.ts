@@ -96,7 +96,7 @@ export class EventExport extends HHModule {
                 const rewards = window.event_girls ?? window.event_data?.girls;
                 const names = rewards?.map(reward => sheetCell(reward.name ?? ''));
                 if (!rewards || !names?.length || names.some(name => !name)) {
-                    label.textContent = 'Event names unavailable';
+                    label.textContent = 'Names unavailable';
                     return;
                 }
                 const sources = this.includeSources ? rewards.map(reward => currentSource(reward, kind, id)) : [];
@@ -106,7 +106,7 @@ export class EventExport extends HHModule {
                 label.textContent = `${names.length} ${names.length === 1 ? 'name' : 'names'} copied`;
             } catch (err) {
                 console.warn('Jarvis could not copy the event names:', err);
-                label.textContent = 'Could not copy names';
+                label.textContent = 'Copy failed';
             } finally {
                 if (this.button === button) {
                     button.disabled = false;

@@ -1,5 +1,8 @@
 # Changelog
 
+- **0.11.12**
+  - Open the art viewer with the camera at the top left of the selected character’s portrait in Harem++.
+  - Use the switches in Reward art preview settings to choose the opening layout and artwork tab separately. If the selected artwork is unavailable, the viewer opens on Original and keeps your chosen layout.
 - **0.11.10**
   - Open the art viewer with a camera icon. Seasonal Event Overview and Market each have one button for the characters shown there. The camera on a character page opens that character’s gallery.
   - Browse a gallery that fits the artwork to the window, with animated originals and skins alongside still poses. Use All but scenes to leave out the wider scene images, or click an image to zoom in and browse one at a time.

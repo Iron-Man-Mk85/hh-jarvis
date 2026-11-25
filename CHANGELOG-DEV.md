@@ -1,5 +1,6 @@
 # Development notes
 
+- **0.11.18** See character names in the Love Raids art viewer for mysterious raids, and browse their poses, released skins, and scene previews when the game provides them.
 - **0.11.17** Copy owned Path of Attraction characters in their original Free and Paid slots, even when all four character rewards have been replaced.
 - **0.11.16** Turn off Include event name on supported events for two compact clipboard buttons. The left copies the event name and the right copies the reward names. The default button still copies both together.
 - **0.11.15**

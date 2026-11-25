@@ -144,7 +144,7 @@ export class RewardArtDialog {
                 thumbnails.set(choice, () => {
                     const icon = document.createElement('img');
                     icon.alt = '';
-                    icon.addEventListener('error', () => { choice.textContent = label; }, { once: true });
+                    icon.addEventListener('error', () => { choice.textContent = choice.title; }, { once: true });
                     choice.replaceChildren(icon);
                     icon.src = thumbnail;
                 });
@@ -340,6 +340,12 @@ export class RewardArtDialog {
                 if (!reward || this.session?.refresh !== render || selected !== entryIndex) return;
                 const current = index === preferredIndex ? visible[index] : undefined;
                 fullName.textContent = reward.name || fullName.textContent;
+                const choice = choices[entryIndex];
+                if (choice && reward.name && choice.title !== reward.name) {
+                    choice.title = reward.name;
+                    choice.setAttribute('aria-label', reward.name);
+                    if (!choice.querySelector('img')) choice.textContent = reward.name;
+                }
                 artwork = artworkFor({ ...entry, reward });
                 render(current);
             });

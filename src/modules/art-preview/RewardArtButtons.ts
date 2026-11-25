@@ -1,9 +1,10 @@
-import type { RewardArt } from './gameArt';
+import type { GirlData } from '../../game-types';
+import { hasPreviewArt, requestRewardArt, type RewardArt } from './gameArt';
 import { RewardArtDialog, type RewardArtEntry } from './RewardArtDialog';
 import { SeasonalArt } from './SeasonalArt';
 import { CharacterArt } from './CharacterArt';
 import { openArtInGallery, readDefaultArtFilter } from './artViewSettings';
-import { getLoveRaids } from '../love-raids/gameData';
+import { getGirlDictionary, getLoveRaids } from '../love-raids/gameData';
 import { getPathRewardTiers, isPathOfAttraction, pathEventControls } from '../events/pathOfAttraction';
 
 interface Target {
@@ -35,7 +36,7 @@ function cards(selector: string, rewards: RewardArt[], side: Target['side']): Ta
     });
 }
 
-function raidTargets(): Target[] {
+function raidTargets(girls: ReadonlyMap<string, GirlData> | null, loadDetails: (id: string) => Promise<RewardArt | undefined>): Target[] {
     const raidsById = new Map(getLoveRaids().map(raid => [String(raid.id_raid), raid]));
     const entries: RewardArtEntry[] = [];
     const indices = new Map<string, number>();
@@ -47,7 +48,20 @@ function raidTargets(): Target[] {
         let index = indices.get(id);
         if (index === undefined) {
             index = entries.length;
-            entries.push({ reward: { ...raid.girl_data, id_girl: raid.id_girl }, native: card.querySelector<HTMLElement>('.left-girl-container') ?? undefined });
+            const hidden = raid.status === 'upcoming' && !raid.all_is_owned && raid.girl_data.id_girl == null &&
+                (raid.announcement_type_name === 'none' || raid.announcement_type_name === 'partial');
+            const girl = hidden ? girls?.get(id) : undefined;
+            const reward = {
+                ...raid.girl_data,
+                id_girl: raid.id_girl,
+                name: girl?.name || raid.girl_data.name,
+                rarity: raid.girl_data.rarity || girl?.rarity
+            };
+            entries.push({
+                reward,
+                native: card.querySelector<HTMLElement>('.left-girl-container') ?? undefined,
+                loadDetails: hasPreviewArt(reward) ? undefined : () => loadDetails(id)
+            });
             indices.set(id, index);
         }
         targets.push({ host: card, entries, initialIndex: index });
@@ -57,8 +71,6 @@ function raidTargets(): Target[] {
 
 function rewardTargets(page: string): Target[] {
     switch (page) {
-        case '/love-raids.html':
-            return raidTargets();
         case '/path-of-valor.html':
         case '/path-of-glory.html':
             return cards('.potions-paths-second-row .girl-preview[girl-id]', window.path_girls ?? [], 'below');
@@ -128,6 +140,9 @@ export class RewardArtButtons {
     private dialog: RewardArtDialog;
     private seasonal: SeasonalArt | undefined;
     private character: CharacterArt | undefined;
+    private raidGirls: ReadonlyMap<string, GirlData> | null = null;
+    private raidNamesReady: Promise<void> | undefined;
+    private raidDetails = new Map<string, Promise<RewardArt | undefined>>();
 
     constructor(private page: string, scenes: boolean) {
         this.dialog = new RewardArtDialog(scenes);
@@ -138,6 +153,12 @@ export class RewardArtButtons {
         this.seasonal = page === '/seasonal.html' ? new SeasonalArt(schedule) : undefined;
         const haremPlusPlus = page === '/waifu.html';
         this.character = haremPlusPlus || page.startsWith('/characters/') ? new CharacterArt(schedule, haremPlusPlus) : undefined;
+        if (page === '/love-raids.html') {
+            this.raidNamesReady = getGirlDictionary().then(girls => {
+                this.raidGirls = girls;
+                if (this.launchers.size) this.sync();
+            });
+        }
         this.observer = new MutationObserver(records => {
             if (records.some(({ target }) => !(target instanceof Element && target.closest('.jarvis-art-dialog')))) schedule();
         });
@@ -166,7 +187,8 @@ export class RewardArtButtons {
 
     private sync() {
         const pageTarget = this.seasonal?.getTarget() ?? this.character?.getTarget();
-        const targets: Target[] = pageTarget ? [pageTarget] : rewardTargets(this.page);
+        const targets: Target[] = pageTarget ? [pageTarget] : this.page === '/love-raids.html'
+            ? raidTargets(this.raidGirls, id => this.loadRaidDetails(id)) : rewardTargets(this.page);
         const populated = targets.filter(target => target.entries.length);
         const active = new Set(populated.map(target => target.host));
         for (const [host, { button, layout }] of this.launchers) {
@@ -195,8 +217,13 @@ export class RewardArtButtons {
             const launcher: Launcher = { button, target, layout: new ResizeObserver(() => this.position(button, launcher.target)) };
             button.addEventListener('click', event => {
                 event.stopPropagation();
-                const { entries, initialIndex, galleryOnOpen } = launcher.target;
-                this.dialog.show(entries, button, initialIndex, openArtInGallery(galleryOnOpen), readDefaultArtFilter());
+                const show = () => {
+                    if (!button.isConnected) return;
+                    const { entries, initialIndex, galleryOnOpen } = launcher.target;
+                    this.dialog.show(entries, button, initialIndex, openArtInGallery(galleryOnOpen), readDefaultArtFilter());
+                };
+                if (this.raidNamesReady) void this.raidNamesReady.then(show);
+                else show();
             });
             if (target.prepend) target.host.prepend(button);
             else target.host.append(button);
@@ -204,6 +231,17 @@ export class RewardArtButtons {
             this.observe(launcher.layout, target);
             this.position(button, target);
         }
+    }
+
+    private loadRaidDetails(id: string) {
+        const cached = this.raidDetails.get(id);
+        if (cached) return cached;
+        const request = requestRewardArt(id).then(reward => {
+            if (!reward) this.raidDetails.delete(id);
+            return reward;
+        });
+        this.raidDetails.set(id, request);
+        return request;
     }
 
     private observe(layout: ResizeObserver, { host, anchor }: Target) {

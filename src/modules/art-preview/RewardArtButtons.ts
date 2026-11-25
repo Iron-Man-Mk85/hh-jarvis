@@ -55,6 +55,7 @@ function raidTargets(girls: ReadonlyMap<string, GirlData> | null, loadDetails: (
                 ...raid.girl_data,
                 id_girl: raid.id_girl,
                 name: girl?.name || raid.girl_data.name,
+                ico: hidden ? raid.girl_data.ico?.replace(/-black\//, '/') : raid.girl_data.ico,
                 rarity: raid.girl_data.rarity || girl?.rarity
             };
             entries.push({

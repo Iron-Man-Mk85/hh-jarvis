@@ -1,5 +1,8 @@
 # Development notes
 
+- **0.11.15**
+  - Copy event names with one compact clipboard button on every supported event page.
+  - Path of Attraction includes the event name by default. Turn off Include event name to copy only the Free and Paid columns.
 - **0.11.14** Paste Path of Attraction reward names into the Free and Paid columns to preserve the existing merged title cell. Copy the event title with its own button.
 - **0.11.13**
   - Open artwork for free and paid Path of Attraction character rewards with the camera beside the event tabs.

@@ -19,6 +19,7 @@ export interface EventRewardSource {
 }
 
 export interface EventReward extends RewardArt {
+    own?: boolean;
     source?: EventRewardSource;
     source_list?: Record<string, EventRewardSource[] | undefined>;
 }
@@ -26,7 +27,7 @@ export interface EventReward extends RewardArt {
 export interface PathEventTier {
     num_step: number;
     rewards?: Partial<Record<'free' | 'locked', {
-        reward?: { girls?: EventReward[] };
+        reward?: { girls?: EventReward[]; shards?: EventReward[] };
     }>>;
 }
 

@@ -1,5 +1,13 @@
 # Development notes
 
+- **0.11.16** Turn off Include event name on supported events for two compact clipboard buttons. The left copies the event name and the right copies the reward names. The default button still copies both together.
+- **0.11.15**
+  - Copy event names with one compact clipboard button on every supported event page.
+  - Path of Attraction includes the event name by default. Turn off Include event name to copy only the Free and Paid columns.
+- **0.11.14** Paste Path of Attraction reward names into the Free and Paid columns to preserve the existing merged title cell. Copy the event title with its own button.
+- **0.11.13**
+  - Open artwork for free and paid Path of Attraction character rewards with the camera beside the event tabs.
+  - Copy Path of Attraction names in tier order, with free and paid columns and one event title spanning the reward rows.
 - **0.11.12** Use the switches in Reward art preview settings to choose the opening layout and artwork separately. The viewer opens on Original when the selected artwork is unavailable.
 - **0.11.11**
   - Open the selected character’s artwork from the camera at the top left of their portrait in Harem++.

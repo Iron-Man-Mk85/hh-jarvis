@@ -1,7 +1,26 @@
 import type { EventReward, EventRewardSource } from '../../game-types';
+import { getPathRewardTiers, isPathOfAttraction, pathEventControls } from './pathOfAttraction';
 
 type SourceForReward = (reward: EventReward, id: string) => string;
 interface ExportRule { source?: SourceForReward }
+
+interface TitledEventLayout {
+    matches(): boolean;
+    controls: string;
+    getEventName(): string | undefined;
+    getRewardRows(): EventReward[][][];
+}
+
+const titledEventLayouts: TitledEventLayout[] = [{
+    matches: isPathOfAttraction,
+    controls: pathEventControls,
+    getEventName: () => window.event_data?.path_of_attraction?.name,
+    getRewardRows: () => getPathRewardTiers().map(({ free, paid }) => [free, paid])
+}];
+
+export function getTitledEventLayout() {
+    return titledEventLayouts.find(layout => layout.matches());
+}
 
 const rules = new Map<string, ExportRule>([
     ['event', { source: (reward, id) => currentSource(reward, 'event', id) }],

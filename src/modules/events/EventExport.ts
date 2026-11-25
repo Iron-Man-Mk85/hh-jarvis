@@ -9,43 +9,23 @@ function sheetCell(value: string) {
 }
 
 async function copyPathNames() {
-    const title = sheetCell(window.event_data?.path_of_attraction?.name ?? '');
     const rewards = getPathRewardTiers().map(({ free, paid }) => [
         free.map(reward => sheetCell(reward.name ?? '')),
         paid.map(reward => sheetCell(reward.name ?? ''))
     ]);
     const names = rewards.flat(2);
-    if (!title || !names.length || names.some(name => !name)) return 0;
+    if (!names.length || names.some(name => !name)) return 0;
 
-    const rows = rewards.map(([free, paid], index) => [index === 0 ? title : '', free.join(', '), paid.join(', ')]);
-    const tsv = rows.map(row => row.join('\t')).join('\n');
-    if (typeof ClipboardItem !== 'undefined' && navigator.clipboard.write) {
-        const table = document.createElement('table');
-        rows.forEach(([event, free, paid], index) => {
-            const row = table.insertRow();
-            if (index === 0) {
-                const titleCell = row.insertCell();
-                titleCell.textContent = event;
-                titleCell.rowSpan = rows.length;
-            }
-            row.insertCell().textContent = free;
-            row.insertCell().textContent = paid;
-        });
-        await navigator.clipboard.write([new ClipboardItem({
-            'text/html': new Blob([table.outerHTML], { type: 'text/html' }),
-            'text/plain': new Blob([tsv], { type: 'text/plain' })
-        })]);
-    } else {
-        await navigator.clipboard.writeText(tsv);
-    }
+    const rows = rewards.map(([free, paid]) => `${free.join(', ')}\t${paid.join(', ')}`);
+    await navigator.clipboard.writeText(rows.join('\n'));
     return names.length;
 }
 
 export class EventExport extends HHModule {
-    private button: HTMLButtonElement | null = null;
+    private buttons: HTMLButtonElement[] = [];
     private row: HTMLElement | null = null;
     private observer: MutationObserver | null = null;
-    private feedbackTimer: number | undefined;
+    private feedbackTimers = new Map<HTMLButtonElement, number>();
     private includeSources = true;
 
     constructor() {
@@ -53,7 +33,7 @@ export class EventExport extends HHModule {
         super({ name: baseKey, configSchema: {
             baseKey,
             default: false,
-            label: settingHelp('Event names export', 'Copy names from regular events, Mythic Days, Crazy Cumback Contest, and Path of Attraction. Path of Attraction includes the event name and one row per character reward tier, with free and paid columns.'),
+            label: settingHelp('Event names export', 'Copy names from regular events, Mythic Days, Crazy Cumback Contest, and Path of Attraction. On Path of Attraction, paste reward names starting in the Free column and copy the event title separately.'),
             subSettings: [{
                 key: 'includeSources',
                 label: settingHelp('Include event sources', 'Add a second column on supported event types when every reward has an identifiable source.'),
@@ -76,34 +56,23 @@ export class EventExport extends HHModule {
         this.hasRun = true;
         this.includeSources = includeSources;
 
-        const button = document.createElement('button');
-        button.type = 'button';
-        button.className = 'blue_button_L jarvis-event-copy';
-        const label = document.createElement('span');
-        label.setAttribute('aria-live', 'polite');
-        label.textContent = 'Copy event names';
-        button.appendChild(label);
-        button.addEventListener('click', async () => {
-            button.disabled = true;
-            clearTimeout(this.feedbackTimer);
-            try {
-                const count = pathEvent ? await copyPathNames() : await this.copyEventNames(rule);
-                label.textContent = count ? `${count} ${count === 1 ? 'name' : 'names'} copied` : 'Names unavailable';
-            } catch (err) {
-                console.warn('Jarvis could not copy the event names:', err);
-                label.textContent = 'Copy failed';
-            } finally {
-                if (this.button === button) {
-                    button.disabled = false;
-                    this.feedbackTimer = window.setTimeout(() => label.textContent = 'Copy event names', 2500);
-                }
-            }
+        const button = this.addCopyButton(pathEvent ? 'Copy reward names' : 'Copy event names', async () => {
+            const count = pathEvent ? await copyPathNames() : await this.copyEventNames(rule);
+            return count ? `${count} ${count === 1 ? 'name' : 'names'} copied` : 'Names unavailable';
         });
-        this.button = button;
+        if (pathEvent) {
+            button.title = 'Paste at the first Free reward cell to preserve the merged event title.';
+            this.addCopyButton('Copy event title', async () => {
+                const title = sheetCell(window.event_data?.path_of_attraction?.name ?? '');
+                if (!title) return 'Title unavailable';
+                await navigator.clipboard.writeText(title);
+                return 'Title copied';
+            });
+        }
         const mount = () => {
             if (pathEvent) {
                 const controls = eventPanel.querySelector(pathEventControls);
-                if (controls && button.parentElement !== controls) controls.append(button);
+                if (controls && this.buttons.some(button => button.parentElement !== controls)) controls.append(...this.buttons);
                 return;
             }
             const source = eventPanel.querySelector('.nc-event-reward-container.selected .nc-events-prize-locations-container');
@@ -129,6 +98,36 @@ export class EventExport extends HHModule {
         mount();
     }
 
+    private addCopyButton(text: string, copy: () => Promise<string>) {
+        const button = document.createElement('button');
+        button.type = 'button';
+        button.className = 'blue_button_L jarvis-event-copy';
+        const label = document.createElement('span');
+        label.setAttribute('aria-live', 'polite');
+        label.textContent = text;
+        button.appendChild(label);
+        button.addEventListener('click', async () => {
+            button.disabled = true;
+            clearTimeout(this.feedbackTimers.get(button));
+            try {
+                label.textContent = await copy();
+            } catch (err) {
+                console.warn('Jarvis could not copy event data:', err);
+                label.textContent = 'Copy failed';
+            } finally {
+                if (this.buttons.includes(button)) {
+                    button.disabled = false;
+                    this.feedbackTimers.set(button, window.setTimeout(() => {
+                        label.textContent = text;
+                        this.feedbackTimers.delete(button);
+                    }, 2500));
+                }
+            }
+        });
+        this.buttons.push(button);
+        return button;
+    }
+
     private async copyEventNames(rule: ReturnType<typeof getEventExportRule>) {
         if (!rule) return 0;
         const rewards = window.event_girls ?? window.event_data?.girls;
@@ -150,10 +149,11 @@ export class EventExport extends HHModule {
     tearDown() {
         this.observer?.disconnect();
         this.observer = null;
-        clearTimeout(this.feedbackTimer);
-        this.button?.remove();
+        for (const timer of this.feedbackTimers.values()) clearTimeout(timer);
+        this.feedbackTimers.clear();
+        for (const button of this.buttons) button.remove();
+        this.buttons = [];
         this.removeRow();
-        this.button = null;
         this.hasRun = false;
     }
 

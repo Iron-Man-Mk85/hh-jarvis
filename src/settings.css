@@ -428,7 +428,8 @@ td[data-jarvis-mark] > a {
 #quick-harem-wrapper .qh-harem > .pose:has(> .jarvis-art-launcher) {
     position: relative;
 }
-#events .nc-event-container .nc-event-reward-container .nc-events-prize-locations-container .jarvis-event-copy-row > button.jarvis-event-copy.blue_button_L {
+#events :is(.nc-event-container .nc-event-reward-container .nc-events-prize-locations-container .jarvis-event-copy-row,
+    .nc-panel-header .events-list) > button.jarvis-event-copy.blue_button_L {
     flex: none;
     display: inline-flex;
     align-items: center;
@@ -443,6 +444,10 @@ td[data-jarvis-mark] > a {
     line-height: 1.1;
     white-space: nowrap;
     text-shadow: var(--jarvis-event-text-outline);
+}
+#events .nc-panel-header .events-list > .jarvis-event-copy {
+    align-self: center;
+    margin-inline-start: .5rem;
 }
 .jarvis-mark-setting-actions,
 .jarvis-mark-actions {

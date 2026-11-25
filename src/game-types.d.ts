@@ -23,6 +23,13 @@ export interface EventReward extends RewardArt {
     source_list?: Record<string, EventRewardSource[] | undefined>;
 }
 
+export interface PathEventTier {
+    num_step: number;
+    rewards?: Partial<Record<'free' | 'locked', {
+        reward?: { girls?: EventReward[] };
+    }>>;
+}
+
 export interface LoveRaid {
     id_raid: GameId;
     id_girl: GameId;
@@ -84,7 +91,11 @@ declare global {
             finished?: ContestData[] | Record<string, ContestData>;
         };
         event_girls?: EventReward[];
-        event_data?: { identifier?: string; girls?: EventReward[] };
+        event_data?: {
+            identifier?: string;
+            girls?: EventReward[];
+            path_of_attraction?: { name?: string; tiers?: Record<string, PathEventTier> };
+        };
         path_girls?: RewardArt[];
         seasons_girls?: RewardArt[];
         leagues_girl?: RewardArt | null;

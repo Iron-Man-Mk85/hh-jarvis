@@ -458,6 +458,9 @@ td[data-jarvis-mark] > a {
     align-self: center;
     margin-inline-start: .5rem;
 }
+#events .nc-panel-header .events-list > .jarvis-event-copy + .jarvis-event-copy {
+    margin-inline-start: .25rem;
+}
 .jarvis-mark-setting-actions,
 .jarvis-mark-actions {
     display: flex;

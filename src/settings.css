@@ -409,7 +409,7 @@ td[data-jarvis-mark] > a {
     align-self: flex-start;
     margin: .35rem;
 }
-:is(#mega-event-tabs, .tabs-switcher:has(> #home_tab)) > .jarvis-art-launcher {
+:is(#mega-event-tabs, .tabs-switcher:has(> #home_tab), #events .nc-panel-header .events-list) > .jarvis-art-launcher {
     position: relative;
     z-index: 1;
     flex: none;
@@ -446,6 +446,7 @@ td[data-jarvis-mark] > a {
     text-shadow: var(--jarvis-event-text-outline);
 }
 #events .nc-panel-header .events-list > .jarvis-event-copy {
+    order: 1;
     align-self: center;
     margin-inline-start: .5rem;
 }

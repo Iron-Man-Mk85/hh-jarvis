@@ -4,6 +4,7 @@ import { SeasonalArt } from './SeasonalArt';
 import { CharacterArt } from './CharacterArt';
 import { openArtInGallery, readDefaultArtFilter } from './artViewSettings';
 import { getLoveRaids } from '../love-raids/gameData';
+import { getPathRewardTiers, isPathOfAttraction, pathEventControls } from '../events/pathOfAttraction';
 
 interface Target {
     host: HTMLElement;
@@ -84,6 +85,18 @@ function rewardTargets(page: string): Target[] {
             return target(host, window.leagues_girl, host?.querySelector('.shards_bar_wrapper'), 'below', host ?? undefined);
         }
         case '/event.html': {
+            if (isPathOfAttraction()) {
+                const host = first(pathEventControls);
+                if (!host) return [];
+                const byId = new Map((window.event_girls ?? []).map(reward => [String(reward.id_girl), reward]));
+                const participants = getPathRewardTiers().flatMap(({ free, paid }) => [...free, ...paid]);
+                const ids = new Set(participants.map(reward => String(reward.id_girl)));
+                const entries = [...ids].flatMap(id => {
+                    const reward = byId.get(id);
+                    return reward?.preview ? [{ reward }] : [];
+                });
+                return [{ host, entries }];
+            }
             const host = first('#events .nc-event-container');
             if (!host) return [];
             const selected = host.querySelector<HTMLElement>('.nc-event-reward-container.selected');

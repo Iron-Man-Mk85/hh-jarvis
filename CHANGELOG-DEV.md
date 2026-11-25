@@ -1,5 +1,8 @@
 # Development notes
 
+- **0.11.11**
+  - Open the selected character’s artwork from the camera at the top left of their portrait in Harem++.
+  - Choose Page default, One at a time, or Show all under Default viewer mode in Reward art preview settings.
 - **0.11.10** Use All but scenes to browse originals, poses, and skins together, including animated artwork.
 - **0.11.9**
   - Find the Seasonal camera directly after the last event tab and the viewer’s Close button inside the top-right corner.

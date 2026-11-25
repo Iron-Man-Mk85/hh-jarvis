@@ -70,23 +70,36 @@ export class EventExport extends HHModule {
         const button = document.createElement('button');
         button.type = 'button';
         button.className = 'blue_button_L jarvis-event-copy';
-        const label = document.createElement('span');
-        label.setAttribute('aria-live', 'polite');
-        label.textContent = 'Copy event names';
-        button.appendChild(label);
+        button.title = 'Copy event names';
+        button.setAttribute('aria-label', button.title);
+        const icon = document.createElement('span');
+        icon.setAttribute('aria-hidden', 'true');
+        icon.textContent = '📋';
+        const status = document.createElement('span');
+        status.className = 'jarvis-event-copy-status';
+        status.setAttribute('role', 'status');
+        button.append(icon, status);
         button.addEventListener('click', async () => {
             button.disabled = true;
             clearTimeout(this.feedbackTimer);
+            status.textContent = '';
             try {
                 const count = pathEvent ? await copyPathNames(this.includePathTitle) : await this.copyEventNames(rule);
-                label.textContent = count ? `${count} ${count === 1 ? 'name' : 'names'} copied` : 'Names unavailable';
+                status.textContent = count ? `${count} ${count === 1 ? 'name' : 'names'} copied` : 'Names unavailable';
+                icon.textContent = count ? '✓' : '!';
             } catch (err) {
                 console.warn('Jarvis could not copy event data:', err);
-                label.textContent = 'Copy failed';
+                status.textContent = 'Copy failed';
+                icon.textContent = '!';
             } finally {
                 if (this.button === button) {
                     button.disabled = false;
-                    this.feedbackTimer = window.setTimeout(() => label.textContent = 'Copy event names', 2500);
+                    button.title = status.textContent;
+                    this.feedbackTimer = window.setTimeout(() => {
+                        button.title = 'Copy event names';
+                        icon.textContent = '📋';
+                        status.textContent = '';
+                    }, 2500);
                 }
             }
         });

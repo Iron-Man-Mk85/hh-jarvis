@@ -435,15 +435,23 @@ td[data-jarvis-mark] > a {
     align-items: center;
     justify-content: center;
     box-sizing: border-box;
-    width: max-content !important;
-    min-width: 7.5rem !important;
-    height: 2rem !important;
-    padding: .1rem .6rem !important;
+    width: 1.8rem !important;
+    min-width: 1.8rem !important;
+    height: 1.55rem !important;
+    padding: .12rem .25rem !important;
     border-radius: 999px !important;
-    font-size: .8rem;
+    font-size: .9rem;
     line-height: 1.1;
     white-space: nowrap;
     text-shadow: var(--jarvis-event-text-outline);
+}
+.jarvis-event-copy-status {
+    position: absolute;
+    clip-path: inset(50%);
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    white-space: nowrap;
 }
 #events .nc-panel-header .events-list > .jarvis-event-copy {
     order: 1;

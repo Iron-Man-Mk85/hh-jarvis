@@ -12,6 +12,9 @@ export interface GameArt {
 }
 
 export type ArtKind = 'poses' | 'skins' | 'scenes';
+export const artFilterLabels = { all: 'All art', withoutScenes: 'All but scenes', original: 'Original', poses: 'Poses', skins: 'Skins', scenes: 'Scenes' } as const;
+export type ArtFilter = keyof typeof artFilterLabels;
+export const artFilters = Object.keys(artFilterLabels) as ArtFilter[];
 export type SpineSkin = { format: 'spine'; path: string; filename: string; offset: number[]; isSkin?: boolean };
 export type ArtItem = { url?: string; label: string; animation?: SpineSkin | { format: 'video'; asset: string } };
 export type ArtGroups = Record<ArtKind, ArtItem[]>;

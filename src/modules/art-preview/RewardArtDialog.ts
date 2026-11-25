@@ -1,11 +1,9 @@
 import { ArtGestures } from './ArtGestures';
 import { mountArt } from './artMedia';
-import { getArtGroups, getOriginalArt, rewardThumbnail, type ArtItem, type ArtKind, type RewardArt } from './gameArt';
+import { artFilterLabels, artFilters, getArtGroups, getOriginalArt, rewardThumbnail, type ArtFilter, type ArtItem, type ArtKind, type RewardArt } from './gameArt';
 import css from './artPreview.css';
 
 const rarities = new Set(['common', 'rare', 'epic', 'legendary', 'mythic']);
-const labels = { all: 'All art', withoutScenes: 'All but scenes', original: 'Original', poses: 'Poses', skins: 'Skins', scenes: 'Scenes' } as const;
-type Filter = keyof typeof labels;
 type Artwork = ArtItem & { kind: 'original' | ArtKind };
 
 export interface RewardArtEntry {
@@ -55,7 +53,7 @@ function artworkFor({ reward, native }: RewardArtEntry): Artwork[] {
 export class RewardArtDialog {
     private session: { close: () => void; refresh: () => void } | null = null;
 
-    show(entries: RewardArtEntry[], opener: HTMLElement, initialIndex = 0, galleryOnOpen = false) {
+    show(entries: RewardArtEntry[], opener: HTMLElement, initialIndex = 0, galleryOnOpen = false, filterOnOpen: ArtFilter = 'original') {
         if (!entries.length) return;
         this.close();
         const style = document.createElement('style');
@@ -85,8 +83,8 @@ export class RewardArtDialog {
         filters.className = 'jarvis-art-filters';
         filters.setAttribute('role', 'group');
         filters.setAttribute('aria-label', 'Artwork type');
-        const filterButtons = new Map((Object.keys(labels) as Filter[]).map(filter => {
-            const button = control(labels[filter], () => {
+        const filterButtons = new Map(artFilters.map(filter => {
+            const button = control(artFilterLabels[filter], () => {
                 if (preferredFilter === filter) return;
                 preferredFilter = filter;
                 preferredIndex = 0;
@@ -175,7 +173,7 @@ export class RewardArtDialog {
         let selected = -1;
         let index = 0;
         let preferredIndex = 0;
-        let preferredFilter: Filter = 'all';
+        let preferredFilter = filterOnOpen;
         let galleryMode = galleryOnOpen;
         let artwork: Artwork[] = [];
         let visible: Artwork[] = [];
@@ -300,7 +298,8 @@ export class RewardArtDialog {
         const render = (current?: Artwork) => {
             const available = artwork.filter(item => item.kind !== 'scenes' || this.scenesEnabled);
             const kinds = new Set(available.map(item => item.kind));
-            const category = preferredFilter === 'all' || preferredFilter === 'withoutScenes' || kinds.has(preferredFilter) ? preferredFilter : 'all';
+            const fallback = kinds.has('original') ? 'original' : 'all';
+            const category = preferredFilter === 'all' || preferredFilter === 'withoutScenes' || kinds.has(preferredFilter) ? preferredFilter : fallback;
             for (const [filter, button] of filterButtons) {
                 if (filter === 'all') button.hidden = kinds.size < 2;
                 else if (filter === 'withoutScenes') button.hidden = category !== filter && (kinds.size < 2 || !kinds.has('scenes'));

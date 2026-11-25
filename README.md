@@ -47,6 +47,8 @@ For an approved stable release, fast-forward the reusable `release` branch to `m
 
 After the merge, sync `main` into `testing` and run `npm run build:testing` and `npm run check`. Keep any newer work and version already on `testing`.
 
+after verifying the release on `main`, give the requester a ready-to-paste discord announcement. use lowercase discord markdown with a script and version heading and short bullets on what changed for players since the last stable release. put the raw message in a plain fenced block for copying.
+
 ## License & Disclaimer
 
 This project is provided "as is" for personal use.  

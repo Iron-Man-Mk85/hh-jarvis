@@ -1,9 +1,10 @@
 import { settingHelp } from '../../settingsHelp';
 import { HHModule, type ModuleSettings } from '../../HHModule';
 import { $, currentPage } from '../../game';
+import { selectChoice } from '../../settingsChoice';
 import { LS_CONFIG_NAME, lsGet, lsSet, lsRm } from '../../storage';
 import { CONTEST_SKIPS_KEY, makeRankChoice, pruneContestRanks, readContestDefaults, readContestRank,
-    readContestSetting, readContestSkips, saveContestRank, selectContestChoice, toggleContestSkip,
+    readContestSetting, readContestSkips, saveContestRank, toggleContestSkip,
     type ContestEvent, type ContestKind } from './contestPreferences';
 import { positionContestShortcuts, renderContestShortcuts } from './contestShortcuts';
 
@@ -308,7 +309,7 @@ export class ContestStart extends HHModule {
                     if (!contestId) return;
                     try {
                         saveContestRank(contestId, rank);
-                        selectContestChoice(choice, rank);
+                        selectChoice(choice, rank);
                     } catch (err) {
                         console.warn('Jarvis could not save the leaderboard position:', err);
                         return;
@@ -323,7 +324,7 @@ export class ContestStart extends HHModule {
                 skip.after(choice);
                 position = choice;
             }
-            selectContestChoice(position, readContestRank(id, this.defaults.rank));
+            selectChoice(position, readContestRank(id, this.defaults.rank));
 
             if (!title) continue;
             let text = this.titleLabels.get(title);

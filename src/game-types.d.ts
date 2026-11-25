@@ -89,6 +89,7 @@ declare global {
         seasons_girls?: RewardArt[];
         leagues_girl?: RewardArt | null;
         girls?: GameReward[];
+        girls_data_list?: GameReward[];
         penta_drill_data?: {
             girl_data?: RewardArt;
             pass_reminder?: { penta_drill_pass?: { season_girls?: RewardArt[] }[] };

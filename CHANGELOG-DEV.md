@@ -1,5 +1,8 @@
 # Development notes
 
+- **0.11.13**
+  - Open artwork for free and paid Path of Attraction character rewards with the camera beside the event tabs.
+  - Copy Path of Attraction names in tier order, with free and paid columns and one event title spanning the reward rows.
 - **0.11.12** Use the switches in Reward art preview settings to choose the opening layout and artwork separately. The viewer opens on Original when the selected artwork is unavailable.
 - **0.11.11**
   - Open the selected character’s artwork from the camera at the top left of their portrait in Harem++.

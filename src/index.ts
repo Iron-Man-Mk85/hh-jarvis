@@ -13,6 +13,7 @@ import { GameLinks } from './modules/navigation/GameLinks';
 import { MythicPreviewFix } from './modules/events/MythicPreviewFix';
 import { EventExport } from './modules/events/EventExport';
 import { EventArtPreview } from './modules/events/EventArtPreview';
+import { installArtViewSettings } from './modules/art-preview/artViewSettings';
 
 armContestStartupGuard();
 
@@ -72,6 +73,7 @@ function runJarvis() {
             hhPlusPlusConfig.runModules()
             friendsAndFoes.installSettings();
             installContestSettings();
+            installArtViewSettings();
             changelog.installSettings();
             packSettings();
         }

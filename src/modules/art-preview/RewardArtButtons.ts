@@ -2,6 +2,7 @@ import type { RewardArt } from './gameArt';
 import { RewardArtDialog, type RewardArtEntry } from './RewardArtDialog';
 import { SeasonalArt } from './SeasonalArt';
 import { CharacterArt } from './CharacterArt';
+import { openArtInGallery } from './artViewSettings';
 import { getLoveRaids } from '../love-raids/gameData';
 
 interface Target {
@@ -181,7 +182,8 @@ export class RewardArtButtons {
             const launcher: Launcher = { button, target, layout: new ResizeObserver(() => this.position(button, launcher.target)) };
             button.addEventListener('click', event => {
                 event.stopPropagation();
-                this.dialog.show(launcher.target.entries, button, launcher.target.initialIndex, launcher.target.galleryOnOpen);
+                const { entries, initialIndex, galleryOnOpen } = launcher.target;
+                this.dialog.show(entries, button, initialIndex, openArtInGallery(galleryOnOpen));
             });
             if (target.prepend) target.host.prepend(button);
             else target.host.append(button);

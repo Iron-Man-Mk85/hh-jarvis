@@ -58,6 +58,22 @@
 .hh-plus-plus-config-panel .jarvis-settings-layout input[type="checkbox"] {
     flex-shrink: 0;
 }
+.hh-plus-plus-config-panel .jarvis-art-default-view {
+    display: grid;
+    gap: .3em;
+    margin-block-start: .45em;
+    font-size: .85em;
+}
+.jarvis-art-default-view select {
+    box-sizing: border-box;
+    max-width: 100%;
+    padding: .25em;
+    border: 1px solid var(--config-setting-border, currentColor);
+    border-radius: .35em;
+    background: var(--config-setting-background, #241e30);
+    color: inherit;
+    font: inherit;
+}
 .hh-plus-plus-config-panel .tabs h4[rel="JARVIS"] {
     position: relative;
 }

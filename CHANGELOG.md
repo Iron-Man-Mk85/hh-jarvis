@@ -1,5 +1,6 @@
 # Changelog
 
+- **0.11.17** Path of Attraction copies already-owned characters into their original Free or Paid cells, even when all four character rewards have been replaced.
 - **0.11.16**
   - Open artwork for all four Path of Attraction reward characters with one camera beside the event tabs in Hentai Heroes and Pornstar Harem.
   - Copy event rewards with a compact clipboard button. Path of Attraction includes the event name and puts Free and Paid rewards in separate columns, with one row per reward tier.

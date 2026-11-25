@@ -1,5 +1,6 @@
 # Development notes
 
+- **0.11.16** Turn off Include event name on supported events for two compact clipboard buttons. The left copies the event name and the right copies the reward names. The default button still copies both together.
 - **0.11.15**
   - Copy event names with one compact clipboard button on every supported event page.
   - Path of Attraction includes the event name by default. Turn off Include event name to copy only the Free and Paid columns.

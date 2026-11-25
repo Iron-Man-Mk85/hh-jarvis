@@ -10,6 +10,7 @@ export interface RewardArtEntry {
     reward: RewardArt;
     native?: HTMLElement;
     loadDetails?: () => Promise<RewardArt | undefined>;
+    thumbnailFromDetails?: boolean;
 }
 
 function control(label: string, action: () => void) {
@@ -132,7 +133,7 @@ export class RewardArtDialog {
             thumbnails.get(choice)?.();
             thumbnails.delete(choice);
         });
-        const choices = entries.length > 1 ? entries.map(({ reward }, entryIndex) => {
+        const choices = entries.length > 1 ? entries.map(({ reward, loadDetails, thumbnailFromDetails }, entryIndex) => {
             const label = reward.name || `Character ${entryIndex + 1}`;
             const choice = control(label, () => selectCharacter(entryIndex));
             const rarity = reward.rarity || 'common';
@@ -140,13 +141,24 @@ export class RewardArtDialog {
             choice.setAttribute('aria-label', label);
             choice.title = label;
             const thumbnail = rewardThumbnail(reward);
-            if (thumbnail) {
-                thumbnails.set(choice, () => {
+            const loadThumbnailDetails = thumbnailFromDetails ? loadDetails : undefined;
+            if (thumbnail || loadThumbnailDetails) {
+                const showThumbnail = (url: string) => {
                     const icon = document.createElement('img');
                     icon.alt = '';
                     icon.addEventListener('error', () => { choice.textContent = choice.title; }, { once: true });
                     choice.replaceChildren(icon);
-                    icon.src = thumbnail;
+                    icon.src = url;
+                };
+                thumbnails.set(choice, () => {
+                    if (thumbnail) {
+                        showThumbnail(thumbnail);
+                        return;
+                    }
+                    void loadThumbnailDetails?.().then(details => {
+                        const url = details && rewardThumbnail(details);
+                        if (url && choice.isConnected) showThumbnail(url);
+                    });
                 });
                 pickerObserver.observe(choice);
             }

@@ -2,13 +2,14 @@ import type { RewardArt } from './gameArt';
 import { RewardArtDialog, type RewardArtEntry } from './RewardArtDialog';
 import { SeasonalArt } from './SeasonalArt';
 import { CharacterArt } from './CharacterArt';
+import { openArtInGallery, readDefaultArtFilter } from './artViewSettings';
 import { getLoveRaids } from '../love-raids/gameData';
 
 interface Target {
     host: HTMLElement;
     entries: RewardArtEntry[];
     anchor?: HTMLElement | null;
-    side?: 'above' | 'below' | 'right';
+    side?: 'above' | 'below' | 'right' | 'top-left';
     leftAligned?: boolean;
     initialIndex?: number;
     prepend?: boolean;
@@ -122,11 +123,14 @@ export class RewardArtButtons {
             this.frame = requestAnimationFrame(() => { this.frame = 0; this.sync(); });
         };
         this.seasonal = page === '/seasonal.html' ? new SeasonalArt(schedule) : undefined;
-        this.character = page.startsWith('/characters/') ? new CharacterArt(schedule) : undefined;
+        const haremPlusPlus = page === '/waifu.html';
+        this.character = haremPlusPlus || page.startsWith('/characters/') ? new CharacterArt(schedule, haremPlusPlus) : undefined;
         this.observer = new MutationObserver(records => {
             if (records.some(({ target }) => !(target instanceof Element && target.closest('.jarvis-art-dialog')))) schedule();
         });
-        this.observer.observe(document.body, { childList: true, subtree: true, attributes: true, attributeFilter: ['class', 'girl', 'girl-id', 'id-girl'] });
+        const attributeFilter = ['class', 'girl', 'girl-id', 'id-girl'];
+        if (haremPlusPlus) attributeFilter.push('href', 'alt');
+        this.observer.observe(document.body, { childList: true, subtree: true, attributes: true, attributeFilter });
         this.sync();
     }
 
@@ -178,7 +182,8 @@ export class RewardArtButtons {
             const launcher: Launcher = { button, target, layout: new ResizeObserver(() => this.position(button, launcher.target)) };
             button.addEventListener('click', event => {
                 event.stopPropagation();
-                this.dialog.show(launcher.target.entries, button, launcher.target.initialIndex, launcher.target.galleryOnOpen);
+                const { entries, initialIndex, galleryOnOpen } = launcher.target;
+                this.dialog.show(entries, button, initialIndex, openArtInGallery(galleryOnOpen), readDefaultArtFilter());
             });
             if (target.prepend) target.host.prepend(button);
             else target.host.append(button);
@@ -199,16 +204,18 @@ export class RewardArtButtons {
         button.toggleAttribute('data-jarvis-art-anchor', Boolean(anchor));
         button.toggleAttribute('data-jarvis-art-above', side === 'above');
         button.toggleAttribute('data-jarvis-art-beside', side === 'right');
+        button.toggleAttribute('data-jarvis-art-top-left', side === 'top-left');
         if (!anchor) return;
         const box = host.getBoundingClientRect();
         const edge = anchor.getBoundingClientRect();
         if (!box.width || !box.height || !edge.width) return;
         const beside = side === 'right';
-        const anchorX = beside ? edge.right : edge.left + edge.width * (leftAligned ? .33 : .5);
-        const anchorY = beside ? edge.top + edge.height / 2 : side === 'above' ? edge.top : edge.bottom;
+        const topLeft = side === 'top-left';
+        const anchorX = beside ? edge.right : edge.left + edge.width * (topLeft ? 0 : leftAligned ? .33 : .5);
+        const anchorY = beside ? edge.top + edge.height / 2 : side === 'above' || topLeft ? edge.top : edge.bottom;
         const x = (anchorX - box.left) * host.clientWidth / box.width;
         const y = (anchorY - box.top) * host.clientHeight / box.height;
-        button.style.setProperty('--jarvis-art-launcher-x', `${x + (beside ? 6 : 0)}px`);
+        button.style.setProperty('--jarvis-art-launcher-x', `${x + (beside || topLeft ? 6 : 0)}px`);
         button.style.setProperty('--jarvis-art-launcher-y', `${y + (beside ? 0 : side === 'above' ? -4 : 4)}px`);
     }
 }

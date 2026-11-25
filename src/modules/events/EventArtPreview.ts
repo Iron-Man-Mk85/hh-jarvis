@@ -24,7 +24,7 @@ export class EventArtPreview extends HHModule {
         super({ name: baseKey, configSchema: {
             baseKey,
             default: false,
-            label: settingHelp('Reward art preview', 'Open a viewer for art on events, Love Raids, Path of Valor, Path of Glory, Penta Drill, Season, Seasonal Events, Leagues, and character pages.'),
+            label: settingHelp('Reward art preview', 'Open a viewer for art on events, Love Raids, Path of Valor, Path of Glory, Penta Drill, Season, Seasonal Events, Leagues, character pages, and Harem++.'),
             subSettings: [{
                 key: 'scenes',
                 label: settingHelp('Show scene previews', 'Also browse the still scene previews that the game provides.'),
@@ -38,7 +38,7 @@ export class EventArtPreview extends HHModule {
     }
 
     shouldRun() {
-        return rewardPages.has(currentPage) || currentPage.startsWith('/characters/');
+        return rewardPages.has(currentPage) || currentPage.startsWith('/characters/') || currentPage === '/waifu.html';
     }
 
     run({ scenes = true, inline = false }: ModuleSettings) {

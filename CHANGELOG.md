@@ -1,5 +1,9 @@
 # Changelog
 
+- **0.11.16**
+  - Open artwork for all four Path of Attraction reward characters with one camera beside the event tabs in Hentai Heroes and Pornstar Harem.
+  - Copy event rewards with a compact clipboard button. Path of Attraction includes the event name and puts Free and Paid rewards in separate columns, with one row per reward tier.
+  - Turn off Include event name to copy the title and rewards separately. Paste the rewards beside an existing merged title in Sheets to preserve the merge.
 - **0.11.12**
   - Open the art viewer with the camera at the top left of the selected character’s portrait in Harem++.
   - Use the switches in Reward art preview settings to choose the opening layout and artwork tab separately. If the selected artwork is unavailable, the viewer opens on Original and keeps your chosen layout.

@@ -5,6 +5,7 @@ import { ArtPreview } from '../art-preview/ArtPreview';
 import { RewardArtButtons } from '../art-preview/RewardArtButtons';
 import { getArtGroups } from '../art-preview/gameArt';
 import type { EventReward } from '../../game-types';
+import { isPathOfAttraction } from './pathOfAttraction';
 
 const rewardPages = new Set(['/event.html', '/path-of-valor.html', '/path-of-glory.html', '/penta-drill.html', '/season.html', '/seasonal.html', '/leagues.html', '/love-raids.html']);
 
@@ -24,14 +25,14 @@ export class EventArtPreview extends HHModule {
         super({ name: baseKey, configSchema: {
             baseKey,
             default: false,
-            label: settingHelp('Reward art preview', 'Open a viewer for art on events, Love Raids, Path of Valor, Path of Glory, Penta Drill, Season, Seasonal Events, Leagues, character pages, and Harem++.'),
+            label: settingHelp('Reward art preview', 'Open a viewer for art on events including Path of Attraction, Love Raids, Path of Valor, Path of Glory, Penta Drill, Season, Seasonal Events, Leagues, character pages, and Harem++.'),
             subSettings: [{
                 key: 'scenes',
                 label: settingHelp('Show scene previews', 'Also browse the still scene previews that the game provides.'),
                 default: true
             }, {
                 key: 'inline',
-                label: settingHelp('Inline event controls', 'Put preview controls beside the artwork on event pages.'),
+                label: settingHelp('Inline event controls', 'Put preview controls beside the artwork on event pages with a reward carousel.'),
                 default: false
             }]
         } });
@@ -43,7 +44,7 @@ export class EventArtPreview extends HHModule {
 
     run({ scenes = true, inline = false }: ModuleSettings) {
         if (this.hasRun || !this.shouldRun()) return;
-        if (!inline || currentPage !== '/event.html') {
+        if (!inline || currentPage !== '/event.html' || isPathOfAttraction()) {
             this.hasRun = true;
             this.scenesEnabled = scenes;
             this.buttons = new RewardArtButtons(currentPage, scenes);
@@ -103,7 +104,7 @@ export class EventArtPreview extends HHModule {
             this.scenesEnabled = value;
             this.viewer?.setScenesEnabled(value);
             this.buttons?.setScenesEnabled(value);
-        } else if (key === 'inline' && this.hasRun && currentPage === '/event.html') {
+        } else if (key === 'inline' && this.hasRun && currentPage === '/event.html' && !isPathOfAttraction()) {
             this.tearDown();
             this.run({ scenes: this.scenesEnabled, inline: value });
         }

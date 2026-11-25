@@ -387,6 +387,9 @@ td[data-jarvis-mark] > a {
 .jarvis-art-launcher[data-jarvis-art-beside] {
     transform: translateY(-50%);
 }
+.jarvis-art-launcher[data-jarvis-art-top-left] {
+    transform: none;
+}
 #events .nc-event-container > .jarvis-art-launcher:not([data-jarvis-art-anchor]) {
     position: absolute;
     z-index: 6;
@@ -420,6 +423,9 @@ td[data-jarvis-mark] > a {
     z-index: 6;
 }
 #harem_right .middle_part.missing_girl:has(> .jarvis-art-launcher) {
+    position: relative;
+}
+#quick-harem-wrapper .qh-harem > .pose:has(> .jarvis-art-launcher) {
     position: relative;
 }
 #events .nc-event-container .nc-event-reward-container .nc-events-prize-locations-container .jarvis-event-copy-row > button.jarvis-event-copy.blue_button_L {

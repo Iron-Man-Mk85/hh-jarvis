@@ -58,22 +58,6 @@
 .hh-plus-plus-config-panel .jarvis-settings-layout input[type="checkbox"] {
     flex-shrink: 0;
 }
-.hh-plus-plus-config-panel .jarvis-art-default-view {
-    display: grid;
-    gap: .3em;
-    margin-block-start: .45em;
-    font-size: .85em;
-}
-.jarvis-art-default-view select {
-    box-sizing: border-box;
-    max-width: 100%;
-    padding: .25em;
-    border: 1px solid var(--config-setting-border, currentColor);
-    border-radius: .35em;
-    background: var(--config-setting-background, #241e30);
-    color: inherit;
-    font: inherit;
-}
 .hh-plus-plus-config-panel .tabs h4[rel="JARVIS"] {
     position: relative;
 }
@@ -154,7 +138,7 @@ button:is(.jarvis-contest-pin, .jarvis-contest-skip) {
 :is(.jarvis-contest-pin, .jarvis-contest-skip):focus-visible {
     outline: 1px solid currentColor;
 }
-.jarvis-contest-choice {
+.jarvis-choice {
     display: inline-flex;
     width: fit-content;
     gap: .12em;
@@ -164,7 +148,7 @@ button:is(.jarvis-contest-pin, .jarvis-contest-skip) {
     color: inherit;
     line-height: 1.15;
 }
-.jarvis-contest-choice button {
+.jarvis-choice button {
     all: unset;
     padding: .18em .38em;
     border-radius: .26em;
@@ -174,13 +158,13 @@ button:is(.jarvis-contest-pin, .jarvis-contest-skip) {
     white-space: nowrap;
     cursor: pointer;
 }
-.jarvis-contest-choice button[aria-pressed="true"] {
-    background: color-mix(in srgb, currentColor 22%, transparent);
-}
-.jarvis-contest-choice button:hover {
+.jarvis-choice button:hover {
     background: color-mix(in srgb, currentColor 15%, transparent);
 }
-.jarvis-contest-choice button:focus-visible {
+.jarvis-choice button[aria-pressed="true"] {
+    background: color-mix(in srgb, currentColor 22%, transparent);
+}
+.jarvis-choice button:focus-visible {
     outline: 1px solid currentColor;
 }
 .jarvis-contest-rank-start {
@@ -220,7 +204,7 @@ button:is(.jarvis-contest-pin, .jarvis-contest-skip) {
     justify-self: start;
     font-size: .64em;
 }
-.jarvis-contest-settings {
+:is(.jarvis-contest-settings, .jarvis-art-defaults) {
     display: grid;
     gap: .3em;
     min-width: 0;
@@ -229,18 +213,18 @@ button:is(.jarvis-contest-pin, .jarvis-contest-skip) {
     border: 0;
     font-size: .85em;
 }
-.jarvis-contest-settings .jarvis-contest-choice {
+:is(.jarvis-contest-settings, .jarvis-art-defaults) .jarvis-choice {
     box-sizing: border-box;
     max-width: 100%;
     flex-wrap: wrap;
 }
-.jarvis-contest-settings [hidden] {
+:is(.jarvis-contest-settings, .jarvis-art-defaults) [hidden] {
     display: none;
 }
-.jarvis-contest-settings:disabled .jarvis-contest-choice {
+:is(.jarvis-contest-settings, .jarvis-art-defaults):disabled .jarvis-choice {
     opacity: .5;
 }
-.jarvis-contest-settings:disabled button {
+:is(.jarvis-contest-settings, .jarvis-art-defaults):disabled button {
     cursor: default;
 }
 .jarvis-contest-shortcuts {

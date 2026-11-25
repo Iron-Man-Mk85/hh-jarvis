@@ -1,4 +1,5 @@
 import { currentPage } from '../../game';
+import { makeChoice, selectChoice } from '../../settingsChoice';
 import { settingHelp } from '../../settingsHelp';
 import { lsGet, lsRm, lsSet } from '../../storage';
 
@@ -89,32 +90,6 @@ export function makeRankChoice(label: string, select: (rank: ContestRank) => voi
     return makeChoice(label, CONTEST_RANKS, select);
 }
 
-function makeChoice<T extends string>(label: string, options: ReadonlyArray<readonly [T, string]>, select: (value: T) => void) {
-    const group = document.createElement('span');
-    group.className = 'jarvis-contest-choice';
-    group.setAttribute('role', 'group');
-    group.setAttribute('aria-label', label);
-    group.addEventListener('keydown', event => event.stopPropagation());
-    for (const [value, text] of options) {
-        const button = document.createElement('button');
-        button.type = 'button';
-        button.textContent = text;
-        button.dataset.contestChoice = value;
-        button.addEventListener('click', event => {
-            event.stopPropagation();
-            select(value);
-        });
-        group.appendChild(button);
-    }
-    return group;
-}
-
-export function selectContestChoice(group: HTMLElement, value: string) {
-    for (const button of group.querySelectorAll('button')) {
-        button.setAttribute('aria-pressed', String(button.dataset.contestChoice === value));
-    }
-}
-
 export function installContestSettings() {
     if (currentPage !== '/home.html') return;
 
@@ -129,7 +104,7 @@ export function installContestSettings() {
         const save = (key: string, value: string, group: HTMLElement) => {
             try {
                 lsSet(key, value);
-                selectContestChoice(group, value);
+                selectChoice(group, value);
                 return true;
             } catch (err) {
                 console.warn('Jarvis could not save the contest default:', err);
@@ -145,9 +120,9 @@ export function installContestSettings() {
         });
         const ranks = makeRankChoice('Default leaderboard position', value => save('ContestRankStart', value, ranks));
         const defaults = readContestDefaults();
-        selectContestChoice(kinds, defaults.kind);
-        selectContestChoice(events, defaults.event);
-        selectContestChoice(ranks, defaults.rank);
+        selectChoice(kinds, defaults.kind);
+        selectChoice(events, defaults.event);
+        selectChoice(ranks, defaults.rank);
         showEvents(defaults.kind);
 
         const kindLabel = document.createElement('div');

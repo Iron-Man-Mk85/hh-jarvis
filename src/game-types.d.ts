@@ -35,6 +35,8 @@ export interface LoveRaid {
     id_raid: GameId;
     id_girl: GameId;
     id_announcement_type?: GameId;
+    announcement_type_name?: 'full' | 'partial' | 'none';
+    all_is_owned?: boolean;
     background_id?: GameId;
     event_name?: string;
     start_datetime?: string;

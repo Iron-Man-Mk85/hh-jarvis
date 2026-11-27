@@ -1,6 +1,8 @@
 # Changelog
 
-- **0.11.20**
+- **0.12.1**
+  - Enable League clubmates and add your club’s Apps Script link to copy a Discord-ready report from the current league. The icon sits to the right of Copy This Week’s League and uses the latest roster.
+  - Scroll the artwork and the character thumbnails independently in the art viewer.
   - Open the camera on mysterious Love Raids to see character names and browse available poses, released skins, and scene previews. The character switcher uses the game’s small portraits.
   - Path of Attraction copies already-owned characters into their original Free or Paid cells, even when all four character rewards have been replaced.
 - **0.11.16**

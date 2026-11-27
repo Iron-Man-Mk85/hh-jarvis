@@ -175,7 +175,9 @@ export class LeagueClubmates extends HHModule {
         const status = document.createElement('span');
         status.setAttribute('role', 'status');
         control.append(button, status);
-        timer.after(control);
+        const copyThisWeek = timer.parentElement?.querySelector(':scope > .record_league:has(> #this_week)');
+        const anchor = copyThisWeek ?? timer;
+        anchor.after(control);
         this.control = control;
 
         let clearStatus: number;

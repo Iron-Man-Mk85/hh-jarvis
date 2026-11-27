@@ -1,5 +1,8 @@
 # Development notes
 
+- **0.12.1** Find the clubmates icon to the right of Copy This Week's League. The Discord report now includes your own player when your roster entry qualifies.
+- **0.12.0** Enable League clubmates and add your club’s Apps Script link in Jarvis settings. Copy a Discord-ready list from the current league using the latest Google Sheets roster.
+- **0.11.21** Scroll the artwork and the character thumbnails independently in the art viewer.
 - **0.11.20** Use the game’s compact character thumbnails for mysterious Love Raids in the art viewer’s switcher.
 - **0.11.19** See full-color portraits for mysterious Love Raids in the art viewer’s character switcher.
 - **0.11.18** See character names in the Love Raids art viewer for mysterious raids, and browse their poses, released skins, and scene previews when the game provides them.

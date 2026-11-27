@@ -227,6 +227,105 @@ button:is(.jarvis-contest-pin, .jarvis-contest-skip) {
 :is(.jarvis-contest-settings, .jarvis-art-defaults):disabled button {
     cursor: default;
 }
+.jarvis-league-link {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    gap: .35em;
+    min-width: 0;
+    margin: .45em 0 0;
+    padding: 0;
+    border: 0;
+    font-size: .85em;
+}
+.jarvis-league-link[hidden] {
+    display: none;
+}
+.jarvis-league-link > :is(label, [role="status"]) {
+    grid-column: 1 / -1;
+}
+.jarvis-league-link input {
+    box-sizing: border-box;
+    min-width: 0;
+    width: 100%;
+    padding: .3em .45em;
+    border: 1px solid var(--config-setting-border, #a9a3bc);
+    border-radius: .25em;
+    background: #241e30;
+    color: #fff;
+    font: inherit;
+}
+.jarvis-league-link button.blue_button_L {
+    min-width: 0;
+    min-height: 0;
+    height: auto;
+    padding: .3em .6em;
+    font-size: inherit;
+    line-height: 1.25;
+}
+.jarvis-league-copy {
+    display: inline-flex;
+    align-items: center;
+    flex: none;
+    position: relative;
+    margin-inline: .2em;
+}
+#leagues .jarvis-league-copy > button {
+    position: relative;
+    width: 1.5em;
+    height: 1.5em;
+    min-width: 0;
+    padding: 0;
+    border: 0;
+    border-radius: .25em;
+    background: transparent;
+    color: #c3bdce;
+    font: inherit;
+    cursor: pointer;
+}
+#leagues .jarvis-league-copy > button:not(:disabled):hover {
+    color: #fff;
+    background: #fff2;
+}
+#leagues .jarvis-league-copy > button:disabled {
+    opacity: .55;
+    cursor: wait;
+}
+.jarvis-league-copy button::before,
+.jarvis-league-copy button::after {
+    position: absolute;
+    box-sizing: border-box;
+    width: .62em;
+    height: .78em;
+    border: 1px solid currentColor;
+    border-radius: .1em;
+    content: "";
+}
+.jarvis-league-copy button::before {
+    top: .25em;
+    left: .54em;
+    border-bottom: 0;
+    border-left: 0;
+}
+.jarvis-league-copy button::after {
+    top: .46em;
+    left: .34em;
+}
+.jarvis-league-copy [role="status"]:not(:empty) {
+    position: absolute;
+    z-index: 2;
+    top: 100%;
+    left: 50%;
+    width: max-content;
+    max-width: 15em;
+    padding: .25em .45em;
+    border-radius: .3em;
+    background: #241e30;
+    color: #fff;
+    font-size: .8em;
+    text-align: center;
+    transform: translateX(-50%);
+    pointer-events: none;
+}
 .jarvis-contest-shortcuts {
     position: absolute;
     inset-block-start: 1.3rem;

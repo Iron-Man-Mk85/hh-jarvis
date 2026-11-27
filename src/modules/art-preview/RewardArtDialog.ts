@@ -21,15 +21,6 @@ function control(label: string, action: () => void) {
     return button;
 }
 
-function scrollSideways(strip: HTMLElement) {
-    strip.addEventListener('wheel', event => {
-        if (event.ctrlKey || Math.abs(event.deltaX) >= Math.abs(event.deltaY) || strip.scrollWidth <= strip.clientWidth) return;
-        event.preventDefault();
-        const unit = event.deltaMode === 1 ? 16 : event.deltaMode === 2 ? strip.clientWidth : 1;
-        strip.scrollLeft += event.deltaY * unit;
-    }, { passive: false });
-}
-
 function observeStrip(strip: HTMLElement, onVisibility: (node: Element, visible: boolean) => void) {
     return new IntersectionObserver(entries => {
         const bounds = strip.getBoundingClientRect();
@@ -166,7 +157,6 @@ export class RewardArtDialog {
             return choice;
         }) : [];
         picker.hidden = !choices.length;
-        scrollSideways(picker);
         header.append(picker, close);
 
         const stage = document.createElement('div');
@@ -177,9 +167,22 @@ export class RewardArtDialog {
         gallery.className = 'jarvis-art-gallery hh-scroll';
         gallery.setAttribute('role', 'group');
         gallery.setAttribute('aria-label', 'Artwork gallery');
-        scrollSideways(gallery);
         stage.append(layer, gallery);
         dialog.append(header, stage);
+        dialog.addEventListener('wheel', event => {
+            if (event.ctrlKey || !event.cancelable) return;
+            // A wheel gesture can keep targeting the strip where it started after the pointer leaves.
+            const pointed = document.elementFromPoint(event.clientX, event.clientY);
+            const strips = [picker, gallery];
+            const strip = strips.find(node => !node.hidden && node.contains(pointed));
+            if (!strip && !strips.some(node => event.composedPath().includes(node))) return;
+            event.preventDefault();
+            event.stopPropagation();
+            if (!strip) return;
+            const unit = event.deltaMode === 1 ? 16 : event.deltaMode === 2 ? strip.clientWidth : 1;
+            const delta = Math.abs(event.deltaX) > Math.abs(event.deltaY) ? event.deltaX : event.deltaY;
+            strip.scrollLeft += delta * unit;
+        }, { capture: true, passive: false });
         document.body.append(dialog);
 
         let selected = -1;

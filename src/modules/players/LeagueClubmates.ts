@@ -98,12 +98,11 @@ function leagueReport(heading: string, rows: unknown[], opponents: NonNullable<W
         if (!members.has(id)) members.set(id, row[1]);
     }
 
-    const heroId = (window.shared?.Hero ?? window.Hero)?.infos?.id;
     const yes: string[] = [];
     const notes: string[] = [];
     const no: string[] = [];
     for (const { player, nickname } of opponents) {
-        if (player?.id_fighter == null || String(player.id_fighter) === String(heroId)) continue;
+        if (player?.id_fighter == null) continue;
         const name = player.nickname || nickname;
         const weakening = members.get(normalizeId(player.id_fighter));
         if (!name || !weakening) continue;

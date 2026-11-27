@@ -1,53 +1,24 @@
 # HH J.A.R.V.I.S.
 
-## Description
-
-HH J.A.R.V.I.S. is a Quality of Life userscript for Kinkoid games.
+HH J.A.R.V.I.S. adds quality-of-life features to Kinkoid games through HH++ BDSM.
 
 ## Features
 
-- **Friends & Foes Management:** Easily mark players as friends or foes in leagues and contests.
-- **Better PoV/PoG** Remove the lock icon in PoV/PoG Pass/Pass+ for easier reading
-- **Love Raids Addon:** Adds useful infos to the Love Raids page.
-- **Love Raids Parser:** If you manage a Sheet to track Love Raids girls, you can easily get all the info in a click!
+- **Leagues.** Mark friends and foes, see the promotion target in lower tiers, and copy a Discord-ready list of clubmates when your club has configured a roster link.
+- **Contests.** Choose which contest and rank to open, switch with rank shortcuts, and star or skip individual contests.
+- **Reward art viewer.** Browse available poses, skins, animations, and scene previews on supported game pages and in Harem++. Zoom into individual images or scroll the artwork gallery and character thumbnails independently.
+- **Love Raids.** Reveal mysterious character names, show rarity and skin indicators, and copy new raids in a spreadsheet-ready format.
+- **Event and mission exports.** Copy event titles and reward names on supported events, including Free and Paid rewards in separate Path of Attraction columns. Copy legendary mission titles, descriptions, and image links.
+- **Navigation and passes.** Open the game logo and pass links in new tabs, and hide lock icons on Path of Valor and Path of Glory reward passes.
+- **Update notices.** Read the latest changes in-game or switch to a small update icon in HH++ settings.
+
+See the [changelog](CHANGELOG.md) for recent updates.
 
 ## Installation
 
-1. **Install a userscript manager:**  
-- [Tampermonkey](https://www.tampermonkey.net/)
-- [Violentmonkey](https://violentmonkey.github.io/)
-- [Userscripts (iOS)](https://apps.apple.com/us/app/userscripts/id1463298887)
-- [Stay (iOS)](https://apps.apple.com/us/app/stay-for-safari/id1591620171)
-
-2. **Install the script:**  
-- [Click here to install](https://raw.githubusercontent.com/Iron-Man-Mk85/hh-jarvis/main/hh-jarvis.user.js)
-- Or copy the contents of `hh-jarvis.user.js` and paste into your userscript manager.
-
-3. **HH++ BDSM:**
-- Make sure you've got [HH++ BDSM](https://github.com/zoop0kemon/hh-plus-plus/) installed and active, it only works with it.
-
-## Development
-
-Edit the TypeScript modules in `src/modules/`. `src/index.ts` starts Jarvis and registers the modules with HH++. `package.json` supplies the version for both the userscript header and the HH++ tab. Record changes in `CHANGELOG.md`.
-
-Record every testing update in `CHANGELOG-DEV.md`, including fixes to features that are still in testing. For a public release, add one summary to `CHANGELOG.md` covering what players gain compared with the previous public release. Describe the finished feature once. The Dev popup uses the detailed entry when both files contain the same version. Start each entry with `- **x.y.z**` and add a summary or indented bullets below it.
-
-Run `npm ci` with Node.js 20 or newer.
-
-| Command | Result |
-| --- | --- |
-| `npm run build:testing` | Writes the minified `hh-jarvis-dev.user.js` and a transition copy for the old Dev install URL on `testing`. |
-| `npm run watch` | Rebuilds the testing userscript when source files change. |
-| `npm run build` | Writes a minified stable userscript to `dist/hh-jarvis.user.js`. |
-| `npm run check` | Type-checks the source and verifies the committed testing userscript. |
-
-Install the [Dev userscript](https://raw.githubusercontent.com/Iron-Man-Mk85/hh-jarvis/testing/hh-jarvis-dev.user.js) from the testing branch in Tampermonkey and enable one channel at a time. The transition copy retains the Dev identity and points to the new update URL.
-
-For an approved stable release, fast-forward the reusable `release` branch to `main`. Merge the approved `testing` commit if the full batch is approved, or cherry-pick the approved source commits and their dependencies for a partial release. Set the release version and notes for the selected changes. Run `npm run build:release` to write the stable userscript and remove the Dev artifact, then run `npm run check -- stable` before opening the PR from `release` to `main`.
-
-After the merge, sync `main` into `testing` and run `npm run build:testing` and `npm run check`. Keep any newer work and version already on `testing`.
-
-after verifying the release on `main`, give the requester a ready-to-paste discord announcement. use lowercase discord markdown with a script and version heading and short bullets on what changed for players since the last stable release. put the raw message in a plain fenced block for copying.
+1. Install a userscript manager such as [Tampermonkey](https://www.tampermonkey.net/), [Violentmonkey](https://violentmonkey.github.io/), [Userscripts for iOS](https://apps.apple.com/us/app/userscripts/id1463298887), or [Stay for Safari](https://apps.apple.com/us/app/stay-for-safari/id1591620171).
+2. Install and enable [HH++ BDSM](https://github.com/zoop0kemon/hh-plus-plus/) and [HH J.A.R.V.I.S.](https://raw.githubusercontent.com/Iron-Man-Mk85/hh-jarvis/main/hh-jarvis.user.js).
+3. Open **HH++ → HH Jarvis** on the game homepage to configure the features you use.
 
 ## License & Disclaimer
 

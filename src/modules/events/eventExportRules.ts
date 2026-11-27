@@ -15,7 +15,7 @@ const titledEventLayouts: TitledEventLayout[] = [{
     matches: isPathOfAttraction,
     controls: pathEventControls,
     getEventName: () => window.event_data?.path_of_attraction?.name,
-    getRewardRows: () => getPathRewardTiers().map(({ free, paid }) => [free, paid])
+    getRewardRows: () => getPathRewardTiers({ includeOwned: true }).map(({ free, paid }) => [free, paid])
 }];
 
 export function getTitledEventLayout() {

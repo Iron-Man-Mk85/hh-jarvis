@@ -10,6 +10,7 @@ export interface RewardArtEntry {
     reward: RewardArt;
     native?: HTMLElement;
     loadDetails?: () => Promise<RewardArt | undefined>;
+    thumbnailFromDetails?: boolean;
 }
 
 function control(label: string, action: () => void) {
@@ -18,15 +19,6 @@ function control(label: string, action: () => void) {
     button.textContent = label;
     button.addEventListener('click', action);
     return button;
-}
-
-function scrollSideways(strip: HTMLElement) {
-    strip.addEventListener('wheel', event => {
-        if (event.ctrlKey || Math.abs(event.deltaX) >= Math.abs(event.deltaY) || strip.scrollWidth <= strip.clientWidth) return;
-        event.preventDefault();
-        const unit = event.deltaMode === 1 ? 16 : event.deltaMode === 2 ? strip.clientWidth : 1;
-        strip.scrollLeft += event.deltaY * unit;
-    }, { passive: false });
 }
 
 function observeStrip(strip: HTMLElement, onVisibility: (node: Element, visible: boolean) => void) {
@@ -132,7 +124,7 @@ export class RewardArtDialog {
             thumbnails.get(choice)?.();
             thumbnails.delete(choice);
         });
-        const choices = entries.length > 1 ? entries.map(({ reward }, entryIndex) => {
+        const choices = entries.length > 1 ? entries.map(({ reward, loadDetails, thumbnailFromDetails }, entryIndex) => {
             const label = reward.name || `Character ${entryIndex + 1}`;
             const choice = control(label, () => selectCharacter(entryIndex));
             const rarity = reward.rarity || 'common';
@@ -140,13 +132,24 @@ export class RewardArtDialog {
             choice.setAttribute('aria-label', label);
             choice.title = label;
             const thumbnail = rewardThumbnail(reward);
-            if (thumbnail) {
-                thumbnails.set(choice, () => {
+            const loadThumbnailDetails = thumbnailFromDetails ? loadDetails : undefined;
+            if (thumbnail || loadThumbnailDetails) {
+                const showThumbnail = (url: string) => {
                     const icon = document.createElement('img');
                     icon.alt = '';
-                    icon.addEventListener('error', () => { choice.textContent = label; }, { once: true });
+                    icon.addEventListener('error', () => { choice.textContent = choice.title; }, { once: true });
                     choice.replaceChildren(icon);
-                    icon.src = thumbnail;
+                    icon.src = url;
+                };
+                thumbnails.set(choice, () => {
+                    if (thumbnail) {
+                        showThumbnail(thumbnail);
+                        return;
+                    }
+                    void loadThumbnailDetails?.().then(details => {
+                        const url = details && rewardThumbnail(details);
+                        if (url && choice.isConnected) showThumbnail(url);
+                    });
                 });
                 pickerObserver.observe(choice);
             }
@@ -154,7 +157,6 @@ export class RewardArtDialog {
             return choice;
         }) : [];
         picker.hidden = !choices.length;
-        scrollSideways(picker);
         header.append(picker, close);
 
         const stage = document.createElement('div');
@@ -165,9 +167,22 @@ export class RewardArtDialog {
         gallery.className = 'jarvis-art-gallery hh-scroll';
         gallery.setAttribute('role', 'group');
         gallery.setAttribute('aria-label', 'Artwork gallery');
-        scrollSideways(gallery);
         stage.append(layer, gallery);
         dialog.append(header, stage);
+        dialog.addEventListener('wheel', event => {
+            if (event.ctrlKey || !event.cancelable) return;
+            // A wheel gesture can keep targeting the strip where it started after the pointer leaves.
+            const pointed = document.elementFromPoint(event.clientX, event.clientY);
+            const strips = [picker, gallery];
+            const strip = strips.find(node => !node.hidden && node.contains(pointed));
+            if (!strip && !strips.some(node => event.composedPath().includes(node))) return;
+            event.preventDefault();
+            event.stopPropagation();
+            if (!strip) return;
+            const unit = event.deltaMode === 1 ? 16 : event.deltaMode === 2 ? strip.clientWidth : 1;
+            const delta = Math.abs(event.deltaX) > Math.abs(event.deltaY) ? event.deltaX : event.deltaY;
+            strip.scrollLeft += delta * unit;
+        }, { capture: true, passive: false });
         document.body.append(dialog);
 
         let selected = -1;
@@ -340,6 +355,12 @@ export class RewardArtDialog {
                 if (!reward || this.session?.refresh !== render || selected !== entryIndex) return;
                 const current = index === preferredIndex ? visible[index] : undefined;
                 fullName.textContent = reward.name || fullName.textContent;
+                const choice = choices[entryIndex];
+                if (choice && reward.name && choice.title !== reward.name) {
+                    choice.title = reward.name;
+                    choice.setAttribute('aria-label', reward.name);
+                    if (!choice.querySelector('img')) choice.textContent = reward.name;
+                }
                 artwork = artworkFor({ ...entry, reward });
                 render(current);
             });

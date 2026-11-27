@@ -3,7 +3,7 @@ import { mountSettingsHelp } from './settingsHelp';
 import css from './settings.css';
 
 const categories = [
-    { id: 'leagues-and-contests', label: 'Leagues and contests', keys: ['friendAndFoes', 'contestStart', 'leagueTop20'] },
+    { id: 'leagues-and-contests', label: 'Leagues and contests', keys: ['friendAndFoes', 'contestStart', 'leagueTop20', 'leagueClubmates'] },
     { id: 'navigation-and-passes', label: 'Navigation and passes', keys: ['gameLinks', 'removePassLock', 'mythicPreviewFix', 'eventArtPreview'] },
     { id: 'raids-and-exports', label: 'Love Raids and exports', keys: ['loveRaidsAddon', 'loveRaidsParser', 'activityParser', 'eventExport'] },
     { id: 'script-updates', label: 'Script updates', keys: ['changelog'] }

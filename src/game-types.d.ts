@@ -19,6 +19,7 @@ export interface EventRewardSource {
 }
 
 export interface EventReward extends RewardArt {
+    own?: boolean;
     source?: EventRewardSource;
     source_list?: Record<string, EventRewardSource[] | undefined>;
 }
@@ -26,7 +27,7 @@ export interface EventReward extends RewardArt {
 export interface PathEventTier {
     num_step: number;
     rewards?: Partial<Record<'free' | 'locked', {
-        reward?: { girls?: EventReward[] };
+        reward?: { girls?: EventReward[]; shards?: EventReward[] };
     }>>;
 }
 
@@ -34,6 +35,8 @@ export interface LoveRaid {
     id_raid: GameId;
     id_girl: GameId;
     id_announcement_type?: GameId;
+    announcement_type_name?: 'full' | 'partial' | 'none';
+    all_is_owned?: boolean;
     background_id?: GameId;
     event_name?: string;
     start_datetime?: string;
@@ -58,7 +61,7 @@ interface HeroData {
 }
 
 interface LeagueOpponent {
-    player?: { id_fighter?: GameId };
+    player?: { id_fighter?: GameId; nickname?: string };
     nickname?: string;
     place?: number | string;
     player_league_points?: number | string;

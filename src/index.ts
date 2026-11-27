@@ -4,6 +4,7 @@ import { FriendAndFoes } from './modules/players/FriendAndFoes';
 import { armContestStartupGuard, ContestStart } from './modules/contests/ContestStart';
 import { installContestSettings } from './modules/contests/contestPreferences';
 import { LeagueTop20 } from './modules/players/LeagueTop20';
+import { installLeagueClubmatesSettings, LeagueClubmates } from './modules/players/LeagueClubmates';
 import { RemovePassLock } from './modules/progression/RemovePassLock';
 import { LoveRaidsAddon } from './modules/love-raids/LoveRaidsAddon';
 import { LoveRaidsParser } from './modules/love-raids/LoveRaidsParser';
@@ -46,6 +47,7 @@ function runJarvis() {
         friendsAndFoes,
         new ContestStart(),
         new LeagueTop20(),
+        new LeagueClubmates(),
         new RemovePassLock(),
         new LoveRaidsAddon(),
         new LoveRaidsParser(),
@@ -73,6 +75,7 @@ function runJarvis() {
             hhPlusPlusConfig.runModules()
             friendsAndFoes.installSettings();
             installContestSettings();
+            installLeagueClubmatesSettings();
             installArtViewSettings();
             changelog.installSettings();
             packSettings();

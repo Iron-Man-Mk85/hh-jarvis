@@ -7,6 +7,7 @@ import { CONTEST_SKIPS_KEY, makeRankChoice, pruneContestRanks, readContestDefaul
     readContestSetting, readContestSkips, saveContestRank, toggleContestSkip,
     type ContestEvent, type ContestKind } from './contestPreferences';
 import { positionContestShortcuts, renderContestShortcuts } from './contestShortcuts';
+import { applyContestSnapshot, loadContestSnapshot } from './contestRefresh';
 
 type ContestCategory = ContestKind | ContestEvent;
 const CONTEST_SHORT_LABELS: Record<ContestCategory, string> = {
@@ -129,7 +130,7 @@ export class ContestStart extends HHModule {
         const configSchema = {
             baseKey,
             default: true,
-            label: settingHelp("Contest startup", "Open the preferred contest and rank on load, and switch active contests from the header. A starred contest takes priority on load."),
+            label: settingHelp("Contest startup", "Open the preferred contest and rank on load, and switch or reload active contests from the header. A starred contest takes priority on load."),
             subSettings: [{
                 key: 'noSwitchScroll',
                 label: settingHelp('Stop scrolling on contest switches', 'Keep the contest list in place when you switch by clicking a card. The leaderboard opens at your preferred position, and you can still scroll by hand.'),
@@ -403,7 +404,39 @@ export class ContestStart extends HHModule {
             return { id, name: label, category: category ? CONTEST_SHORT_LABELS[category] : 'Contest', rank,
                 skipped: skipped.has(id) };
         });
-        renderContestShortcuts(canvas, shortcuts, this.getSelectedContestId(list, right), id => this.openShortcut(id));
+        renderContestShortcuts(canvas, shortcuts, this.getSelectedContestId(list, right), id => this.openShortcut(id),
+            () => this.reloadSelectedContest());
+    }
+
+    async reloadSelectedContest() {
+        const { list, right, listeners } = this;
+        if (!list || !right || !listeners) return;
+        const id = this.getSelectedContestId(list, right);
+        if (!id) return;
+        const card = list.querySelector<HTMLElement>(`.contest[id_contest="${CSS.escape(id)}"]`);
+        const board = this.getLeaderboardScroller(right, id);
+        if (!card?.querySelector('.contest_header.in_progress') || !board) return;
+
+        const { signal } = listeners;
+        const isCurrent = () => !signal.aborted && this.list === list && this.right === right &&
+            list.contains(card) && right.contains(board) && list.getClientRects().length > 0 &&
+            getComputedStyle(list).visibility === 'visible' && this.getSelectedContestId(list, right) === id;
+        try {
+            const snapshot = await loadContestSnapshot(id, signal);
+            if (!isCurrent()) return;
+            if (!snapshot) return 'This contest has changed. Reload the page to update the contest list.';
+
+            this.stopJump?.();
+            this.switchScroll?.stop();
+            const listTop = list.scrollTop;
+            const boardTop = board.scrollTop;
+            if (!applyContestSnapshot(snapshot, card, board, this.getOwnRow(board) ?? null)) throw new Error('Contest view changed');
+            this.scrollInstantly(list, listTop);
+            this.scrollInstantly(board, boardTop);
+            this.refresh();
+        } catch {
+            if (isCurrent()) return 'Couldn’t reload this contest. Try again.';
+        }
     }
 
     openShortcut(id: string) {

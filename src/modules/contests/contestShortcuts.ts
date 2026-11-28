@@ -24,7 +24,8 @@ export function renderContestShortcuts(
     canvas: HTMLElement,
     contests: ContestShortcut[],
     selected: string | null,
-    select: (id: string) => void
+    select: (id: string) => void,
+    reload: () => Promise<string | undefined>
 ) {
     let bar = canvas.querySelector<HTMLElement>(':scope > .jarvis-contest-shortcuts');
     if (!contests.length) {
@@ -35,17 +36,50 @@ export function renderContestShortcuts(
         bar = document.createElement('div');
         bar.className = 'jarvis-contest-shortcuts';
         bar.setAttribute('role', 'group');
-        bar.setAttribute('aria-label', 'Active contests');
+        bar.setAttribute('aria-label', 'Contest shortcuts');
+        const button = document.createElement('button');
+        button.type = 'button';
+        button.className = 'jarvis-contest-reload';
+        button.title = 'Reload selected contest';
+        button.setAttribute('aria-label', button.title);
+        const icon = document.createElement('strong');
+        icon.textContent = '↻';
+        icon.setAttribute('aria-hidden', 'true');
+        const label = document.createElement('span');
+        label.textContent = 'Reload';
+        button.append(icon, label);
+        const status = document.createElement('div');
+        status.className = 'jarvis-contest-reload-status';
+        status.setAttribute('role', 'status');
+        button.addEventListener('click', async event => {
+            event.stopPropagation();
+            if (button.getAttribute('aria-busy') === 'true') return;
+            status.textContent = '';
+            button.setAttribute('aria-busy', 'true');
+            try {
+                status.textContent = await reload() ?? '';
+            } finally {
+                button.removeAttribute('aria-busy');
+            }
+        });
         bar.addEventListener('click', event => {
             if (!(event.target instanceof Element)) return;
             const id = event.target.closest<HTMLButtonElement>('button[data-contest-id]')?.dataset.contestId;
             if (id) select(id);
         });
+        bar.append(button, status);
         canvas.prepend(bar);
         positionContestShortcuts(canvas, bar);
     }
 
-    const buttons = new Map(Array.from(bar.querySelectorAll('button'), button => [button.dataset.contestId, button]));
+    const reloadButton = bar.querySelector<HTMLButtonElement>('.jarvis-contest-reload');
+    if (reloadButton) reloadButton.disabled = !contests.some(contest => contest.id === selected);
+    if (bar.dataset.selectedContest !== (selected ?? '')) {
+        bar.dataset.selectedContest = selected ?? '';
+        bar.querySelector('.jarvis-contest-reload-status')?.replaceChildren();
+    }
+    const buttons = new Map(Array.from(bar.querySelectorAll<HTMLButtonElement>('button[data-contest-id]'),
+        button => [button.dataset.contestId, button]));
     const categories = contests.map(contest => contest.category);
     for (const [index, { id, category, name, rank, skipped }] of contests.entries()) {
         let button = buttons.get(id);

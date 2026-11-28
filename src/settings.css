@@ -379,6 +379,35 @@ button:is(.jarvis-contest-pin, .jarvis-contest-skip) {
     outline: 2px solid currentColor;
     outline-offset: 2px;
 }
+.jarvis-contest-shortcuts .jarvis-contest-reload:disabled,
+.jarvis-contest-shortcuts .jarvis-contest-reload[aria-busy="true"] {
+    opacity: .6;
+    cursor: default;
+}
+.jarvis-contest-shortcuts .jarvis-contest-reload[aria-busy="true"] strong {
+    animation: jarvis-contest-reload-spin .8s linear infinite;
+}
+@keyframes jarvis-contest-reload-spin {
+    to { transform: rotate(360deg); }
+}
+@media (prefers-reduced-motion: reduce) {
+    .jarvis-contest-shortcuts .jarvis-contest-reload[aria-busy="true"] strong {
+        animation: none;
+    }
+}
+.jarvis-contest-reload-status:not(:empty) {
+    position: absolute;
+    inset-block-start: calc(100% + .4em);
+    inset-inline-end: 0;
+    width: max-content;
+    max-width: 15em;
+    padding: .4em .6em;
+    border-radius: .4em;
+    background: #232936;
+    color: #fff;
+    font-size: .8em;
+    pointer-events: none;
+}
 .jarvis-mark-menu {
     position: fixed;
     z-index: 10000;

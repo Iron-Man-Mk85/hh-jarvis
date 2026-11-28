@@ -110,7 +110,7 @@ declare global {
         };
         Hero?: HeroData;
         shared?: {
-            general?: GameAjax;
+            general?: GameAjax & { hero_page_popup?(options: { id: number; profile_fallback: boolean }): void };
             Hero?: HeroData;
             girl_animation?: GirlAnimationRenderer;
         };
